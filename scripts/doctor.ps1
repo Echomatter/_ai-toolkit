@@ -42,7 +42,7 @@ foreach($a in @('build','deep','review')){
   $p=Join-Path $ocGlobal "agents\$a.md"
   if(Test-Path -LiteralPath $p){OK "Desktop agent installed: $a"}else{FAIL "Desktop agent missing: $a"}
 }
-foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model')){
+foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome')){
   $p=Join-Path $ocGlobal "commands\$c.md"
   if(Test-Path -LiteralPath $p){OK "Desktop command installed: /$c"}else{FAIL "Desktop command missing: /$c"}
 }
@@ -60,7 +60,14 @@ if(Test-Path -LiteralPath $rosterPath){
 
 $statePath=Join-Path $ToolkitRoot 'routing\state.json'
 if(Test-Path -LiteralPath $statePath){
-   try { $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json; OK "Routine: $($st.routine)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"; if(-not $st.review_is_independent){WARN 'Review currently uses the same model as Deep.'} } catch { FAIL 'routing state is invalid JSON.' }
+   try {
+      $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
+      OK "Routine: $($st.routine)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
+      $distinct = $true
+      if($null -ne $st.review_is_distinct_model){ $distinct = [bool]$st.review_is_distinct_model }
+      elseif($null -ne $st.review_is_independent){ $distinct = [bool]$st.review_is_independent }
+      if(-not $distinct){ WARN 'Review currently uses the same model ID as Deep.' }
+    } catch { FAIL 'routing state is invalid JSON.' }
 } else { FAIL 'routing state missing.' }
 
 $evidencePath = Join-Path $ToolkitRoot 'routing\model-evidence.json'
@@ -98,6 +105,26 @@ if(Test-Path -LiteralPath $evidencePath){
         if($evidenceData.readiness_reason){ OK "Readiness reason: $($evidenceData.readiness_reason)" }
     } catch { FAIL 'model-evidence.json is invalid JSON.' }
 } else { FAIL 'model-evidence.json missing.' }
+
+# Review independence is about the underlying model vendor, not merely a
+# different provider/access prefix. Warn when Deep and Review resolve to the
+# same canonical vendor so users know the second pass is less independent.
+if($evidenceData -and $st -and $evidenceData.alias_index -and $evidenceData.models){
+    function Get-EvidenceProvider([string]$rid){
+        $ck = $null
+        foreach($p in @($evidenceData.alias_index.PSObject.Properties)){ if($p.Name -eq $rid){ $ck=[string]$p.Value; break } }
+        if(-not $ck){ return '' }
+        foreach($p in @($evidenceData.models.PSObject.Properties)){
+            if($p.Name -eq $ck -and $p.Value.provider){ return ([string]$p.Value.provider).ToLower() }
+        }
+        return ''
+    }
+    $deepVendor = Get-EvidenceProvider ([string]$st.deep)
+    $reviewVendor = Get-EvidenceProvider ([string]$st.review)
+    if($deepVendor -and $reviewVendor -and $deepVendor -eq $reviewVendor -and $st.deep -ne $st.review){
+        WARN "Review uses a different model ID but the same model vendor as Deep ($deepVendor); cross-vendor independence is reduced."
+    }
+}
 
 # ---- Enhanced reporting -------------------------------------------
 Write-Output ''

@@ -12,7 +12,7 @@ OpenCode's Scout agent is experimental in the stable line and is **not required*
 
 ### Desktop agents
 
-- **Build** — OpenCode's native primary ID, pinned to the current free/routine model with guarded permissions.
+- **Build** — OpenCode's native primary ID, pinned to the current free/routine model. Shell/tool approval behavior inherits your OpenCode permission settings.
 - **Deep** — subagent pinned to the strongest eligible subscription model available through OpenAI OAuth or GitHub Copilot OAuth.
 - **Review** — independent read-only subagent, preferably on a different provider/model.
 
@@ -37,7 +37,9 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 - `/github` — use local git + authenticated `gh`; writes follow normal OpenCode approval.
 - `/audit` — independent Review child session.
 - `/routing` — explain current lane assignments.
-- `/recommend-model` — recommend the best current model for the next phase without switching it.
+- `/recommend-model` — characterize the task, invoke the deterministic evidence-aware selector, and recommend the best current model without switching it.
+- `/refresh-model-evidence` — refresh sourced model capability evidence through current web research.
+- `/record-outcome` — record a meaningful task result so local success, retries, escalation, and later review defects can influence future routing.
 
 ## Routing and promotion
 
@@ -49,7 +51,7 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 6. When the next phase clearly benefits from another model, Build may append one compact `Next model:` recommendation. If there is no material advantage, it says nothing about models.
 7. `/recommend-model` performs the deeper evidence-backed comparison on demand.
 
-`routing/model-roster.json` is regenerated from the models and non-metered access surfaces OpenCode can actually see.
+`routing/model-roster.json` is regenerated from the models and non-metered access surfaces OpenCode can actually see. Capability claims live separately in `routing/model-evidence.json`; empirical outcomes live in `routing/task-history.json`.
 
 Eligible automatic/recommended surfaces are OpenCode free models, OpenAI OAuth/ChatGPT subscription models, GitHub Copilot OAuth models, and optional local Ollama. Separately metered API gateways are excluded.
 
@@ -71,6 +73,18 @@ F:\_ai-toolkit\scripts\refresh-routing.cmd
 ```
 
 Then start a new OpenCode session (or restart Desktop) so the refreshed model assignments and global guidance are cleanly loaded.
+
+## Permissions and nested agents
+
+The toolkit does **not** set broad shell/PowerShell approval rules. Build and Deep inherit your OpenCode permission settings; Review adds only the role-defining `edit: deny` restriction.
+
+Nested subagents are allowed selectively when your OpenCode `subagent_depth` permits them:
+
+- Build -> Explore / Deep / Review
+- Deep -> Explore / Review
+- Review -> Explore
+
+The toolkit does not set `subagent_depth` for you. OpenCode defaults to depth 1; set it to 2 in your own OpenCode configuration if you want one additional nested level.
 
 ## GitHub
 

@@ -31,18 +31,5 @@
       ".git/**",
       ".runtime/**"
     ]
-  },
-
-  "permission": {
-    "read": "allow",
-    "glob": "allow",
-    "grep": "allow",
-    "lsp": "allow",
-    "skill": "allow",
-    "webfetch": "allow",
-    "websearch": "allow",
-    "question": "allow",
-    "external_directory": "ask",
-    "doom_loop": "ask"
   }
 }

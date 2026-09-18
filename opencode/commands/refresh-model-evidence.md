@@ -1,5 +1,7 @@
 ---
 description: Refresh the model capability evidence database through real current web research
+agent: build
+subagent: true
 ---
 
 # /refresh-model-evidence
@@ -33,7 +35,7 @@ Repopulate `routing/model-evidence.json` with current, sourced capability eviden
 4. Update `routing/model-evidence.json` (schema_version 2 — keep this exact shape):
    - Top level: `schema_version`, `generated_at`, `evidence_as_of` (date), `advisor_readiness` + honest `readiness_reason`, `policy` invariants, `current_assignments_snapshot`, `serious_candidate_set`, `evidence_classes`, `sources` registry, `alias_index` covering **every** roster eligible ID, `models` keyed by canonical ID, prioritized `research_queue`.
    - `sources` registry: every source gets publisher, title, URL, `retrieved_at`, what it `supports`, and any `caution`. No registered source, no claim.
-   - Evidence classes are exactly `VERIFIED_LOCAL`, `VERIFIED_CATALOG`, `PROVIDER-REPORTED`, `INDEPENDENT`, `INFERRED`.
+   - Evidence classes are exactly `VERIFIED_LOCAL`, `VERIFIED_CATALOG`, `PROVIDER_REPORTED`, `INDEPENDENT`, `INFERRED`.
    - Per model: `provider`, `aliases`, `research_status` (`researched_current` / `provider_researched` / `partially_researched` / `identity_only` / `stale_variant`), `positioning`, `context` with `confidence`, capabilities as `{rating, confidence, evidence[source keys], note?}`, `benchmarks[]` each with `benchmark`, `value`, `unit`, `harness`, `configuration`, and `comparability` whenever versions/harnesses differ, `efficiency` with `interpretation`, `research_gaps`, `cautions`, `source_keys`, `last_researched_at`.
    - Ratings are exactly `strong / good / adequate / weak / unknown` with `confidence = high / medium / low`. Unknown capabilities carry a note (what was searched) — never a bare `unknown`.
    - Benchmark versions are never stored as comparable numbers: record the version/harness/config on every benchmark; flag legacy versions (e.g. Terminal-Bench 2.1 vs 4.0) as non-comparable.

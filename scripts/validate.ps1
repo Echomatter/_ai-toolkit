@@ -46,7 +46,8 @@ if(Test-Path -LiteralPath $template){
 }
 if(Test-Path -LiteralPath $config){
   $c=Get-Content -LiteralPath $config -Raw
-  foreach($needle in @('"default_agent": "build"','"websearch": "allow"')){if($c.Contains($needle)){OK "config contains $needle"}else{F "config missing $needle"}}
+  if($c.Contains('"default_agent": "build"')){OK "config contains default Build agent"}else{F "config missing default Build agent"}
+  if($c.Contains('"permission":')){F "toolkit config still defines top-level permissions"}else{OK "toolkit config leaves global permissions to user settings"}
   foreach($bad in @('openrouter/','vercel/')){if($c -match [regex]::Escape($bad)){F "metered gateway present in routing config: $bad"}else{OK "no $bad routing"}}
 }
 
@@ -57,6 +58,12 @@ foreach($a in $agentTemplates){
   $gp=Join-Path $ToolkitRoot "opencode\agents\$a.md"
   if(Test-Path -LiteralPath $tp){OK "agent template present: $a"}else{F "agent template missing: $a"}
   if(Test-Path -LiteralPath $gp){OK "generated agent present: $a"}else{F "generated agent missing: $a"}
+}
+
+foreach($agentFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents') -File -Filter '*.md'){
+  $at=Get-Content -LiteralPath $agentFile.FullName -Raw
+  if($at.Contains('"*": ask')){F "agent overrides all shell commands to ask: $($agentFile.Name)"}
+  if($at.Contains('external_directory: ask')){F "agent overrides external_directory to ask: $($agentFile.Name)"}
 }
 
 $globalTemplate=Join-Path $ToolkitRoot 'opencode\global-instructions.template.md'
@@ -80,12 +87,18 @@ try{Get-Content -LiteralPath $evidence -Raw | ConvertFrom-Json | Out-Null;OK 'va
 $history=Join-Path $ToolkitRoot 'routing\task-history.json'
 try{Get-Content -LiteralPath $history -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}
 
-$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence')
+$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome')
 foreach($c in $commands){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "opencode\commands\$c.md")){OK "command present: /$c"}else{F "command missing: /$c"}}
 
 foreach($cmdFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\commands') -File -Filter '*.md'){
   $cmdText=Get-Content -LiteralPath $cmdFile.FullName -Raw
   if($cmdText -match '(?m)^agent:\s*plan\s*$'){F "command silently forces Plan: $($cmdFile.Name)"}
+}
+
+$recommendCmd=Join-Path $ToolkitRoot 'opencode\commands\recommend-model.md'
+if(Test-Path -LiteralPath $recommendCmd){
+  $rt=Get-Content -LiteralPath $recommendCmd -Raw
+  if($rt.Contains('select-model.ps1')){OK "/recommend-model invokes deterministic selector"}else{F "/recommend-model does not invoke select-model.ps1"}
 }
 foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','install-local-fallback.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
 

@@ -74,10 +74,17 @@ $policyPath = Join-Path $ToolkitRoot 'routing\policy.json'
 $rosterPath = Join-Path $ToolkitRoot 'routing\model-roster.json'
 $evidencePath = Join-Path $ToolkitRoot 'routing\model-evidence.json'
 $historyPath = Join-Path $ToolkitRoot 'routing\task-history.json'
+$statePath = Join-Path $ToolkitRoot 'routing\state.json'
 
 $policy = Get-Content -LiteralPath $policyPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $roster = Get-Content -LiteralPath $rosterPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $ev = Get-Content -LiteralPath $evidencePath -Raw -Encoding UTF8 | ConvertFrom-Json
+$state = $null
+try {
+    if (Test-Path -LiteralPath $statePath) {
+        $state = Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
+    }
+} catch { $state = $null }
 $historyEntries = @()
 try {
     $h = Get-Content -LiteralPath $historyPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -184,7 +191,45 @@ function Get-Capability($entry, [string]$key) {
     foreach ($p in @($entry.capabilities.PSObject.Properties)) {
         if ($p.Name -eq $key) { return $p.Value }
     }
+    $fallback = @{
+        routine_coding = 'coding'
+        agentic_work = 'long_horizon_engineering'
+        repo_navigation = 'repo_understanding'
+        deep_reasoning = 'long_horizon_engineering'
+    }
+    if ($fallback.ContainsKey($key)) {
+        $alt = [string]$fallback[$key]
+        foreach ($p in @($entry.capabilities.PSObject.Properties)) {
+            if ($p.Name -eq $alt) { return $p.Value }
+        }
+    }
     return $null
+}
+function Get-ModelProvider($entry, [string]$id) {
+    if ($entry -and $entry.provider) { return ([string]$entry.provider).Trim().ToLower() }
+    if ($id -match '^([^/]+)/') { return $Matches[1].ToLower() }
+    return ''
+}
+function Get-ExecutionSurface([string]$ModelId, [string]$Purpose) {
+    if ($CurrentModel -and $ModelId -eq $CurrentModel) { return 'build' }
+    if ($state) {
+        if ($Purpose -eq 'review' -and $state.review -and $ModelId -eq [string]$state.review) { return '@review' }
+        if ($Purpose -eq 'implementation' -and $state.deep -and $ModelId -eq [string]$state.deep) { return '@deep chunk' }
+        if ($state.routine -and $ModelId -eq [string]$state.routine) { return 'build' }
+    }
+    return '/models switch'
+}
+
+$excludeCanonical = $null
+$excludeProvider = ''
+$diversityReferenceModel = $ExcludeModel
+if ($bNeedsDiversity -and -not $diversityReferenceModel -and $CurrentModel) {
+    $diversityReferenceModel = $CurrentModel
+}
+if ($diversityReferenceModel -ne '') {
+    $excludeCanonical = Get-Canonical-Key $ev $diversityReferenceModel
+    $excludeEntry = Get-Canonical-Entry $ev $excludeCanonical
+    $excludeProvider = Get-ModelProvider $excludeEntry $diversityReferenceModel
 }
 
 $scored = @()
@@ -201,6 +246,15 @@ foreach ($rm in @($roster.eligible_models)) {
     if (-not $entry) {
         $filtered += [pscustomobject]@{ id=$rid; reason='no canonical evidence entry' }
         continue
+    }
+    if ($bNeedsDiversity -and $excludeCanonical -and $canon -eq $excludeCanonical) {
+        $filtered += [pscustomobject]@{ id=$rid; reason='excluded: same canonical model as diversity reference' }
+        continue
+    }
+    $provider = Get-ModelProvider $entry $rid
+    $diversityAdj = 0.0
+    if ($bNeedsDiversity -and $excludeProvider -ne '' -and $provider -eq $excludeProvider) {
+        $diversityAdj = -0.5
     }
     # Hard context filter: known insufficient context eliminates.
     if ($NeedsLargeContextTokens -gt 0 -and $entry.context -and $entry.context.input_tokens) {
@@ -234,10 +288,9 @@ foreach ($rm in @($roster.eligible_models)) {
     }
     $capAvg = 0.0
     if ($wsum -gt 0) { $capAvg = $sum / $wsum }
-    # Synonym backfill: routine_coding<->coding, agentic_work<->long_horizon_engineering,
-    # repo_navigation<->repo_understanding, deep_reasoning<->long_horizon_engineering.
-    # If a model lacks one side but is strong on the synonym, average already penalizes;
-    # no extra credit is invented. Unknown stays unknown (no guessing).
+    # Conservative synonym fallback is implemented in Get-Capability. Explicit
+    # evidence always wins; absent schema keys may borrow only the nearest
+    # documented capability and never invent a stronger rating.
 
     # Benchmark bonus: only same-version Coding Agent Index v1.5 family.
     # Terminal-Bench 2.1 and other legacy versions are excluded from ranking.
@@ -262,9 +315,15 @@ foreach ($rm in @($roster.eligible_models)) {
     if ($benchBonus -gt 0.8) { $benchBonus = 0.8 }
 
     # Local history: n<3 anecdotal only; n>=3 may influence; n>=10 substantial.
+    # Reward validated first-pass success and penalize repeated attempts,
+    # escalation, and defects later found by independent review.
     $histN = 0
     $histRate = $null
     $histAdj = 0.0
+    $histTestsRate = $null
+    $histEscRate = $null
+    $histReviewDefectRate = $null
+    $histAvgAttempts = $null
     if ($historyEntries.Count -gt 0) {
         $rel = @($historyEntries | Where-Object { $_.model -eq $rid })
         # Prefer task-overlapping history when enough samples exist.
@@ -279,12 +338,36 @@ foreach ($rm in @($roster.eligible_models)) {
         if ($histN -gt 0) {
             $succ = @($useSet | Where-Object { $_.success -eq $true }).Count
             $histRate = [double]$succ / [double]$histN
+            $testsPass = @($useSet | Where-Object { $_.tests_passed -eq $true }).Count
+            $escCount = @($useSet | Where-Object { $_.escalated -eq $true }).Count
+            $reviewDefects = @($useSet | Where-Object { $_.review_found_defects -eq $true }).Count
+            $attemptTotal = 0.0
+            foreach ($he in $useSet) {
+                try { $attemptTotal += [double]$he.attempts } catch { $attemptTotal += 1.0 }
+            }
+            $histTestsRate = [double]$testsPass / [double]$histN
+            $histEscRate = [double]$escCount / [double]$histN
+            $histReviewDefectRate = [double]$reviewDefects / [double]$histN
+            $histAvgAttempts = $attemptTotal / [double]$histN
             if ($histN -ge 3) {
-                if ($histRate -ge 0.75) { $histAdj = 0.5 }
-                elseif ($histRate -ge 0.6) { $histAdj = 0.25 }
-                elseif ($histRate -lt 0.4) { $histAdj = -0.75 }
-                elseif ($histRate -lt 0.6) { $histAdj = -0.25 }
-                if ($histN -ge 10) { $histAdj = $histAdj * 2.0 }
+                if ($histRate -ge 0.75) { $histAdj += 0.4 }
+                elseif ($histRate -ge 0.6) { $histAdj += 0.2 }
+                elseif ($histRate -lt 0.4) { $histAdj -= 1.0 }
+                elseif ($histRate -lt 0.6) { $histAdj -= 0.35 }
+
+                if ($histTestsRate -ge 0.8 -and $histRate -ge 0.6) { $histAdj += 0.15 }
+                elseif ($histTestsRate -lt 0.5) { $histAdj -= 0.2 }
+
+                if ($histAvgAttempts -gt 2.0) { $histAdj -= 0.3 }
+                elseif ($histAvgAttempts -le 1.25 -and $histRate -ge 0.75) { $histAdj += 0.1 }
+
+                if ($histEscRate -ge 0.5) { $histAdj -= 0.3 }
+                elseif ($histEscRate -eq 0 -and $histRate -ge 0.75) { $histAdj += 0.05 }
+                if ($histReviewDefectRate -ge 0.5) { $histAdj -= 0.4 }
+                elseif ($histReviewDefectRate -gt 0) { $histAdj -= 0.2 }
+                if ($histN -ge 10) { $histAdj = $histAdj * 1.5 }
+                if ($histAdj -gt 1.0) { $histAdj = 1.0 }
+                if ($histAdj -lt -1.5) { $histAdj = -1.5 }
             }
         }
     }
@@ -297,7 +380,7 @@ foreach ($rm in @($roster.eligible_models)) {
         else { $econAdj = -0.25 }
     }
 
-    $total = $capAvg + $benchBonus + $histAdj + $econAdj
+    $total = $capAvg + $benchBonus + $histAdj + $econAdj + $diversityAdj
     $scored += [pscustomobject]@{
         id = $rid
         canonical = $canon
@@ -307,8 +390,13 @@ foreach ($rm in @($roster.eligible_models)) {
         bench_bonus = [Math]::Round($benchBonus, 3)
         hist_n = $histN
         hist_rate = $histRate
-        hist_adj = $histAdj
+        hist_adj = [Math]::Round($histAdj, 3)
+        hist_tests_rate = $histTestsRate
+        hist_escalation_rate = $histEscRate
+        hist_review_defect_rate = $histReviewDefectRate
+        hist_avg_attempts = $histAvgAttempts
         econ_adj = $econAdj
+        diversity_adj = $diversityAdj
         total = [Math]::Round($total, 3)
         priority = (Priority-Index $rid)
         why_caps = ($whyParts -join '; ')
@@ -334,9 +422,9 @@ $execSurface = 'build'
 $phases = @()
 $diagnosisModel = $null
 if ($isReviewTask -and (-not $bNeedsWrites)) {
-    $execSurface = '@review'
+    $execSurface = Get-ExecutionSurface $top.id 'review'
     $phases = @(
-        [ordered]@{ phase=1; name='diagnosis/review'; surface='@review'; model=$top.id }
+        [ordered]@{ phase=1; name='diagnosis/review'; surface=$execSurface; model=$top.id }
     )
 } elseif ($isReviewTask -and $bNeedsWrites) {
     $execSurface = 'combination'
@@ -357,18 +445,16 @@ if ($isReviewTask -and (-not $bNeedsWrites)) {
     }
     $diagnosisModel = $diag
     # Primary recommendation stays the repair model so the two requirement sets differ.
+    $diagSurface = Get-ExecutionSurface $diag.id 'review'
+    $repairSurface = Get-ExecutionSurface $repairModel.id 'implementation'
     $phases = @(
-        [ordered]@{ phase=1; name='diagnosis/review'; surface='@review'; model=$diag.id },
-        [ordered]@{ phase=2; name='implementation/repair'; surface='build/@deep chunk'; model=$repairModel.id }
+        [ordered]@{ phase=1; name='diagnosis/review'; surface=$diagSurface; model=$diag.id },
+        [ordered]@{ phase=2; name='implementation/repair'; surface=$repairSurface; model=$repairModel.id }
     )
     # Fallback for compound is the diagnosis model (already distinct).
     $fallback = $diag
 } else {
-    if ($top.surface -eq 'opencode-free' -or $top.surface -eq 'ollama-local') { $execSurface = 'build' }
-    else {
-        $broad = ($tasks -contains 'architecture' -or $tasks -contains 'large_refactor') -and ($bNeedsDeep -or ($NeedsLargeContextTokens -ge 200000))
-        if ($broad) { $execSurface = '/models switch' } else { $execSurface = '@deep chunk' }
-    }
+    $execSurface = Get-ExecutionSurface $top.id 'implementation'
     $phases = @(
         [ordered]@{ phase=1; name='implementation'; surface=$execSurface; model=$top.id }
     )
@@ -377,7 +463,7 @@ if ($isReviewTask -and (-not $bNeedsWrites)) {
 # Marginal-difference stay-put: if current model is eligible and within 0.5, stay.
 $stayPut = $false
 $currentScore = $null
-if ($CurrentModel -ne '') {
+if ($CurrentModel -ne '' -and -not $bNeedsDiversity -and -not $isReviewTask) {
     foreach ($s in $ranked) { if ($s.id -eq $CurrentModel) { $currentScore = $s; break } }
     if ($currentScore -and ($top.id -ne $CurrentModel) -and (($top.total - $currentScore.total) -lt 0.5)) {
         $stayPut = $true
@@ -385,10 +471,30 @@ if ($CurrentModel -ne '') {
 }
 
 # Research gating.
+function Test-CandidateEvidenceGap($candidate) {
+    if (-not $candidate) { return $false }
+    $ce = Get-Canonical-Entry $ev (Get-Canonical-Key $ev $candidate.id)
+    if (-not $ce) { return $true }
+    $status = ''
+    if ($ce.research_status) { $status = ([string]$ce.research_status).ToLower() }
+    if ($status -in @('identity_only','partially_researched','stale_variant','unresearched')) { return $true }
+    foreach ($k in $weights.Keys) {
+        if ([double]$weights[$k] -lt 2.0) { continue }
+        $cap = Get-Capability $ce $k
+        if (-not $cap -or -not $cap.rating -or ([string]$cap.rating).ToLower() -eq 'unknown') { return $true }
+    }
+    return $false
+}
 $needsResearch = $false
 $researchReason = 'cache sufficient'
 if ($readiness -eq 'UNPOPULATED' -and $isConsequential) { $needsResearch = $true; $researchReason = 'UNPOPULATED evidence + consequential task' }
 elseif ($readiness -eq 'UNPOPULATED' -and $isTrivial) { $needsResearch = $false; $researchReason = 'UNPOPULATED but trivial: inexpensive default' }
+elseif ($isConsequential -and (Test-CandidateEvidenceGap $ranked[0])) {
+    $needsResearch = $true; $researchReason = 'top candidate lacks current task-relevant evidence'
+}
+elseif ($isConsequential -and $ranked.Count -gt 1 -and (Test-CandidateEvidenceGap $ranked[1]) -and (($ranked[0].total - $ranked[1].total) -lt 0.75)) {
+    $needsResearch = $true; $researchReason = 'close runner-up lacks current task-relevant evidence'
+}
 elseif (($freshness -eq 'stale' -or $freshness -eq 'very stale' -or $freshness -eq 'partially stale') -and ($ranked.Count -gt 1) -and (($ranked[0].total - $ranked[1].total) -lt 0.5) -and $isConsequential) {
     $needsResearch = $true; $researchReason = 'stale evidence + close candidates + consequential task'
 }
@@ -398,6 +504,8 @@ $finalAction = $execSurface
 if ($stayPut) {
     $finalRecommended = $CurrentModel
     $finalAction = 'stay'
+    $execSurface = 'build'
+    $phases = @([ordered]@{ phase=1; name='implementation'; surface='build'; model=$CurrentModel })
 }
 
 # Build why lines (task-specific, evidence-tied, no lane identity as evidence).
@@ -406,7 +514,9 @@ $why += ("task: " + ($tasks -join ' + ') + " | writes=$bNeedsWrites terminal=$bN
 if ($top.why_caps -ne '') { $why += ("capabilities: " + $top.why_caps) }
 if ($top.bench_notes -ne '') { $why += ("benchmarks (same-version only, harness-noted): " + $top.bench_notes) }
 else { $why += ("benchmarks: no same-version benchmark bonus applied") }
-if ($top.hist_n -ge 3) { $why += ("local history: n=$($top.hist_n) success_rate=$([Math]::Round([double]$top.hist_rate,2)) adj=$($top.hist_adj)") }
+if ($top.hist_n -ge 3) {
+    $why += ("local history: n=$($top.hist_n) success=$([Math]::Round([double]$top.hist_rate,2)) tests=$([Math]::Round([double]$top.hist_tests_rate,2)) escalation=$([Math]::Round([double]$top.hist_escalation_rate,2)) review_defects=$([Math]::Round([double]$top.hist_review_defect_rate,2)) avg_attempts=$([Math]::Round([double]$top.hist_avg_attempts,2)) adj=$($top.hist_adj)")
+}
 else { $why += ("local history: n=$($top.hist_n) anecdotal only (needs n>=3)") }
 if ($isTrivial) { $why += ("economics: trivial task prefers inexpensive free/local default") }
 else { $why += ("economics: evidence-led (subscription OAuth treated as quota, not per-task bill)") }
@@ -432,7 +542,7 @@ $result = [ordered]@{
     stay_put = $stayPut
     filtered_out = @($filtered | ForEach-Object { [ordered]@{ id=$_.id; reason=$_.reason } })
     top_scores = @($ranked | Select-Object -First 5 | ForEach-Object {
-        [ordered]@{ id=$_.id; total=$_.total; cap_avg=$_.cap_avg; bench=$_.bench_bonus; hist_n=$_.hist_n; hist_adj=$_.hist_adj; econ=$_.econ_adj }
+        [ordered]@{ id=$_.id; total=$_.total; cap_avg=$_.cap_avg; bench=$_.bench_bonus; hist_n=$_.hist_n; hist_adj=$_.hist_adj; econ=$_.econ_adj; diversity=$_.diversity_adj }
     })
 }
 if ($fallback) {

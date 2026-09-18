@@ -100,9 +100,10 @@ if (Test-Path -LiteralPath $AgentSrc) {
 if (Test-Path -LiteralPath $CommandSrc) {
     $currentTargets += @(Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | ForEach-Object { Join-Path $CommandDst $_.Name })
 }
+$currentTargets += (Join-Path $OpenCodeRoot 'ai-toolkit-root.txt')
 
 # Prune anything previously installed by this toolkit that is not part of the current
-# eight-skill edition, even if an old source folder still exists after an overlay.
+# skill set, even if an old source folder still exists after an overlay.
 # Also prune managed entries whose canonical source disappeared.
 foreach ($entry in @($manifest)) {
     $isCurrent = $entry.target -and ($currentTargets -contains $entry.target)
@@ -126,7 +127,7 @@ $manifest = $nextManifest
 # same-named user files alone and report them for manual cleanup.
 $retiredSkills = @(
     'cost-aware-routing','task-contract','workspace-map','public-repo-research',
-    'local-first-escalation','model-advisor','external-research','model-escalation'
+    'local-first-escalation','external-research','model-escalation'
 )
 foreach ($name in $retiredSkills) {
     $target = Join-Path $SkillsDst $name
@@ -260,6 +261,14 @@ foreach ($src in Get-ChildItem -LiteralPath $AgentSrc -File -Filter '*.md' | Whe
 foreach ($src in Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | Where-Object { $_.Name -notlike '*.template.md' }) {
     Install-ManagedFile $src.FullName (Join-Path $CommandDst $src.Name)
 }
+
+# Publish a tiny managed locator so global commands can invoke deterministic toolkit
+# scripts from any project without assuming a drive letter.
+$rootLocatorSrc = Join-Path $StateDir 'toolkit-root.txt'
+$rootLocatorDst = Join-Path $OpenCodeRoot 'ai-toolkit-root.txt'
+$enc = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($rootLocatorSrc, $ToolkitRoot, $enc)
+Install-ManagedFile $rootLocatorSrc $rootLocatorDst
 
 # Merge the toolkit's generated global guidance into OpenCode's global AGENTS.md
 # without replacing user-authored instructions outside the managed markers.
