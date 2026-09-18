@@ -7,7 +7,7 @@ permission:
   task:
     "*": deny
     explore: allow
-    index: allow
+    index: __INDEX_TASK_PERMISSION__
     deep: __DEEP_TASK_PERMISSION__
     review: __REVIEW_TASK_PERMISSION__
 ---
