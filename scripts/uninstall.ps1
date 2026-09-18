@@ -43,4 +43,4 @@ foreach ($entry in $entries) {
 
 Remove-GlobalToolkitBlock
 @($failed) | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
-Write-Output 'Uninstall complete. OpenCode/Ollama/provider credentials were not touched.'
+Write-Output 'Uninstall complete. OpenCode/provider credentials were not touched.'

@@ -8,6 +8,7 @@ permission:
   task:
     "*": deny
     explore: allow
+    index: allow
     deep: allow
     review: allow
 ---

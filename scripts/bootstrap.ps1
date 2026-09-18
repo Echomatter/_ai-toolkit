@@ -4,8 +4,8 @@
 
 .DESCRIPTION
   Cleans recognized artifacts from earlier toolkit editions, installs portable skills,
-  stable OpenCode, and GitHub CLI if missing. Local Ollama is optional and intentionally
-  handled by install-local-fallback.cmd. Provider OAuth remains interactive.
+  OpenCode integration files, stable OpenCode, and GitHub CLI if missing.
+  Provider OAuth remains interactive. No local model engine is installed or managed.
 #>
 param(
     [switch]$SkipSoftwareInstall,
@@ -84,7 +84,7 @@ function Remove-LegacyToolkitArtifacts {
         'bounded-experiment','change-audit','cost-aware-routing','evidence-ledger',
         'external-research','github-ops','handoff-brief','local-first-escalation',
         'local-repo-research','model-advisor','model-escalation','model-routing',
-        'public-repo-research','repo-reorient','task-contract','workspace-map'
+        'public-repo-research','repo-reorient','content-index-research','task-contract','workspace-map'
     )
 
     foreach ($name in $knownToolkitSkills) {

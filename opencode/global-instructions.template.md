@@ -13,16 +13,21 @@ These instructions apply across OpenCode projects. Project `AGENTS.md` files rem
 Current generated lanes:
 
 - Routine / Build: `__ROUTINE_MODEL__`
+- Index: `__ROUTINE_MODEL__` (free retrieval helper)
 - Deep: `__DEEP_MODEL__`
 - Review: `__REVIEW_MODEL__`
 
-Start useful work immediately on the current Build model. Use `@explore` for active-repository search when a child context helps. Delegate a genuinely hard bounded chunk to `@deep` only after the escalation criteria in `model-routing` are met. Use `@review` or `/audit` for independent verification.
+Start useful work immediately on the current free Build model. Use `@explore` for source-code search/tracing, `@index` for exhaustive mixed-corpus retrieval, and native web tools for current public information. Delegate only a narrowed hard chunk to `@deep` after the escalation criteria in `model-routing` are met. Use `@review` or `/audit` for independent verification.
 
 Do not announce routing tiers before doing work. Do not automatically switch the user's current model.
 
+## Paid-lane failure
+
+If a Deep or Review invocation ultimately fails because of quota/rate/provider/auth availability, do not keep retrying or jump to a metered route. Continue in free Build with `@index`, `@explore`, web tools, and deterministic validation. Report a block only when the unresolved remainder genuinely requires stronger reasoning.
+
 ## Lane assignment vs recommendation invariant
 
-Lane assignment is NOT recommendation. `routine/deep/review` are inexpensive execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
+Lane assignment is NOT recommendation. `routine/index/deep/review` are execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Index/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
 
 ## Next-phase model advice
 
@@ -47,7 +52,7 @@ When those conditions are met, append one compact line at the end of the normal 
 
 `Next model: <model or lane> — <task-specific reason>. <action>`
 
-Valid actions are normally `stay`, `delegate the hard chunk to @deep`, `run /audit`, or `switch manually with /models`.
+Valid actions are normally `stay`, `use @index/@explore`, `delegate the hard chunk to @deep`, `run /audit`, or `switch manually with /models`.
 
 If the current model remains adequate, the next phase is unclear, or the difference is marginal, say nothing about model choice. Do not nag. Maximum 2–3 lines.
 

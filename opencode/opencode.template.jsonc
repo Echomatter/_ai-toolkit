@@ -11,9 +11,6 @@
   "snapshot": true,
 
   "instructions": ["../global/WORKSTYLE.md"],
-
-  __LOCAL_PROVIDER_BLOCK__
-
   "compaction": {
     "auto": true,
     "prune": true,

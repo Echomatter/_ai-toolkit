@@ -6,7 +6,8 @@
 4. Run `scripts\refresh-routing.cmd` after provider/model changes.
 5. Fully quit and reopen OpenCode Desktop, or start a new session after routing changes.
 6. Confirm native **Build** and **Plan** are available.
-7. Type `@` and confirm built-in `explore` plus toolkit `deep` and `review` are available.
+7. Type `@` and confirm built-in `explore` plus toolkit `index`, `deep`, and `review` are available.
+8. Run `/index` in a content-heavy repo to confirm the free retrieval helper can build/search the project index.
 8. Confirm `/recommend-model` appears in slash commands.
 9. Run `scripts\doctor.cmd -Deep`.
 

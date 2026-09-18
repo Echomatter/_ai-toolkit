@@ -32,19 +32,26 @@ if($gh){
   if($LASTEXITCODE -eq 0){ OK 'GitHub CLI authenticated.' } else { WARN 'GitHub CLI is installed but not authenticated; run gh auth login.' }
 }else{ WARN 'GitHub CLI not found; remote GitHub work will be unavailable.' }
 
-$skills=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','handoff-brief')
+$skills=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief')
 foreach($s in $skills){ $p=Join-Path $env:USERPROFILE ".agents\skills\$s\SKILL.md"; if(Test-Path -LiteralPath $p){OK "skill installed: $s"}else{FAIL "skill missing: $s"} }
 
 
 $ocGlobal=Join-Path $env:USERPROFILE '.config\opencode'
-foreach($a in @('build','deep','review')){
+foreach($a in @('build','index','deep','review')){
   $p=Join-Path $ocGlobal "agents\$a.md"
   if(Test-Path -LiteralPath $p){OK "Desktop agent installed: $a"}else{FAIL "Desktop agent missing: $a"}
 }
-foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome')){
+foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index')){
   $p=Join-Path $ocGlobal "commands\$c.md"
   if(Test-Path -LiteralPath $p){OK "Desktop command installed: /$c"}else{FAIL "Desktop command missing: /$c"}
 }
+
+$indexTool=Join-Path $env:USERPROFILE '.config\opencode\tools\content_index.ts'
+if(Test-Path -LiteralPath $indexTool){OK 'Desktop custom tool installed: content_index'}else{FAIL 'Desktop custom tool missing: content_index'}
+$py=Get-Command python -ErrorAction SilentlyContinue
+if(-not $py){$py=Get-Command py -ErrorAction SilentlyContinue}
+if(-not $py){$py=Get-Command python3 -ErrorAction SilentlyContinue}
+if($py){OK 'Python available for content indexer.'}else{WARN 'Python not found; content_index will be unavailable until Python is installed.'}
 
 $globalAgents=Join-Path $env:USERPROFILE '.config\opencode\AGENTS.md'
 if(Test-Path -LiteralPath $globalAgents){
@@ -61,7 +68,7 @@ $statePath=Join-Path $ToolkitRoot 'routing\state.json'
 if(Test-Path -LiteralPath $statePath){
    try {
       $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
-      OK "Routine: $($st.routine)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
+      OK "Routine: $($st.routine)"; OK "Index: $($st.index)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
       $distinct = $true
       if($null -ne $st.review_is_distinct_model){ $distinct = [bool]$st.review_is_distinct_model }
       elseif($null -ne $st.review_is_independent){ $distinct = [bool]$st.review_is_independent }
@@ -132,19 +139,18 @@ $eligibleCount = 0
 $opencodeFreeCount = 0
 $openaiOauthCount = 0
 $copilotOauthCount = 0
-$ollamaLocalCount = 0
 if($roster){ $eligibleCount = @($roster.eligible_models).Count }
 if($st){
     $opencodeFreeCount = $st.eligible.opencode_free
     $openaiOauthCount = $st.eligible.openai_oauth
     $copilotOauthCount = $st.eligible.github_copilot_oauth
-    $ollamaLocalCount = $st.eligible.ollama_local
 }
 Write-Output "Eligible models: $eligibleCount"
 Write-Output ""
 Write-Output "Current lanes:"
 Write-Output "Routine (Build): $($st.routine)"
 Write-Output "Explore: native OpenCode agent (no fixed model)"
+Write-Output "Index: $($st.index) (free corpus retrieval)"
 Write-Output "Deep: $($st.deep)"
 Write-Output "Review: $($st.review)"
 Write-Output ""
@@ -192,7 +198,6 @@ Write-Output ""
 Write-Output "OpenAI OAuth: $(if($st.oauth.openai){'detected'}else{'absent'})"
 Write-Output "Copilot OAuth: $(if($st.oauth.github_copilot){'detected'}else{'absent'})"
 Write-Output "OpenCode free models: $opencodeFreeCount"
-Write-Output "Local models: $ollamaLocalCount"
 Write-Output ""
 # Roster age is availability age only - never evidence freshness.
 $rosterFreshness = 'current'

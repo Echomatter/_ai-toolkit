@@ -65,7 +65,6 @@ function Surface-Access([string]$surface) {
         'opencode-free' { return 'free' }
         'openai-oauth' { return 'ChatGPT OAuth' }
         'github-copilot-oauth' { return 'Copilot OAuth' }
-        'ollama-local' { return 'local' }
         default { return $surface }
     }
 }
@@ -376,7 +375,6 @@ foreach ($rm in @($roster.eligible_models)) {
     $econAdj = 0.0
     if ($isTrivial) {
         if ($surface -eq 'opencode-free') { $econAdj = 1.0 }
-        elseif ($surface -eq 'ollama-local') { $econAdj = 0.5 }
         else { $econAdj = -0.25 }
     }
 

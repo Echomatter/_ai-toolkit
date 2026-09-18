@@ -1,0 +1,133 @@
+import { tool } from "@opencode-ai/plugin"
+import path from "path"
+import fs from "fs"
+
+type Ctx = { directory: string; worktree?: string }
+
+async function run(args: string[], cwd: string) {
+  const candidates: string[][] = [
+    ["python", ...args],
+    ["py", "-3", ...args],
+    ["python3", ...args],
+  ]
+  let last = ""
+  for (const cmd of candidates) {
+    try {
+      const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" })
+      const [stdout, stderr, code] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ])
+      if (code === 0) return stdout.trim()
+      last = stderr.trim() || stdout.trim() || `exit ${code}`
+    } catch (err) {
+      last = String(err)
+    }
+  }
+  throw new Error(`Project content indexer failed: ${last}`)
+}
+
+async function gitIndexPath(root: string) {
+  try {
+    const proc = Bun.spawn(["git", "rev-parse", "--git-path", "opencode-content-index.sqlite"], {
+      cwd: root,
+      stdout: "pipe",
+      stderr: "pipe",
+    })
+    const stdout = (await new Response(proc.stdout).text()).trim()
+    const code = await proc.exited
+    if (code === 0 && stdout) return path.resolve(root, stdout)
+  } catch {}
+  return path.join(root, ".content-index", "Project_Content_Index.sqlite")
+}
+
+export default tool({
+  description:
+    "Deterministic mixed-corpus project retrieval. Search/index docs, JSON/XML/CSV/XLSX/DOCX/PDF/ZIP content and derived facts. Use as a locator/completeness aid; verify governing source before authoritative claims or edits.",
+  args: {
+    operation: tool.schema
+      .enum(["status", "search", "sources", "unit", "facts", "meta", "rebuild"])
+      .describe("Index operation"),
+    query: tool.schema.string().optional().describe("Search text for operation=search"),
+    phrase: tool.schema.boolean().optional().describe("Treat search query as an exact phrase"),
+    source: tool.schema.string().optional().describe("Substring source-path filter"),
+    role: tool.schema.string().optional().describe("Exact inferred source role filter"),
+    status: tool.schema.string().optional().describe("Exact inferred source status filter"),
+    unit: tool.schema.number().int().positive().optional().describe("Unit number for operation=unit"),
+    family: tool.schema.string().optional().describe("Fact family filter"),
+    kind: tool.schema
+      .enum(["structured", "label_value", "markdown_table", "special_field", "special_label_value", "special_match"])
+      .optional()
+      .describe("Fact kind filter"),
+    label: tool.schema.string().optional().describe("Fact label filter"),
+    stats: tool.schema.boolean().optional().describe("Return aggregate fact statistics"),
+    facts: tool.schema.enum(["none", "general", "special", "both"]).optional().describe("Fact mode for rebuild"),
+    specialFacts: tool.schema
+      .array(tool.schema.string())
+      .optional()
+      .describe("Focused rebuild rules as FAMILY=REGEX"),
+    ocr: tool.schema.boolean().optional().describe("Use optional OCR fallback for nearly blank PDF pages"),
+    limit: tool.schema.number().int().min(1).max(200).optional().describe("Maximum returned rows"),
+  },
+  async execute(args, context: Ctx) {
+    const root = path.resolve(context.worktree || context.directory)
+    const locator = path.join(
+      process.env.USERPROFILE || process.env.HOME || "",
+      ".config",
+      "opencode",
+      "ai-toolkit-root.txt",
+    )
+    if (!fs.existsSync(locator)) {
+      throw new Error("AI toolkit root locator is missing. Run the toolkit installer/bootstrap.")
+    }
+    const toolkitRoot = fs.readFileSync(locator, "utf8").trim()
+    const script = path.join(toolkitRoot, "tools", "Project_Content_Indexer.py")
+    if (!fs.existsSync(script)) throw new Error(`Project content indexer missing: ${script}`)
+    const db = await gitIndexPath(root)
+
+    const cli: string[] = [script, "--db", db]
+    switch (args.operation) {
+      case "status":
+        cli.push("status", "--root", root)
+        break
+      case "rebuild":
+        cli.push("rebuild", "--root", root, "--facts", args.facts || "none")
+        for (const spec of args.specialFacts || []) cli.push("--special-fact", spec)
+        if (args.ocr) cli.push("--ocr")
+        break
+      case "search":
+        if (!args.query) throw new Error("operation=search requires query")
+        cli.push("search", args.query)
+        if (args.phrase) cli.push("--phrase")
+        if (args.source) cli.push("--source", args.source)
+        if (args.role) cli.push("--role", args.role)
+        if (args.status) cli.push("--status", args.status)
+        cli.push("--limit", String(args.limit || 20))
+        break
+      case "sources":
+        cli.push("sources")
+        if (args.source) cli.push("--source", args.source)
+        if (args.role) cli.push("--role", args.role)
+        if (args.status) cli.push("--status", args.status)
+        break
+      case "unit":
+        if (!args.source || !args.unit) throw new Error("operation=unit requires source and unit")
+        cli.push("unit", "--source", args.source, "--unit", String(args.unit))
+        break
+      case "facts":
+        cli.push("facts")
+        if (args.family) cli.push("--family", args.family)
+        if (args.source) cli.push("--source", args.source)
+        if (args.kind) cli.push("--kind", args.kind)
+        if (args.label) cli.push("--label", args.label)
+        if (args.stats) cli.push("--stats")
+        cli.push("--limit", String(args.limit || 100))
+        break
+      case "meta":
+        cli.push("meta")
+        break
+    }
+    return await run(cli, root)
+  },
+})
