@@ -261,6 +261,14 @@ foreach ($src in Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | W
     Install-ManagedFile $src.FullName (Join-Path $CommandDst $src.Name)
 }
 
+# Publish a tiny managed locator so global commands can invoke deterministic toolkit
+# scripts from any project without assuming a drive letter.
+$rootLocatorSrc = Join-Path $StateDir 'toolkit-root.txt'
+$rootLocatorDst = Join-Path $OpenCodeRoot 'ai-toolkit-root.txt'
+$enc = New-Object System.Text.UTF8Encoding($false)
+[System.IO.File]::WriteAllText($rootLocatorSrc, $ToolkitRoot, $enc)
+Install-ManagedFile $rootLocatorSrc $rootLocatorDst
+
 # Merge the toolkit's generated global guidance into OpenCode's global AGENTS.md
 # without replacing user-authored instructions outside the managed markers.
 $syncGlobal = Join-Path $PSScriptRoot 'sync-global-instructions.ps1'
