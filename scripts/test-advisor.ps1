@@ -37,8 +37,8 @@ function Get-CanonicalKey($Evidence, [string]$RosterId) {
 # E1: trivial simple edit stays inexpensive and in Build without research.
 try {
     $e1 = Invoke-Selection @('simple_edit') $false $false 0 $false $false $false
-    if ($e1.recommended -match '^(opencode|ollama)/') { Pass 'E1 trivial edit recommends inexpensive free/local model' }
-    else { Fail ("E1 trivial edit not inexpensive: " + $e1.recommended) }
+    if ($e1.recommended -match '^opencode/') { Pass 'E1 trivial edit recommends hosted-free model' }
+    else { Fail ("E1 trivial edit not hosted-free: " + $e1.recommended) }
     if ($e1.execution_surface -eq 'build') { Pass 'E1 trivial edit stays in build' }
     else { Fail ("E1 wrong surface: " + $e1.execution_surface) }
     if (-not $e1.needs_research) { Pass 'E1 trivial task uses cache, no research' }
