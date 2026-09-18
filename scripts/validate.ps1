@@ -6,7 +6,7 @@ function OK([string]$m){Write-Output "OK:   $m"}
 function F([string]$m){[void]$fail.Add($m);Write-Output "FAIL: $m"}
 function W([string]$m){[void]$warn.Add($m);Write-Output "WARN: $m"}
 
-$required=@('README.md','AGENTS.md','.agents','global','opencode','routing','scripts','docs')
+$required=@('README.md','AGENTS.md','.agents','global','opencode','routing','scripts','tools','docs')
 foreach($x in $required){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot $x)){OK "$x present"}else{F "$x missing"}}
 
 # Parse every PowerShell script with the current Windows PowerShell parser before any
