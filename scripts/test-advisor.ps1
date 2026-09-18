@@ -1,0 +1,211 @@
+<# Executable regression tests for deterministic evidence-aware selection (no web calls).
+Invokes scripts/select-model.ps1 with fixed task specs and asserts outputs differ
+by requirements - not by prompt text. Also proves history wiring, freshness source,
+encoding, and structural invariants. Windows PowerShell 5.1 compatible. #>
+$ErrorActionPreference = 'Stop'
+$ToolkitRoot = Split-Path -Parent $PSScriptRoot
+$fail = 0
+function Pass([string]$m) { Write-Output "PASS: $m" }
+function Fail([string]$m) { $script:fail++; Write-Output "FAIL: $m" }
+
+$rosterPath = Join-Path $ToolkitRoot 'routing\model-roster.json'
+$statePath = Join-Path $ToolkitRoot 'routing\state.json'
+$evidencePath = Join-Path $ToolkitRoot 'routing\model-evidence.json'
+$historyPath = Join-Path $ToolkitRoot 'routing\task-history.json'
+$policyPath = Join-Path $ToolkitRoot 'routing\policy.json'
+$selectorPath = Join-Path $ToolkitRoot 'scripts\select-model.ps1'
+$recordPath = Join-Path $ToolkitRoot 'scripts\record-task-outcome.ps1'
+
+try { $roster = Get-Content -LiteralPath $rosterPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail 'roster is malformed JSON'; $roster = $null }
+try { $st = Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail 'state is malformed JSON'; $st = $null }
+try { $ev = Get-Content -LiteralPath $evidencePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail 'evidence is malformed JSON'; $ev = $null }
+try { $policy = Get-Content -LiteralPath $policyPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail 'policy is malformed JSON'; $policy = $null }
+if ($roster -and $st -and $ev -and $policy) { Pass 'roster/state/evidence/policy are well-formed JSON' }
+if (-not (Test-Path -LiteralPath $selectorPath)) { Fail 'scripts/select-model.ps1 missing' } else { Pass 'deterministic selector present' }
+
+function Invoke-Selection([string[]]$TaskTypes, $Writes, $Terminal, [int]$Ctx, $Deep, $Diversity, $Conseq) {
+    $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $selectorPath -TaskType $TaskTypes -NeedsWrites:$Writes -NeedsTerminal:$Terminal -NeedsLargeContextTokens $Ctx -NeedsDeepReasoning:$Deep -NeedsModelDiversity:$Diversity -HighConsequence:$Conseq 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "select-model failed for $($TaskTypes -join ',')" }
+    return (($out -join "`n") | ConvertFrom-Json)
+}
+
+function Get-CanonicalKey($Evidence, [string]$RosterId) {
+    foreach ($p in @($Evidence.alias_index.PSObject.Properties)) { if ($p.Name -eq $RosterId) { return [string]$p.Value } }
+    return $null
+}
+
+# E1: trivial simple edit stays inexpensive and in Build without research.
+try {
+    $e1 = Invoke-Selection @('simple_edit') $false $false 0 $false $false $false
+    if ($e1.recommended -match '^(opencode|ollama)/') { Pass 'E1 trivial edit recommends inexpensive free/local model' }
+    else { Fail ("E1 trivial edit not inexpensive: " + $e1.recommended) }
+    if ($e1.execution_surface -eq 'build') { Pass 'E1 trivial edit stays in build' }
+    else { Fail ("E1 wrong surface: " + $e1.execution_surface) }
+    if (-not $e1.needs_research) { Pass 'E1 trivial task uses cache, no research' }
+    else { Fail 'E1 trivial task incorrectly demands research' }
+} catch { Fail ("E1 selector error: " + $_.Exception.Message) }
+
+# E2: hard architecture refactor goes subscription via promotion/delegation, unlike E1.
+try {
+    $e2 = Invoke-Selection @('architecture','large_refactor') $true $false 500000 $true $false $true
+    if ($e2.recommended -match '^(openai|github-copilot)/') { Pass 'E2 hard refactor recommends frontier subscription model' }
+    else { Fail ("E2 hard refactor not subscription: " + $e2.recommended) }
+    if ($e2.execution_surface -eq '@deep chunk' -or $e2.execution_surface -eq '/models switch') { Pass ("E2 hard refactor promotes/delegates (" + $e2.execution_surface + ")") }
+    else { Fail ("E2 wrong surface: " + $e2.execution_surface) }
+    if ($e1 -and ($e2.recommended -ne $e1.recommended)) { Pass 'E2 differs from trivial E1 by requirements' }
+    elseif ($e1) { Fail 'E2 same model as trivial E1 despite different requirements' }
+} catch { Fail ("E2 selector error: " + $_.Exception.Message) }
+
+# E3/E4: DexFraggler review-only vs review+repair must produce different recommendations.
+$dexReviewOnly = $null
+$dexRepair = $null
+try {
+    $dexReviewOnly = Invoke-Selection @('code_review','independent_verification','long_context_reading') $false $false 500000 $false $true $false
+    if ($dexReviewOnly.execution_surface -eq '@review') { Pass 'E3 DexFraggler review-only uses @review alone' }
+    else { Fail ("E3 wrong surface: " + $dexReviewOnly.execution_surface) }
+    if (@($dexReviewOnly.phases).Count -eq 1) { Pass 'E3 single diagnosis phase' }
+    else { Fail 'E3 should have exactly one phase' }
+} catch { Fail ("E3 selector error: " + $_.Exception.Message) }
+try {
+    $dexRepair = Invoke-Selection @('code_review','debugging','terminal_heavy') $true $true 500000 $true $true $true
+    if ($dexRepair.execution_surface -eq 'combination') { Pass 'E4 DexFraggler review+repair uses combination surface' }
+    else { Fail ("E4 wrong surface: " + $dexRepair.execution_surface) }
+    if (@($dexRepair.phases).Count -eq 2) { Pass 'E4 splits Phase1 diagnosis + Phase2 repair' }
+    else { Fail 'E4 should have exactly two phases' }
+    $p1 = @($dexRepair.phases | Where-Object { $_.phase -eq 1 })[0]
+    $p2 = @($dexRepair.phases | Where-Object { $_.phase -eq 2 })[0]
+    if ($p1 -and $p2 -and $p1.surface -eq '@review' -and $p1.model -ne $p2.model) { Pass 'E4 Phase1 @review diagnosis distinct from Phase2 repair model' }
+    else { Fail 'E4 phase separation invalid (needs_writes must reject sole @review)' }
+    if ($p1 -and $dexRepair.execution_surface -eq '@review') { Fail 'E4 must not collapse to sole @review when needs_writes=true' }
+} catch { Fail ("E4 selector error: " + $_.Exception.Message) }
+if ($dexReviewOnly -and $dexRepair) {
+    if (($dexReviewOnly.recommended -ne $dexRepair.recommended) -or ($dexReviewOnly.execution_surface -ne $dexRepair.execution_surface)) {
+        Pass ("E3/E4 DexFraggler requirements change recommendation (" + $dexReviewOnly.recommended + " " + $dexReviewOnly.execution_surface + " -> " + $dexRepair.recommended + " " + $dexRepair.execution_surface + ")")
+    } else { Fail 'E3/E4 identical despite changed requirements (needs_writes/terminal/deep)' }
+    Write-Output ("INFO: DexFraggler review-only  = " + $dexReviewOnly.recommended + " via " + $dexReviewOnly.execution_surface)
+    Write-Output ("INFO: DexFraggler review+repair = " + $dexRepair.recommended + " via " + $dexRepair.execution_surface + " (Phase1 " + $dexRepair.diagnosis_model.id + " @review)")
+}
+
+# E5: history wiring - 3 failures for the trivial winner must move the ranking.
+try {
+    $before = Invoke-Selection @('simple_edit') $false $false 0 $false $false $false
+    $topId = [string]$before.top_scored
+    $secondId = $null
+    if ($before.fallback -and $before.fallback.id) { $secondId = [string]$before.fallback.id }
+    if (-not $secondId) { Fail 'E5 cannot determine fallback for history test'; throw 'no fallback' }
+    $histBak = $null; $rosterBak = $null
+    if (Test-Path -LiteralPath $historyPath) { $histBak = Get-Content -LiteralPath $historyPath -Raw -Encoding UTF8 }
+    if (Test-Path -LiteralPath $rosterPath) { $rosterBak = Get-Content -LiteralPath $rosterPath -Raw -Encoding UTF8 }
+    try {
+        for ($i = 1; $i -le 3; $i++) {
+            & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $recordPath -Repo 'advisor-test' -TaskType @('simple_edit') -Model $topId -Access 'test' -Success:$false -TestsPassed:$false -Attempts 1 -Escalated:$false -ElapsedBand 'minutes' | Out-Null
+            if ($LASTEXITCODE -ne 0) { throw 'record-task-outcome failed' }
+        }
+        $after = Invoke-Selection @('simple_edit') $false $false 0 $false $false $false
+        $hit = @($after.top_scores | Where-Object { $_.id -eq $topId })[0]
+        if ($hit -and $hit.hist_n -ge 3) { Pass ("E5 history wired into selection (n=" + $hit.hist_n + " for $topId)") }
+        else { Fail 'E5 selector did not see recorded history (n<3)' }
+        if ([string]$after.top_scored -ne $topId) { Pass ("E5 3 failures move trivial ranking ($topId -> " + $after.top_scored + ")") }
+        else { Fail ("E5 ranking unchanged despite 3 failures for $topId") }
+        $rosterCheck = Get-Content -LiteralPath $rosterPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $obs = $null
+        foreach ($rm in @($rosterCheck.eligible_models)) { if ($rm.id -eq $topId) { $obs = $rm.observed; break } }
+        if ($obs -and $obs.total -ge 3) { Pass 'E5 roster observed synced from history' }
+        else { Fail 'E5 roster observed not synced' }
+    } finally {
+        if ($null -ne $histBak) {
+            $enc = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($historyPath, $histBak, $enc)
+        }
+        if ($null -ne $rosterBak) {
+            $enc2 = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($rosterPath, $rosterBak, $enc2)
+        }
+    }
+} catch { Fail ("E5 history test error: " + $_.Exception.Message) }
+
+# E6: freshness comes from evidence_as_of (UTC date), never roster.generated_at.
+try {
+    $probe = Invoke-Selection @('simple_edit') $false $false 0 $false $false $false
+    $expected = 'UNPOPULATED'
+    $age = $null
+    if ($ev.evidence_as_of -and ("$($ev.evidence_as_of)".Trim() -ne '')) {
+        $asOf = [DateTime]"$($ev.evidence_as_of)"
+        $age = (((Get-Date).ToUniversalTime().Date) - $asOf.Date).Days
+        if ($age -le 1) { $expected = 'current' } elseif ($age -le 3) { $expected = 'partially stale' } elseif ($age -le 7) { $expected = 'stale' } else { $expected = 'very stale' }
+    }
+    if ([string]$probe.evidence_freshness -eq $expected) { Pass ("E6 freshness from evidence_as_of ($expected)") }
+    else { Fail ("E6 freshness mismatch: selector=" + $probe.evidence_freshness + " expected=" + $expected) }
+    $utcOk = $true
+    foreach ($p in @($rosterPath, $statePath)) {
+        try { $j = Get-Content -LiteralPath $p -Raw -Encoding UTF8 | ConvertFrom-Json; [DateTime]$j.generated_at | Out-Null } catch { $utcOk = $false }
+    }
+    if ($utcOk) { Pass 'E6 roster/state timestamps are parseable ISO-8601' } else { Fail 'E6 bad generated_at format' }
+} catch { Fail ("E6 freshness error: " + $_.Exception.Message) }
+
+# E7: encoding - generated markdown must not contain mojibake.
+# Bad patterns built from char codes so this script stays ASCII-only (PS 5.1 safe).
+try {
+    $emDashMojibake = [string]([char]0x00E2) + [string]([char]0x20AC) + [string]([char]0x201D)
+    $enDashMojibake = [string]([char]0x00E2) + [string]([char]0x20AC) + [string]([char]0x201C)
+    $eAcuteMojibake = [string]([char]0x00C3) + [string]([char]0x00A9)
+    $nbspMojibake = [string]([char]0x00C2) + [string]([char]0x00A0)
+    $bad = @($emDashMojibake, $enDashMojibake, $eAcuteMojibake, $nbspMojibake)
+    $foundBad = @()
+    foreach ($f in @((Join-Path $ToolkitRoot 'opencode\global-instructions.md'), (Join-Path $ToolkitRoot 'opencode\agents\build.md'), (Join-Path $ToolkitRoot 'opencode\agents\deep.md'), (Join-Path $ToolkitRoot 'opencode\agents\review.md'))) {
+        if (Test-Path -LiteralPath $f) {
+            $t = Get-Content -LiteralPath $f -Raw -Encoding UTF8
+            foreach ($b in $bad) { if ($t.Contains($b)) { $foundBad += ([IO.Path]::GetFileName($f) + ":" + $b) } }
+        }
+    }
+    if ($foundBad.Count -eq 0) { Pass 'E7 no mojibake in generated instructions/agents (UTF8 clean)' }
+    else { Fail ("E7 mojibake found: " + ($foundBad -join ', ')) }
+} catch { Fail ("E7 encoding error: " + $_.Exception.Message) }
+
+# E8: legacy benchmark versions never decide ranking (grok TB2.1 must not top terminal work).
+try {
+    $term = Invoke-Selection @('debugging','terminal_heavy') $true $true 0 $true $false $false
+    if ($term.top_scored -notmatch 'grok') { Pass 'E8 legacy TB2.1 evidence does not top terminal ranking' }
+    else { Fail ("E8 legacy benchmark topped ranking: " + $term.top_scored) }
+    $notes = ($term.why -join "`n")
+    if ($notes -notmatch '2\.1') { Pass 'E8 selector reasoning excludes legacy version from bonus' }
+    else { Fail 'E8 legacy version leaked into ranking bonus' }
+} catch { Fail ("E8 benchmark error: " + $_.Exception.Message) }
+
+# Structural: alias coverage, lanes eligible, OAuth gating, no metered, no Plan, provenance.
+$unmapped = @()
+foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {
+    if (-not (Get-CanonicalKey $ev $rid)) { $unmapped += $rid }
+}
+if ($unmapped.Count -eq 0) { Pass 'S1 all eligible roster IDs map to canonical evidence entries' }
+else { Fail ("S1 unmapped roster IDs: " + ($unmapped -join ', ')) }
+$allIds = @($roster.eligible_models | ForEach-Object { $_.id })
+if ($allIds -contains $st.deep -and $allIds -contains $st.review -and $allIds -contains $st.routine) { Pass 'S2 lanes reference eligible roster models' }
+else { Fail 'S2 lane references model outside eligible roster' }
+if (($st.deep -match '^openai/' -and -not $st.oauth.openai) -or ($st.review -match '^github-copilot/' -and -not $st.oauth.github_copilot)) { Fail 'S3 subscription lane without matching OAuth' }
+else { Pass 'S3 OAuth gating holds for subscription lanes' }
+$forbidden = @('openrouter', 'vercel', 'anthropic', 'google', 'xai', 'groq', 'together', 'fireworks')
+$badLane = $false
+foreach ($f in $forbidden) { if ($st.deep -match "^$f" -or $st.review -match "^$f" -or $st.routine -match "^$f") { $badLane = $true } }
+if (-not $badLane) { Pass 'S4 no metered/excluded provider in automatic lanes' } else { Fail 'S4 metered provider in automatic lane' }
+$planForced = $false
+foreach ($cmdFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\commands') -File -Filter '*.md') {
+    $t = Get-Content -LiteralPath $cmdFile.FullName -Raw -Encoding UTF8
+    if ($t -match '(?m)^agent:\s*plan\s*$') { $planForced = $true; Fail ("command forces Plan: " + $cmdFile.Name) }
+}
+if (-not $planForced) { Pass 'S5 no command silently enters Plan' }
+$compatLedger = $false
+foreach ($mprop in @($ev.models.PSObject.Properties)) {
+    foreach ($b in @($mprop.Value.benchmarks)) { if ($b.comparability -or $b.harness) { $compatLedger = $true; break } }
+    if ($compatLedger) { break }
+}
+if ($compatLedger) { Pass 'S6 benchmark harness/comparability recorded in ledger' } else { Fail 'S6 benchmark comparability guard missing' }
+$indepSources = @($ev.sources.PSObject.Properties | Where-Object { $_.Value.source_type -eq 'INDEPENDENT' }).Count
+if ($indepSources -ge 1) { Pass 'S7 independent provenance present' } else { Fail 'S7 no independent sources' }
+try {
+    $h = Get-Content -LiteralPath $historyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+    if ($null -ne $h.entries) { Pass 'S8 task-history.json valid with entries array' } else { Fail 'S8 history lacks entries array' }
+} catch { Fail 'S8 history malformed' }
+
+Write-Output ''
+if ($fail -gt 0) { Write-Output "Advisor regression: $fail failure(s)."; exit 1 } else { Write-Output 'Advisor regression: all checks passed.'; exit 0 }
