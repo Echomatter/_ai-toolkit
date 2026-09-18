@@ -22,6 +22,7 @@ Use the toolkit's deterministic evidence-aware selector as the source of truth. 
    - `needs_model_diversity`
    - `high_consequence_if_wrong`
    - current model ID when known
+   - when independent verification is requested, the implementation/current model to exclude as the diversity reference
 
 3. Read the toolkit root from:
 
@@ -41,6 +42,8 @@ Use the toolkit's deterministic evidence-aware selector as the source of truth. 
      -TaskType @('debugging','terminal_heavy') `
      -NeedsWrites:true -NeedsTerminal:true -NeedsDeepReasoning:true -HighConsequence:true
    ```
+
+   For independent verification, also pass `-NeedsModelDiversity:true` and `-ExcludeModel <implementation-model>` when that model is known.
 
 4. Treat the selector output as authoritative for:
    - ranked recommendation
