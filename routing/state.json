@@ -19,6 +19,7 @@
     "review_is_independent":  true,
     "desktop_agents":  [
                            "build",
+                           "explore",
                            "worker",
                            "index",
                            "deep",
