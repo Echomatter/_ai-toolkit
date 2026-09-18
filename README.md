@@ -1,6 +1,6 @@
 # OpenCode Build Routing Toolkit
 
-A small workflow layer for OpenCode Desktop and CLI. OpenCode remains the execution harness; this toolkit adds model-aware Build routing, portable skills, strong-model delegation, independent review, and explicit next-phase model advice.
+A small workflow layer for OpenCode Desktop and CLI. OpenCode remains the execution harness; this toolkit adds free-first retrieval, deterministic mixed-corpus indexing, evidence-aware model routing, bounded strong-model delegation, independent review, and explicit next-phase model advice.
 
 ## What OpenCode already owns
 
@@ -58,7 +58,7 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 
 `routing/model-roster.json` is regenerated from the models and non-metered access surfaces OpenCode can actually see. Capability claims live separately in `routing/model-evidence.json`; empirical outcomes live in `routing/task-history.json`.
 
-Eligible automatic/recommended surfaces are OpenCode free models, OpenAI OAuth/ChatGPT subscription models, GitHub Copilot OAuth models, and  Separately metered API gateways are excluded.
+Eligible automatic/recommended surfaces are OpenCode free models, OpenAI OAuth/ChatGPT subscription models, and GitHub Copilot OAuth models. Separately metered API gateways are excluded.
 
 ## Install / refresh
 
@@ -69,7 +69,7 @@ F:\_ai-toolkit\scripts\doctor.cmd -Deep
 
 Bootstrap preserves any user-authored `%USERPROFILE%\.config\opencode\AGENTS.md` content and maintains the toolkit guidance inside a marked block.
 
-After bootstrap, **fully quit and reopen OpenCode Desktop**. You should see **Build** and **Plan**. Typing `@` should expose `deep`, `review`, and OpenCode's built-in `explore`.
+After bootstrap, **fully quit and reopen OpenCode Desktop**. You should see **Build** and **Plan**. Typing `@` should expose `index`, `deep`, `review`, and OpenCode's built-in `explore`.
 
 When your connected model inventory changes:
 
