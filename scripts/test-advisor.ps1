@@ -235,6 +235,24 @@ try {
     }
 } catch { Fail ("E10 task linkage error: " + $_.Exception.Message) }
 
+# E11: index/free-fallback lane stays on the routine hosted-free model.
+try {
+    if($st.index -eq $st.routine -and $st.free_fallback -eq $st.routine -and $st.routine -match '^opencode/'){
+        Pass 'E11 Index and free fallback are pinned to hosted-free Routine'
+    } else {
+        Fail ("E11 index/free fallback mismatch: routine=" + $st.routine + " index=" + $st.index + " fallback=" + $st.free_fallback)
+    }
+    $indexAgent=Get-Content -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents\index.md') -Raw -Encoding UTF8
+    if($indexAgent.Contains("model: $($st.routine)")){Pass 'E11 generated Index agent uses Routine model'}else{Fail 'E11 generated Index agent model does not match Routine'}
+} catch { Fail ("E11 index lane error: " + $_.Exception.Message) }
+
+# E12: local model engines are outside the eligible/routing surface.
+try {
+    $localEligible=@($roster.eligible_models | Where-Object { $_.surface -eq 'ollama-local' -or $_.id -match '^ollama/' })
+    if($localEligible.Count -eq 0){Pass 'E12 no local-model entries in eligible roster'}else{Fail 'E12 local-model entry remains eligible'}
+    if(@($policy.allowed_surfaces) -notcontains 'ollama-local'){Pass 'E12 local-model surface removed from policy'}else{Fail 'E12 policy still allows local-model surface'}
+} catch { Fail ("E12 local-engine exclusion error: " + $_.Exception.Message) }
+
 # Structural: alias coverage, lanes eligible, OAuth gating, no metered, no Plan, provenance.
 $unmapped = @()
 foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {
