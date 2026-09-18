@@ -16,14 +16,18 @@ if(-not $python){throw 'Python is required for the content index smoke test.'}
 function Invoke-Indexer([string[]]$Args){
   $all=@($prefix + @($Indexer,'--db',$db) + $Args)
   $errFile=[IO.Path]::GetTempFileName()
+  $previous=$ErrorActionPreference
   try {
+    $ErrorActionPreference='Continue'
     $out=@(& $python.Source @all 2>$errFile)
-    if($LASTEXITCODE -ne 0){
+    $exitCode=$LASTEXITCODE
+    if($exitCode -ne 0){
       $err=(Get-Content -LiteralPath $errFile -Raw -ErrorAction SilentlyContinue)
-      throw "Indexer failed: $err"
+      throw ("Indexer failed with exit code " + $exitCode + ": " + $err)
     }
     return ($out -join [Environment]::NewLine)
   } finally {
+    $ErrorActionPreference=$previous
     Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue
   }
 }
