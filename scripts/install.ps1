@@ -100,6 +100,7 @@ if (Test-Path -LiteralPath $AgentSrc) {
 if (Test-Path -LiteralPath $CommandSrc) {
     $currentTargets += @(Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | ForEach-Object { Join-Path $CommandDst $_.Name })
 }
+$currentTargets += (Join-Path $OpenCodeRoot 'ai-toolkit-root.txt')
 
 # Prune anything previously installed by this toolkit that is not part of the current
 # skill set, even if an old source folder still exists after an overlay.
