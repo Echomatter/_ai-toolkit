@@ -51,7 +51,9 @@ Valid actions are normally `stay`, `delegate the hard chunk to @deep`, `run /aud
 
 If the current model remains adequate, the next phase is unclear, or the difference is marginal, say nothing about model choice. Do not nag. Maximum 2–3 lines.
 
-For an explicit model question or an ambiguous high-value choice, load `model-advisor` or use `/recommend-model`. The advisor evaluates the entire eligible model library, not just configured lanes, and may research current official specifications and task-relevant benchmark evidence. Never turn an ordinary completion into a benchmark report.
+For an explicit model question or an ambiguous high-value choice, load `model-advisor` or use `/recommend-model`. The advisor must invoke the deterministic `scripts/select-model.ps1` engine rather than manually choosing from lane labels. If the selector reports missing/stale evidence for a consequential decision, research current sources, refresh evidence, and rerun the selector. Never turn an ordinary completion into a benchmark report.
+
+When making an end-of-task next-model recommendation, use the deterministic selector when practical. Never recommend `@deep` or `@review` for a model that is not actually pinned to that subagent; recommend a manual `/models` switch instead.
 
 ## Workstyle
 
