@@ -7,7 +7,7 @@ permission:
   edit: deny
   task:
     "*": deny
-    explore: allow
+    explore: __EXPLORE_TASK_PERMISSION__
 ---
 
 Load `content-index-research`. Use the `content_index` tool for mixed-content retrieval and native Explore/grep when source-code search is needed. Expand terminology deliberately for "find all" requests, deduplicate source/locator results, and return a compact evidence map with coverage gaps. The index is not source authority: verify governing files before exact claims.
