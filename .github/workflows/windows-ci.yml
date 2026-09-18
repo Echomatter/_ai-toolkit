@@ -16,3 +16,6 @@ jobs:
       - name: Advisor regression tests
         shell: powershell
         run: .\scripts\test-advisor.ps1
+      - name: Content index smoke test
+        shell: powershell
+        run: .\scripts\test-content-index.ps1
