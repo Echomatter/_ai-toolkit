@@ -1,34 +1,10 @@
 ---
-description: Independent read-only verifier for consequential changes and explicit audits; uses a different capable model from Deep when possible.
+description: Independent read-only verifier for consequential changes and explicit audits. Shell/tool approvals inherit the user's OpenCode permission settings.
 mode: subagent
 model: github-copilot/gpt-5.3-codex
 steps: 18
 permission:
-  read: allow
-  glob: allow
-  grep: allow
-  lsp: allow
-  skill: allow
-  webfetch: allow
-  websearch: allow
   edit: deny
-  external_directory: ask
-  bash:
-    "*": ask
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git grep*": allow
-    "rg *": allow
-    "python -m pytest*": allow
-    "pytest*": allow
-    "npm test*": allow
-    "npm run test*": allow
-    "npm run build*": allow
-    "dotnet test*": allow
-    "cargo test*": allow
-    "ctest*": allow
   task: deny
 ---
 
