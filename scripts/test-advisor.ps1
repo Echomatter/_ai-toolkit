@@ -253,6 +253,18 @@ try {
     if(@($policy.allowed_surfaces) -notcontains 'ollama-local'){Pass 'E12 local-model surface removed from policy'}else{Fail 'E12 policy still allows local-model surface'}
 } catch { Fail ("E12 local-engine exclusion error: " + $_.Exception.Message) }
 
+# E13: paid recommendations always expose a hosted-free fallback.
+try {
+    $paidProbe = Invoke-Selection @('architecture','debugging','terminal_heavy') $true $true 128000 $true $false $true
+    if ($paidProbe.recommended -match '^(openai|github-copilot)/') {
+        if ($paidProbe.fallback -and $paidProbe.fallback.id -match '^opencode/') {
+            Pass ("E13 paid recommendation has hosted-free fallback (" + $paidProbe.fallback.id + ")")
+        } else { Fail 'E13 paid recommendation lacks hosted-free fallback' }
+    } else {
+        Pass 'E13 probe selected hosted-free model; paid fallback requirement not applicable'
+    }
+} catch { Fail ("E13 free fallback error: " + $_.Exception.Message) }
+
 # Structural: alias coverage, lanes eligible, OAuth gating, no metered, no Plan, provenance.
 $unmapped = @()
 foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {

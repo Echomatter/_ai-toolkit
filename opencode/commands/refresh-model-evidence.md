@@ -21,7 +21,7 @@ Repopulate `routing/model-evidence.json` with current, sourced capability eviden
 1. Load `routing/model-roster.json` for the current eligible model list and `routing/model-evidence.json` for existing evidence and freshness dates.
 
 2. Determine the serious candidate set (at minimum):
-   - current Routine, Deep, and Review assignments from `routing/state.json`;
+   - current Routine, Index, Deep, and Review assignments from `routing/state.json`;
    - plausible competing free coding models;
    - plausible competing OpenAI OAuth models;
    - plausible competing Copilot OAuth models.

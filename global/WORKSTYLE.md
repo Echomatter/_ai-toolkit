@@ -6,7 +6,7 @@
 4. Prefer deterministic tools before model speculation.
 5. Keep changes bounded to the request; do not redesign unrelated systems.
 6. Preserve explicit constraints, names, formats, and numbers.
-7. Use built-in Explore for active-repo search. Use native websearch/webfetch for external/upstream research; do not depend on experimental Scout.
+7. Use built-in Explore for active-repo search and `@index`/`content_index` for exhaustive mixed-corpus retrieval. Use native websearch/webfetch for external/upstream research; do not depend on experimental Scout.
 8. Search sibling local repos only when prior work is likely to matter.
 9. Route to Deep only when the next phase materially benefits from a stronger model; difficulty alone is not sufficient.
 10. Use independent Review for consequential/broad changes or when explicitly requested.
