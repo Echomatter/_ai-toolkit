@@ -12,17 +12,20 @@ These instructions apply across OpenCode projects. Project `AGENTS.md` files rem
 
 Current generated lanes:
 
-- Routine / Build: `opencode/muse-spark-1.3-contributor-free`
+- Routine / Build + Worker: `opencode/muse-spark-1.3-contributor-free`
+- Search / Index: `opencode/nemotron-3.5-lightning-free`
 - Deep: `openai/gpt-6-astra`
 - Review: `github-copilot/claude-sonnet-5`
 
-Start useful work immediately on the current Build model. Use `@explore` for active-repository search when a child context helps. Delegate a genuinely hard bounded chunk to `@deep` only after the escalation criteria in `model-routing` are met. Use `@review` or `/audit` for independent verification.
+Start free-first. Use native tools, Explore, `@worker`, and `@index` whenever they can settle the task. Subscription/OAuth Deep and Review calls are approval-gated; asking to launch them is the escalation request.
+
+If a paid subagent is declined or fails because quota, rate limit, authentication, or service availability is exhausted, do not retry in a loop and do not stop the task. Continue with the free parent and free helpers, narrow the unresolved question, and report only the remaining gap if the free path cannot settle it.
 
 Do not announce routing tiers before doing work. Do not automatically switch the user's current model.
 
 ## Lane assignment vs recommendation invariant
 
-Lane assignment is NOT recommendation. `routine/deep/review` are inexpensive execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
+Lane assignment is NOT recommendation. `routine/search/deep/review` are execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Search/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
 
 ## Next-phase model advice
 
@@ -62,7 +65,8 @@ When making an end-of-task next-model recommendation, use the deterministic sele
 3. Keep changes bounded to the request; do not redesign unrelated systems.
 4. Preserve explicit constraints, names, formats, and numbers.
 5. Use native web search/fetch for current external research; do not depend on experimental Scout.
-6. Search sibling repos only when prior work is likely to matter.
+6. Use `@index` / `content_index` for exhaustive mixed-content corpus retrieval or "find all" work; use native Explore/grep/LSP for source-code structure.
+7. Search sibling repos only when prior work is likely to matter.
 7. Validate changed behavior with the smallest meaningful test, build, or reproduction.
 8. Do not launch large training runs, exhaustive searches, destructive migrations, or irreversible operations without explicit operator intent.
 9. Use `git` locally and authenticated `gh` for remote GitHub. Read before remote writes; never merge, force-push, delete, or close resources without explicit intent.
