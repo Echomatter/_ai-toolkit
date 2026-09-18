@@ -65,7 +65,6 @@ function Surface-Access([string]$surface) {
         'opencode-free' { return 'free' }
         'openai-oauth' { return 'ChatGPT OAuth' }
         'github-copilot-oauth' { return 'Copilot OAuth' }
-        'ollama-local' { return 'local' }
         default { return $surface }
     }
 }
@@ -376,7 +375,6 @@ foreach ($rm in @($roster.eligible_models)) {
     $econAdj = 0.0
     if ($isTrivial) {
         if ($surface -eq 'opencode-free') { $econAdj = 1.0 }
-        elseif ($surface -eq 'ollama-local') { $econAdj = 0.5 }
         else { $econAdj = -0.25 }
     }
 
@@ -408,12 +406,18 @@ if ($scored.Count -eq 0) { throw 'No eligible models survived hard filters.' }
 $ranked = @($scored | Sort-Object -Property @{Expression='total';Descending=$true}, @{Expression='priority';Descending=$false}, @{Expression='id';Descending=$false})
 
 $top = $ranked[0]
-# Fallback: second-best different canonical (at most one, only if within 1.5 points).
+# Fallback: prefer a materially close alternative. When the winner is paid,
+# always retain the best hosted-free candidate as a graceful quota/service fallback.
 $fallback = $null
 if ($ranked.Count -gt 1) {
     $cands = @($ranked | Where-Object { ($_.id -ne $top.id) -and ($_.canonical -ne $top.canonical) })
     if ($cands.Count -eq 0) { $cands = @($ranked | Where-Object { $_.id -ne $top.id }) }
     if ($cands.Count -gt 0 -and (($top.total - $cands[0].total) -le 1.5)) { $fallback = $cands[0] }
+
+    if ($top.surface -ne 'opencode-free') {
+        $freeFallback = @($ranked | Where-Object { $_.surface -eq 'opencode-free' } | Select-Object -First 1)
+        if ($freeFallback.Count -gt 0) { $fallback = $freeFallback[0] }
+    }
 }
 
 # Execution surface + compound phases. needs_writes=true can never be sole @review.
@@ -519,7 +523,7 @@ if ($top.hist_n -ge 3) {
 }
 else { $why += ("local history: n=$($top.hist_n) anecdotal only (needs n>=3)") }
 if ($isTrivial) { $why += ("economics: trivial task prefers inexpensive free/local default") }
-else { $why += ("economics: evidence-led (subscription OAuth treated as quota, not per-task bill)") }
+else { $why += ("economics: evidence-led; subscription OAuth is quota-limited, and paid failures fall back to the best hosted-free candidate") }
 if ($bNeedsWrites -and $isReviewTask) { $why += ("compatibility: needs_writes=true rejects read-only @review as sole surface; split Phase1 diagnosis + Phase2 repair") }
 
 $result = [ordered]@{
