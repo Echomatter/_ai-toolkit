@@ -13,12 +13,17 @@ These instructions apply across OpenCode projects. Project `AGENTS.md` files rem
 Current generated lanes:
 
 - Routine / Build: `__ROUTINE_MODEL__`
+- Index: `__ROUTINE_MODEL__` (free retrieval helper)
 - Deep: `__DEEP_MODEL__`
 - Review: `__REVIEW_MODEL__`
 
-Start useful work immediately on the current Build model. Use `@explore` for active-repository search when a child context helps. Delegate a genuinely hard bounded chunk to `@deep` only after the escalation criteria in `model-routing` are met. Use `@review` or `/audit` for independent verification.
+Start useful work immediately on the current free Build model. Use `@explore` for source-code search/tracing, `@index` for exhaustive mixed-corpus retrieval, and native web tools for current public information. Delegate only a narrowed hard chunk to `@deep` after the escalation criteria in `model-routing` are met. Use `@review` or `/audit` for independent verification.
 
 Do not announce routing tiers before doing work. Do not automatically switch the user's current model.
+
+## Paid-lane failure
+
+If a Deep or Review invocation ultimately fails because of quota/rate/provider/auth availability, do not keep retrying or jump to a metered route. Continue in free Build with `@index`, `@explore`, web tools, and deterministic validation. Report a block only when the unresolved remainder genuinely requires stronger reasoning.
 
 ## Lane assignment vs recommendation invariant
 
