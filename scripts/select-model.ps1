@@ -464,6 +464,13 @@ if ($isReviewTask -and (-not $bNeedsWrites)) {
     )
 }
 
+# Preserve a hosted-free fallback for any paid recommendation, even when
+# compound task handling selected a separate diagnosis model.
+if ($top.surface -ne 'opencode-free') {
+    $freeFallback = @($ranked | Where-Object { $_.surface -eq 'opencode-free' } | Select-Object -First 1)
+    if ($freeFallback.Count -gt 0) { $fallback = $freeFallback[0] }
+}
+
 # Marginal-difference stay-put: if current model is eligible and within 0.5, stay.
 $stayPut = $false
 $currentScore = $null
