@@ -352,14 +352,17 @@ foreach ($rm in @($roster.eligible_models)) {
             if ($histN -ge 3) {
                 if ($histRate -ge 0.75) { $histAdj += 0.4 }
                 elseif ($histRate -ge 0.6) { $histAdj += 0.2 }
-                elseif ($histRate -lt 0.4) { $histAdj -= 0.6 }
-                elseif ($histRate -lt 0.6) { $histAdj -= 0.2 }
-                if ($histTestsRate -ge 0.8) { $histAdj += 0.15 }
-                elseif ($histTestsRate -lt 0.5) { $histAdj -= 0.15 }
-                if ($histAvgAttempts -gt 2.0) { $histAdj -= 0.25 }
-                elseif ($histAvgAttempts -le 1.25) { $histAdj += 0.1 }
-                if ($histEscRate -ge 0.5) { $histAdj -= 0.25 }
-                elseif ($histEscRate -eq 0) { $histAdj += 0.05 }
+                elseif ($histRate -lt 0.4) { $histAdj -= 1.0 }
+                elseif ($histRate -lt 0.6) { $histAdj -= 0.35 }
+
+                if ($histTestsRate -ge 0.8 -and $histRate -ge 0.6) { $histAdj += 0.15 }
+                elseif ($histTestsRate -lt 0.5) { $histAdj -= 0.2 }
+
+                if ($histAvgAttempts -gt 2.0) { $histAdj -= 0.3 }
+                elseif ($histAvgAttempts -le 1.25 -and $histRate -ge 0.75) { $histAdj += 0.1 }
+
+                if ($histEscRate -ge 0.5) { $histAdj -= 0.3 }
+                elseif ($histEscRate -eq 0 -and $histRate -ge 0.75) { $histAdj += 0.05 }
                 if ($histReviewDefectRate -ge 0.5) { $histAdj -= 0.4 }
                 elseif ($histReviewDefectRate -gt 0) { $histAdj -= 0.2 }
                 if ($histN -ge 10) { $histAdj = $histAdj * 1.5 }
