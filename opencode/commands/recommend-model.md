@@ -79,7 +79,7 @@ Return:
 Recommended: <model>
 
 Access:
-<free / ChatGPT OAuth / Copilot OAuth / local>
+<free / ChatGPT OAuth / Copilot OAuth>
 
 Why:
 - task-specific evidence-backed reason
@@ -105,3 +105,7 @@ Action:
 Do not output a full leaderboard unless explicitly requested.
 
 Lane identity is operational context, not capability evidence. Never switch the session model automatically.
+
+## Paid-lane fallback
+
+If the selected Deep/Review subscription lane is unavailable because of quota/rate/provider/auth failure, do not automatically choose a different paid provider. Continue with free Build + `@index`/`@explore`/web/test work and report only the unresolved remainder. Prefer bounded `@deep` delegation when graceful fallback matters.
