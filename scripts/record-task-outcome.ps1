@@ -10,7 +10,10 @@ param(
     $TestsPassed,
     [int]$Attempts,
     $Escalated,
-    [string]$ElapsedBand
+    [string]$ElapsedBand,
+    [string]$TaskId = '',
+    $ReviewFoundDefects = $false,
+    [switch]$MarkReviewDefect
 )
 
 function To-Bool($v) {
@@ -22,6 +25,7 @@ function To-Bool($v) {
 $Success = To-Bool $Success
 $TestsPassed = To-Bool $TestsPassed
 $Escalated = To-Bool $Escalated
+$ReviewFoundDefects = To-Bool $ReviewFoundDefects
 
 $ErrorActionPreference = 'Stop'
 $ToolkitRoot = Split-Path -Parent $PSScriptRoot
@@ -42,26 +46,43 @@ if (-not $historyData) { $historyData = [ordered]@{generated=$true; generated_at
 if (-not $historyData.generated) { $historyData | Add-Member -NotePropertyName generated -NotePropertyValue $true -Force }
 if ($null -eq $historyData.entries) { $historyData | Add-Member -NotePropertyName entries -NotePropertyValue @() -Force }
 
-# Create new entry
 $now = (Get-Date).ToUniversalTime().ToString('o')
-$entry = [ordered]@{
-    timestamp = $now
-    repo = $Repo
-    task_type = $TaskType
-    model = $Model
-    access = $Access
-    success = $Success
-    tests_passed = $TestsPassed
-    attempts = $Attempts
-    escalated = $Escalated
-    review_found_defects = $false
-    elapsed_band = $ElapsedBand
-}
-
-# Append entry
 $existing = @()
 if ($historyData.entries) { $existing = @($historyData.entries) }
-$existing += $entry
+
+# A review can update the original implementation record instead of creating
+# a second unrelated observation. This is the bridge that lets review quality
+# influence future routing.
+if ($MarkReviewDefect) {
+    if (-not $TaskId) { throw '-MarkReviewDefect requires -TaskId.' }
+    $updated = $false
+    foreach ($e in $existing) {
+        if ([string]$e.task_id -eq $TaskId) {
+            $e.review_found_defects = $true
+            $e | Add-Member -NotePropertyName reviewed_at -NotePropertyValue $now -Force
+            $updated = $true
+            break
+        }
+    }
+    if (-not $updated) { throw "TaskId not found in task history: $TaskId" }
+} else {
+    if (-not $TaskId) { $TaskId = [guid]::NewGuid().ToString() }
+    $entry = [ordered]@{
+        task_id = $TaskId
+        timestamp = $now
+        repo = $Repo
+        task_type = $TaskType
+        model = $Model
+        access = $Access
+        success = $Success
+        tests_passed = $TestsPassed
+        attempts = $Attempts
+        escalated = $Escalated
+        review_found_defects = $ReviewFoundDefects
+        elapsed_band = $ElapsedBand
+    }
+    $existing += $entry
+}
 
 # Keep last 50 entries, sorted by timestamp descending
 if ($existing.Count -gt 50) {
@@ -113,7 +134,16 @@ try {
     Write-Warning "History recorded but roster observed sync failed: $($_.Exception.Message)"
 }
 
+if ($MarkReviewDefect) {
+    Write-Output "Updated task review outcome:"
+    Write-Output "  Task ID: $TaskId"
+    Write-Output "  Review found defects: True"
+    Write-Output "  Total entries: $($existing.Count)"
+    exit 0
+}
+
 Write-Output "Recorded task outcome:"
+Write-Output "  Task ID: $TaskId"
 Write-Output "  Repo: $Repo"
 Write-Output "  Task: $($TaskType -join ', ')"
 Write-Output "  Model: $Model"
