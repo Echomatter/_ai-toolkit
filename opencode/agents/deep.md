@@ -1,37 +1,9 @@
 ---
-description: Strong-model escalation lane for difficult implementation, debugging, architecture, algorithms, or high-consequence technical work after Build has narrowed the problem.
+description: Strong-model escalation lane for difficult implementation, debugging, architecture, algorithms, or high-consequence technical work after Build has narrowed the problem. Tool approvals inherit the user's OpenCode permission settings.
 mode: subagent
 model: openai/gpt-6-astra
 steps: 32
 permission:
-  read: allow
-  glob: allow
-  grep: allow
-  lsp: allow
-  skill: allow
-  webfetch: allow
-  websearch: allow
-  edit: allow
-  external_directory: ask
-  bash:
-    "*": ask
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git grep*": allow
-    "rg *": allow
-    "python -m pytest*": allow
-    "pytest*": allow
-    "npm test*": allow
-    "npm run test*": allow
-    "npm run build*": allow
-    "dotnet test*": allow
-    "cargo test*": allow
-    "ctest*": allow
-    "git push*": deny
-    "git reset --hard*": deny
-    "git clean*": deny
   task: deny
 ---
 
