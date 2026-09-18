@@ -80,7 +80,7 @@ try{Get-Content -LiteralPath $evidence -Raw | ConvertFrom-Json | Out-Null;OK 'va
 $history=Join-Path $ToolkitRoot 'routing\task-history.json'
 try{Get-Content -LiteralPath $history -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}
 
-$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence')
+$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome')
 foreach($c in $commands){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "opencode\commands\$c.md")){OK "command present: /$c"}else{F "command missing: /$c"}}
 
 foreach($cmdFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\commands') -File -Filter '*.md'){
