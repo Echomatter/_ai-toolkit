@@ -4,7 +4,7 @@
 OpenCode Desktop
  |
  |-- Build (free primary)
- |    |-- Explore (native read-only code/repo search)
+ |    |-- Explore (built-in ID override; free read-only code/repo search)
  |    |-- Worker  (free bounded coding/research)
  |    |-- Index   (free mixed-content retrieval)
  |    |-- Deep    (subscription/OAuth; ASK when agent-launched)
