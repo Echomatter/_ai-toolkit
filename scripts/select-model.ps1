@@ -456,7 +456,7 @@ if ($isReviewTask -and (-not $bNeedsWrites)) {
 # Marginal-difference stay-put: if current model is eligible and within 0.5, stay.
 $stayPut = $false
 $currentScore = $null
-if ($CurrentModel -ne '') {
+if ($CurrentModel -ne '' -and -not $bNeedsDiversity -and -not $isReviewTask) {
     foreach ($s in $ranked) { if ($s.id -eq $CurrentModel) { $currentScore = $s; break } }
     if ($currentScore -and ($top.id -ne $CurrentModel) -and (($top.total - $currentScore.total) -lt 0.5)) {
         $stayPut = $true
@@ -497,6 +497,8 @@ $finalAction = $execSurface
 if ($stayPut) {
     $finalRecommended = $CurrentModel
     $finalAction = 'stay'
+    $execSurface = 'build'
+    $phases = @([ordered]@{ phase=1; name='implementation'; surface='build'; model=$CurrentModel })
 }
 
 # Build why lines (task-specific, evidence-tied, no lane identity as evidence).
