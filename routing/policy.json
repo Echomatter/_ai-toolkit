@@ -2,8 +2,7 @@
   "allowed_surfaces": [
     "opencode-free",
     "openai-oauth",
-    "github-copilot-oauth",
-    "ollama-local"
+    "github-copilot-oauth"
   ],
   "forbidden_auto_providers": [
     "openrouter",
@@ -60,6 +59,15 @@
     "OpenCode Scout is experimental in the stable line and is not required; Build uses native web tools for external research.",
     "Full-session model changes are always explicit user actions through /models; automatic routing delegates only bounded chunks to Deep.",
     "Model advice should be task-specific and evidence-informed; do not turn benchmark results into a universal ranking.",
-    "Review prefers a different canonical model vendor from Deep when evidence is otherwise comparable; exact model-ID difference alone is not treated as independent review."
+    "Review prefers a different canonical model vendor from Deep when evidence is otherwise comparable; exact model-ID difference alone is not treated as independent review.",
+    "Free Build/Worker/Index/Explore paths are preferred for ordinary work; paid Deep/Review delegation requires user approval and must fail back to free work rather than blocking the task."
+  ],
+  "search_priority": [
+    "opencode/nemotron-3.5-lightning-free",
+    "opencode/muse-spark-1.3-contributor-free",
+    "opencode/mimo-v2.5-free",
+    "opencode/nemotron-3-ultra-free",
+    "opencode/ling-3.0-flash-fin-free",
+    "opencode/big-pickle"
   ]
 }
