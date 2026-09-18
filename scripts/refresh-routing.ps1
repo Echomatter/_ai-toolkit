@@ -398,6 +398,7 @@ if (-not $evidenceExists) {
         }
         current_assignments_snapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+            index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
@@ -466,6 +467,7 @@ if (-not $evidenceExists) {
 
         $newSnapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+            index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
