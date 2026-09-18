@@ -2,8 +2,7 @@
   "allowed_surfaces": [
     "opencode-free",
     "openai-oauth",
-    "github-copilot-oauth",
-    "ollama-local"
+    "github-copilot-oauth"
   ],
   "forbidden_auto_providers": [
     "openrouter",
@@ -60,6 +59,7 @@
     "OpenCode Scout is experimental in the stable line and is not required; Build uses native web tools for external research.",
     "Full-session model changes are always explicit user actions through /models; automatic routing delegates only bounded chunks to Deep.",
     "Model advice should be task-specific and evidence-informed; do not turn benchmark results into a universal ranking.",
-    "Review prefers a different canonical model vendor from Deep when evidence is otherwise comparable; exact model-ID difference alone is not treated as independent review."
+    "Review prefers a different canonical model vendor from Deep when evidence is otherwise comparable; exact model-ID difference alone is not treated as independent review.",
+    "Use free hosted retrieval/search first; paid OAuth models are bounded escalation lanes and should fail soft back to free Build/index/Explore when quota or provider availability prevents escalation."
   ]
 }
