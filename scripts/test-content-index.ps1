@@ -15,9 +15,17 @@ if(-not $python){throw 'Python is required for the content index smoke test.'}
 
 function Invoke-Indexer([string[]]$Args){
   $all=@($prefix + @($Indexer) + $Args)
-  $out=@(& $python.Source @all 2>&1)
-  if($LASTEXITCODE -ne 0){throw "Indexer failed: $($out -join ' ')"}
-  return ($out -join [Environment]::NewLine)
+  $errFile=[IO.Path]::GetTempFileName()
+  try {
+    $out=@(& $python.Source @all 2>$errFile)
+    if($LASTEXITCODE -ne 0){
+      $err=(Get-Content -LiteralPath $errFile -Raw -ErrorAction SilentlyContinue)
+      throw "Indexer failed: $err"
+    }
+    return ($out -join [Environment]::NewLine)
+  } finally {
+    Remove-Item -LiteralPath $errFile -Force -ErrorAction SilentlyContinue
+  }
 }
 
 $root=Join-Path ([IO.Path]::GetTempPath()) ("ai-toolkit-index-test-" + [guid]::NewGuid().ToString('N'))
