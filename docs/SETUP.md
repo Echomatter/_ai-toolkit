@@ -6,12 +6,12 @@
 4. Run `scripts\refresh-routing.cmd` after provider/model changes.
 5. Fully quit and reopen OpenCode Desktop, or start a new session after routing changes.
 6. Confirm native **Build** and **Plan** are available.
-7. Type `@` and confirm built-in `explore` plus toolkit `deep` and `review` are available.
-8. Confirm `/recommend-model` appears in slash commands.
+7. Type `@` and confirm `worker`, `index`, `deep`, `review`, plus native `explore`.
+8. Confirm `/index` and `/recommend-model` appear in slash commands.
 9. Run `scripts\doctor.cmd -Deep`.
 
-Normal work should stay in Build. Use Plan only when you explicitly select it.
+Normal work should stay free-first in Build/Worker/Index/Explore.
 
-For a hard bounded chunk, Build may delegate to Deep automatically. For a whole next phase that needs a stronger model, the toolkit recommends a model but leaves the actual `/models` switch to you.
+Agent-initiated paid Deep/Review use prompts for approval. If you decline or the provider is quota/rate/auth unavailable, the free path continues.
 
-The terminal launcher remains optional. Normal work can use OpenCode Desktop.
+The toolkit does not install or manage a local model engine.
