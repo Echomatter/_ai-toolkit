@@ -32,6 +32,10 @@ Build uses native `websearch` and `webfetch`. The experimental Scout agent is in
 
 ## Economic boundary
 
-Automatic routing and model advice may use only current OpenCode free models, OpenAI OAuth models, GitHub Copilot OAuth models, and optional local Ollama. API-key/gateway models are excluded unless the user explicitly changes the policy.
+Automatic routing and model advice may use only current OpenCode free models, OpenAI OAuth models, GitHub Copilot OAuth models, and  API-key/gateway models are excluded unless the user explicitly changes the policy.
 
 See `MODEL-ADVISOR.md` for evidence and recommendation rules.
+
+## Paid-lane failure
+
+If a bounded Deep/Review call exhausts quota or fails at the provider after OpenCode retry handling, return to free Build and continue with Index/Explore/web/tests. Do not repeatedly call the unavailable lane or silently select another paid/metred provider.
