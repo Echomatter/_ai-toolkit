@@ -7,7 +7,7 @@ permission:
   edit: deny
   task:
     "*": deny
-    explore: allow
+    explore: __EXPLORE_TASK_PERMISSION__
     index: __INDEX_TASK_PERMISSION__
 ---
 
