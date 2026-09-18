@@ -1,5 +1,7 @@
 ---
 description: Refresh the model capability evidence database through real current web research
+agent: build
+subagent: true
 ---
 
 # /refresh-model-evidence
