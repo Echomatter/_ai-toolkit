@@ -3,15 +3,14 @@
   Regenerates OpenCode Build/Deep/Review model assignments from models the user can actually access.
 
 .DESCRIPTION
-  Uses only current OpenCode free SKUs, ChatGPT OAuth, GitHub Copilot OAuth,
-  and optional local Ollama. Separately metered API-key/gateway providers are ignored.
+  Uses only current OpenCode free SKUs, ChatGPT OAuth, and GitHub Copilot OAuth.
+  Separately metered API-key/gateway providers are ignored.
   Also regenerates the model roster and the toolkit-managed global OpenCode instructions
   used for conditional next-phase model recommendations.
 #>
 param(
     [switch]$NoRefresh,
-    [switch]$Quiet,
-    [switch]$PreferLocal
+    [switch]$Quiet
 )
 $ErrorActionPreference = 'Stop'
 $ToolkitRoot = Split-Path -Parent $PSScriptRoot
@@ -63,24 +62,24 @@ function Invoke-OpenCodeCaptured([string[]]$Arguments) {
     }
     return [pscustomobject]@{ Output = $output; ExitCode = $exitCode }
 }
-function Render-Agent([string]$Name, [string]$OwnModel, [string]$RoutineModel, [string]$DeepModel, [string]$ReviewModel) {
+function Render-Agent([string]$Name, [string]$RoutineModel, [string]$SearchModel, [string]$DeepModel, [string]$ReviewModel, [string]$DeepTaskPermission, [string]$ReviewTaskPermission) {
     $templatePath = Join-Path $AgentsDir "$Name.template.md"
     $outputPath = Join-Path $AgentsDir "$Name.md"
     if (-not (Test-Path -LiteralPath $templatePath)) { throw "Missing agent template: $templatePath" }
     $text = Get-Content -LiteralPath $templatePath -Raw -Encoding UTF8
-    $text = $text.Replace('__ROUTINE_MODEL__',$RoutineModel).Replace('__DEEP_MODEL__',$DeepModel).Replace('__REVIEW_MODEL__',$ReviewModel)
-    if ($Name -eq 'build') { $text = $text.Replace('__MODEL__',$RoutineModel) }
-    elseif ($Name -eq 'deep') { $text = $text.Replace('__MODEL__',$DeepModel) }
-    elseif ($Name -eq 'review') { $text = $text.Replace('__MODEL__',$ReviewModel) }
-    # Backward-compatible templates use their lane-specific placeholder as the model field.
-    $text = $text.Replace("model: __ROUTINE_MODEL__","model: $RoutineModel").Replace("model: __DEEP_MODEL__","model: $DeepModel").Replace("model: __REVIEW_MODEL__","model: $ReviewModel")
+    $text = $text.Replace('__ROUTINE_MODEL__',$RoutineModel).Replace('__SEARCH_MODEL__',$SearchModel).Replace('__DEEP_MODEL__',$DeepModel).Replace('__REVIEW_MODEL__',$ReviewModel)
+    $text = $text.Replace('__DEEP_TASK_PERMISSION__',$DeepTaskPermission).Replace('__REVIEW_TASK_PERMISSION__',$ReviewTaskPermission)
     Write-Utf8NoBom $outputPath $text
+}
+function Task-PermissionFor([string]$Model) {
+    $surface = Surface-For $Model
+    if ($surface -eq 'openai-oauth' -or $surface -eq 'github-copilot-oauth') { return 'ask' }
+    return 'allow'
 }
 function Surface-For([string]$Model) {
     if ($Model -match '^opencode/') { return 'opencode-free' }
     if ($Model -match '^openai/') { return 'openai-oauth' }
     if ($Model -match '^github-copilot/') { return 'github-copilot-oauth' }
-    if ($Model -match '^ollama/') { return 'ollama-local' }
     return 'unknown'
 }
 
@@ -115,27 +114,16 @@ if ($hasCopilotOAuth) {
     $copilot = @($available | Where-Object { $_ -match '^github-copilot/' -and $_ -notmatch '^github-copilot/gpt-5\.6-' })
 }
 
-$local = @()
-$ollama = Get-Command ollama -ErrorAction SilentlyContinue
-if ($ollama) {
-    try {
-        $olist = & $ollama.Source list 2>$null
-        if ($LASTEXITCODE -eq 0 -and ($olist -join "`n") -match 'qwen2\.5-coder:7b-16k') {
-            $local = @('ollama/qwen2.5-coder:7b-16k')
-        }
-    } catch {}
-}
-
 # Static picks are fallback defaults only. Evidence-aware selection below overrides
 # them whenever model-evidence.json + task-history.json yield a better candidate.
-$routineStatic = $null
-if ($PreferLocal -and $local.Count -gt 0) { $routineStatic = $local[0] }
-if (-not $routineStatic) { $routineStatic = Pick-Exact $available $policy.routine_priority }
+$routineStatic = Pick-Exact $available $policy.routine_priority
 if (-not $routineStatic) { $routineStatic = Pick-First $free }
-if (-not $routineStatic -and $local.Count -gt 0) { $routineStatic = $local[0] }
 $subscriptionModels = @($openai + $copilot)
 if (-not $routineStatic) { $routineStatic = Pick-First $subscriptionModels }
 if (-not $routineStatic) { throw 'No eligible non-metered routine model was found.' }
+
+$searchStatic = Pick-Exact $free $policy.search_priority
+if (-not $searchStatic) { $searchStatic = $routineStatic }
 
 $deepStatic = Pick-Exact $subscriptionModels $policy.deep_priority
 if (-not $deepStatic) { $deepStatic = Pick-Pattern $subscriptionModels @('^openai/gpt-5\.6-sol','^openai/gpt-5\.6-terra','^openai/gpt-5\.5','^github-copilot/claude-opus','^github-copilot/claude-sonnet','^github-copilot/gpt-5\.5','^github-copilot/gemini.*pro') }
@@ -143,7 +131,7 @@ if (-not $deepStatic) { $deepStatic = Pick-First $subscriptionModels }
 if (-not $deepStatic) { $deepStatic = Pick-Exact $available $policy.routine_priority }
 if (-not $deepStatic) { $deepStatic = $routineStatic }
 
-$reviewEligible = @(@($subscriptionModels + $free + $local) | Sort-Object -Unique)
+$reviewEligible = @(@($subscriptionModels + $free) | Sort-Object -Unique)
 $reviewStatic = Pick-Exact $reviewEligible $policy.review_priority $deepStatic
 if (-not $reviewStatic) {
     if ($deepStatic -match '^openai/') {
@@ -158,6 +146,7 @@ if (-not $reviewStatic) { $reviewStatic = Pick-First $free $deepStatic }
 if (-not $reviewStatic) { $reviewStatic = $deepStatic }
 
 $routine = $routineStatic
+$search = $searchStatic
 $deep = $deepStatic
 $review = $reviewStatic
 
@@ -188,11 +177,10 @@ if ($selectorUsable) {
     # Routine: ordinary implementation on an inexpensive model (writes, no deep/terminal/large-ctx).
     $r = Invoke-Selector @('simple_edit','bounded_feature') $true $false 0 $false $false $false
     if ($r -and $r.recommended -and ($available -contains $r.recommended)) {
-        # Routine must stay inexpensive when a free/local option exists.
-        if (($r.recommended -match '^opencode/' -or $r.recommended -match '^ollama/') -or ($free.Count -eq 0 -and $local.Count -eq 0)) {
+        # Routine stays on a hosted free model whenever one is available.
+        if (($r.recommended -match '^opencode/') -or $free.Count -eq 0) {
             $routine = $r.recommended
-        } elseif ($free.Count -gt 0 -or $local.Count -gt 0) {
-            # Selector preferred subscription for a trivial task: keep static inexpensive default.
+        } elseif ($free.Count -gt 0) {
             $routine = $routineStatic
         } else {
             $routine = $r.recommended
@@ -217,36 +205,16 @@ if ($selectorUsable) {
 }
 
 if (-not (Test-Path -LiteralPath $AgentsDir)) { New-Item -ItemType Directory -Path $AgentsDir -Force | Out-Null }
-Render-Agent 'build' $routine $routine $deep $review
-Render-Agent 'deep' $deep $routine $deep $review
-Render-Agent 'review' $review $routine $deep $review
+$deepTaskPermission = Task-PermissionFor $deep
+$reviewTaskPermission = Task-PermissionFor $review
+Render-Agent 'build' $routine $search $deep $review $deepTaskPermission $reviewTaskPermission
+Render-Agent 'worker' $routine $search $deep $review $deepTaskPermission $reviewTaskPermission
+Render-Agent 'index' $routine $search $deep $review $deepTaskPermission $reviewTaskPermission
+Render-Agent 'deep' $routine $search $deep $review $deepTaskPermission $reviewTaskPermission
+Render-Agent 'review' $routine $search $deep $review $deepTaskPermission $reviewTaskPermission
 
 $templateText = Get-Content -LiteralPath $Template -Raw -Encoding UTF8
-$localBlock = ''
-$localFlag = Join-Path $ToolkitRoot '.state\local-enabled'
-if (Test-Path -LiteralPath $localFlag) {
-    $localBlock = @'
-"provider": {
-    "ollama": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Ollama (optional local fallback)",
-      "options": { "baseURL": "http://127.0.0.1:11434/v1" },
-      "models": {
-        "qwen2.5-coder:7b-16k": {
-          "name": "Qwen2.5-Coder 7B (local, 16K)",
-          "limit": { "context": 16384, "output": 4096 }
-        }
-      }
-    }
-  },
-'@
-}
-$configText = $templateText.Replace('__LOCAL_PROVIDER_BLOCK__',$localBlock).Replace('__ROUTINE_MODEL__',$routine)
-if (-not $localBlock) {
-    # An empty provider block leaves bare indentation behind; fold it back
-    # into a single blank line so the generated config stays tidy on refresh.
-    $configText = $configText -replace "`r`n`r`n  `r`n`r`n", "`r`n`r`n"
-}
+$configText = $templateText.Replace('__ROUTINE_MODEL__',$routine).Replace('__SEARCH_MODEL__',$search)
 Write-Utf8NoBom $Config $configText
 
 if (-not (Test-Path -LiteralPath $GlobalInstructionsTemplate)) { throw "Missing global instruction template: $GlobalInstructionsTemplate" }
@@ -314,11 +282,6 @@ foreach ($m in @($copilot | Sort-Object -Unique)) {
     $o.observed = Get-HistoryObserved $m $historyEntriesEarly
     [void]$eligibleModels.Add($o)
 }
-foreach ($m in @($local | Sort-Object -Unique)) {
-    $o = New-ModelObject $m 'ollama-local' 'local-compute'
-    $o.observed = Get-HistoryObserved $m $historyEntriesEarly
-    [void]$eligibleModels.Add($o)
-}
 
 $now = (Get-Date).ToUniversalTime().ToString('o')
 $state = [ordered]@{
@@ -333,16 +296,17 @@ $state = [ordered]@{
         opencode_free = $free.Count
         openai_oauth = $openai.Count
         github_copilot_oauth = $copilot.Count
-        ollama_local = $local.Count
     }
     routine = $routine
+    search = $search
     deep = $deep
     review = $review
     review_is_distinct_model = ($review -ne $deep)
     review_is_independent = ($review -ne $deep) # legacy field: distinct ID, not necessarily different vendor
-    desktop_agents = @('build','deep','review')
-    policy = 'free OpenCode -> OAuth subscriptions -> optional local fallback; no metered API gateways'
-    promotion = 'delegate hard chunks to Deep automatically; switch the whole session only by explicit user /models selection'
+    desktop_agents = @('build','worker','index','deep','review')
+    policy = 'free hosted workers first -> OAuth subscription escalation with approval; no local engine and no metered API gateways'
+    paid_subagents_require_approval = $true
+    promotion = 'free workers run normally; paid Deep/Review delegation asks first; full-session switches remain explicit /models actions'
 }
 Write-Utf8NoBom $StatePath ($state | ConvertTo-Json -Depth 7)
 
@@ -352,6 +316,7 @@ $roster = [ordered]@{
     generated_at = $now
     assignments = [ordered]@{
         routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+        search = [ordered]@{ id=$search; surface=(Surface-For $search) }
         deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
         review = [ordered]@{ id=$review; surface=(Surface-For $review) }
     }
@@ -359,12 +324,11 @@ $roster = [ordered]@{
         opencode_free = 'currently free hosted model; availability may change'
         openai_oauth = 'ChatGPT subscription/quota access; not API token billing'
         github_copilot_oauth = 'GitHub Copilot subscription/quota access; not API token billing'
-        ollama_local = 'local inference; no marginal model charge'
     }
     eligible_models = @($eligibleModels)
     recommendation = [ordered]@{
         automatic_session_switch = $false
-        automatic_chunk_delegation = 'Deep when model-routing escalation criteria are met'
+        automatic_chunk_delegation = 'free worker/index/explore first; paid Deep/Review only through approval gate'
         end_of_task = 'recommend only when the next phase is clear and another lane has a material advantage'
         explicit_command = '/recommend-model'
     }
@@ -401,12 +365,13 @@ if (Test-Path -LiteralPath $syncScript) {
 
 Say 'Routing refreshed:'
 Say "  Build/Routine: $routine"
-Say "  Deep         : $deep"
-Say "  Review       : $review"
+Say "  Search/Index : $search"
+Say "  Deep         : $deep ($deepTaskPermission)"
+Say "  Review       : $review ($reviewTaskPermission)"
 if ($hasOpenAIOAuth) { Say '  OpenAI OAuth  : detected' } else { Say '  OpenAI OAuth  : not detected' }
 if ($hasCopilotOAuth) { Say '  Copilot OAuth : detected' } else { Say '  Copilot OAuth : not detected' }
 if ($review -eq $deep) { Say '  WARN: no distinct review model was available.' }
-Say '  Promotion     : delegate hard chunks automatically; switch full session manually with /models'
+Say '  Promotion     : free helpers run normally; paid subagents ask; failed/declined paid calls fall back to free work'
 Say '  Advice        : /recommend-model; conditional one-line next-phase advice enabled'
 
 # ---- model-evidence.json (capability evidence, separate from availability) ---
