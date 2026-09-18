@@ -358,12 +358,13 @@ if (Test-Path -LiteralPath $syncScript) {
 
 Say 'Routing refreshed:'
 Say "  Build/Routine: $routine"
+Say "  Index        : $routine (free retrieval helper)"
 Say "  Deep         : $deep"
 Say "  Review       : $review"
 if ($hasOpenAIOAuth) { Say '  OpenAI OAuth  : detected' } else { Say '  OpenAI OAuth  : not detected' }
 if ($hasCopilotOAuth) { Say '  Copilot OAuth : detected' } else { Say '  Copilot OAuth : not detected' }
 if ($review -eq $deep) { Say '  WARN: no distinct review model was available.' }
-Say '  Promotion     : delegate hard chunks automatically; switch full session manually with /models'
+Say '  Promotion     : free retrieval first; bounded Deep escalation; paid failure returns to free Build/index/Explore'
 Say '  Advice        : /recommend-model; conditional one-line next-phase advice enabled'
 
 # ---- model-evidence.json (capability evidence, separate from availability) ---
@@ -472,7 +473,7 @@ if (-not $evidenceExists) {
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
         $storedSnapshot = $evidenceObj.current_assignments_snapshot
-        if ((-not $storedSnapshot) -or ($storedSnapshot.routine.id -ne $routine) -or ($storedSnapshot.deep.id -ne $deep) -or ($storedSnapshot.review.id -ne $review)) {
+        if ((-not $storedSnapshot) -or ($storedSnapshot.routine.id -ne $routine) -or ($storedSnapshot.index.id -ne $routine) -or ($storedSnapshot.deep.id -ne $deep) -or ($storedSnapshot.review.id -ne $review)) {
             $evidenceObj.current_assignments_snapshot = $newSnapshot
             $evidenceDirty = $true
         }
