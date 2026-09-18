@@ -265,6 +265,117 @@ try {
     }
 } catch { Fail ("E13 free fallback error: " + $_.Exception.Message) }
 
+function Invoke-SelectionWithRole([string[]]$TaskTypes, $Writes, $Terminal, [int]$Ctx, $Deep, $Diversity, $Conseq, [string]$Role, [string]$PrefCost, [string]$Exclude) {
+    $argList = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$selectorPath,'-TaskType',$TaskTypes)
+    if ($Writes) { $argList += @('-NeedsWrites:$true') } else { $argList += @('-NeedsWrites:$false') }
+    if ($Terminal) { $argList += @('-NeedsTerminal:$true') } else { $argList += @('-NeedsTerminal:$false') }
+    $argList += @('-NeedsLargeContextTokens',$Ctx)
+    if ($Deep) { $argList += @('-NeedsDeepReasoning:$true') } else { $argList += @('-NeedsDeepReasoning:$false') }
+    if ($Diversity) { $argList += @('-NeedsModelDiversity:$true') } else { $argList += @('-NeedsModelDiversity:$false') }
+    if ($Conseq) { $argList += @('-HighConsequence:$true') } else { $argList += @('-HighConsequence:$false') }
+    if ($Role -ne '') { $argList += @('-Role',$Role) }
+    if ($PrefCost -ne '') { $argList += @('-PreferredCostClass',$PrefCost) }
+    if ($Exclude -ne '') { $argList += @('-ExcludeModel',$Exclude) }
+    $out = & powershell.exe @argList 2>$null
+    if ($LASTEXITCODE -ne 0) { throw "select-model failed for $($TaskTypes -join ',') role=$Role" }
+    return (($out -join "`n") | ConvertFrom-Json)
+}
+
+# E14: worker-role bounded work selects an adequately qualified free model.
+try {
+    $e14 = Invoke-SelectionWithRole @('bounded_feature') $true $false 0 $false $false $false 'worker' '' ''
+    if ($e14.selected_model -match '^opencode/') { Pass 'E14 worker role selects hosted free model for bounded work' }
+    else { Fail ("E14 worker role not on hosted free model: " + $e14.selected_model) }
+    if ($e14.adequacy -eq 'strong' -or $e14.adequacy -eq 'adequate') { Pass ("E14 worker selection adequacy: " + $e14.adequacy) }
+    else { Fail ("E14 worker adequacy too weak: " + $e14.adequacy) }
+    if (-not $e14.needs_research) { Pass 'E14 worker delegation uses cache, no research' }
+    else { Fail 'E14 worker delegation incorrectly demands research' }
+} catch { Fail ("E14 worker role error: " + $_.Exception.Message) }
+
+# E15: delegation contract fields are present and consistent.
+try {
+    $e15 = Invoke-SelectionWithRole @('bounded_feature') $true $false 0 $false $false $false 'worker' '' ''
+    $contractOk = $true
+    if (-not $e15.selected_model -or $e15.selected_model -ne $e15.recommended) { $contractOk = $false }
+    if (-not $e15.surface) { $contractOk = $false }
+    if ($e15.role -ne 'worker') { $contractOk = $false }
+    if (-not $e15.adequacy) { $contractOk = $false }
+    if ($null -eq $e15.reason_codes -or @($e15.reason_codes).Count -eq 0) { $contractOk = $false }
+    if (-not $e15.fallback_model) { $contractOk = $false }
+    if (-not $e15.evidence_readiness) { $contractOk = $false }
+    if ($contractOk) { Pass 'E15 delegation contract fields present and consistent' }
+    else { Fail 'E15 delegation contract fields missing or inconsistent' }
+} catch { Fail ("E15 contract error: " + $_.Exception.Message) }
+
+# E16: an explicitly excluded model never wins.
+try {
+    $base = Invoke-SelectionWithRole @('bounded_feature') $true $false 0 $false $false $false 'worker' '' ''
+    $excluded = [string]$base.selected_model
+    $e16 = Invoke-SelectionWithRole @('bounded_feature') $true $false 0 $false $false $false 'worker' '' $excluded
+    if ([string]$e16.selected_model -ne $excluded) { Pass ("E16 excluded model does not win ($excluded -> " + $e16.selected_model + ")") }
+    else { Fail ("E16 excluded model still selected: " + $excluded) }
+} catch { Fail ("E16 exclusion error: " + $_.Exception.Message) }
+
+# E17: a model lacking required context is filtered with a context reason.
+try {
+    $e17 = Invoke-SelectionWithRole @('long_context_reading') $false $false 900000 $false $false $false '' '' ''
+    $ctxFiltered = @($e17.filtered_out | Where-Object { $_.reason -match 'context' })
+    if ($ctxFiltered.Count -gt 0) { Pass ("E17 insufficient-context models filtered (" + $ctxFiltered.Count + " with context reason)") }
+    else { Fail 'E17 no context-based filtering observed for 900K requirement' }
+} catch { Fail ("E17 context filter error: " + $_.Exception.Message) }
+
+# E18: review role with diversity excludes the implementation (Deep) model.
+try {
+    $e18 = Invoke-SelectionWithRole @('code_review','independent_verification') $false $false 0 $false $true $false 'review' '' $st.deep
+    $deepCanon = Get-CanonicalKey $ev $st.deep
+    $recCanon = Get-CanonicalKey $ev $e18.selected_model
+    if ($deepCanon -and $recCanon -and $deepCanon -ne $recCanon) { Pass 'E18 review role excludes the Deep canonical model' }
+    else { Fail 'E18 review role reused the Deep canonical model' }
+} catch { Fail ("E18 review diversity error: " + $_.Exception.Message) }
+
+# E19: index role with free preference stays on a free candidate.
+try {
+    $e19 = Invoke-SelectionWithRole @('research') $false $false 0 $false $false $false 'index' 'free' ''
+    if ($e19.selected_model -match '^opencode/') { Pass 'E19 index role stays free-biased' }
+    else { Fail ("E19 index role not on free model: " + $e19.selected_model) }
+} catch { Fail ("E19 index bias error: " + $_.Exception.Message) }
+
+# E20: identical inputs/evidence produce deterministic output.
+try {
+    $e20a = Invoke-SelectionWithRole @('debugging') $true $false 0 $false $false $false 'worker' '' ''
+    $e20b = Invoke-SelectionWithRole @('debugging') $true $false 0 $false $false $false 'worker' '' ''
+    $ta = @($e20a.top_scores | Where-Object { $_.id -eq $e20a.selected_model })[0]
+    $tb = @($e20b.top_scores | Where-Object { $_.id -eq $e20b.selected_model })[0]
+    if ($e20a.selected_model -eq $e20b.selected_model -and $ta -and $tb -and $ta.total -eq $tb.total) {
+        Pass 'E20 deterministic output for identical inputs/evidence'
+    } else { Fail 'E20 nondeterministic selection output' }
+} catch { Fail ("E20 determinism error: " + $_.Exception.Message) }
+
+# E21: ordinary selection has no side effects on routing files (parent state untouched).
+try {
+    function File-Hash([string]$p) {
+        if (-not (Test-Path -LiteralPath $p)) { return '' }
+        return (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash
+    }
+    $h1 = @($rosterPath, $statePath, $evidencePath, $historyPath) | ForEach-Object { File-Hash $_ }
+    [void](Invoke-SelectionWithRole @('bounded_feature') $true $false 0 $false $false $false 'worker' '' '')
+    $h2 = @($rosterPath, $statePath, $evidencePath, $historyPath) | ForEach-Object { File-Hash $_ }
+    $same = $true
+    for ($i = 0; $i -lt $h1.Count; $i++) { if ($h1[$i] -ne $h2[$i]) { $same = $false; break } }
+    if ($same) { Pass 'E21 selection is read-only over roster/state/evidence/history' }
+    else { Fail 'E21 selection modified routing files' }
+} catch { Fail ("E21 side-effect error: " + $_.Exception.Message) }
+
+# E22: no live web research occurs during ordinary selection (static check).
+try {
+    $selText = Get-Content -LiteralPath $selectorPath -Raw -Encoding UTF8
+    $webCalls = @('Invoke-WebRequest','Invoke-RestMethod','System.Net.WebClient','System.Net.Http.HttpClient','Start-BitsTransfer')
+    $foundWeb = @()
+    foreach ($w in $webCalls) { if ($selText.Contains($w)) { $foundWeb += $w } }
+    if ($foundWeb.Count -eq 0) { Pass 'E22 selector performs no live web calls' }
+    else { Fail ("E22 selector contains web calls: " + ($foundWeb -join ', ')) }
+} catch { Fail ("E22 web-check error: " + $_.Exception.Message) }
+
 # Structural: alias coverage, lanes eligible, OAuth gating, no metered, no Plan, provenance.
 $unmapped = @()
 foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {
@@ -273,7 +384,7 @@ foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {
 if ($unmapped.Count -eq 0) { Pass 'S1 all eligible roster IDs map to canonical evidence entries' }
 else { Fail ("S1 unmapped roster IDs: " + ($unmapped -join ', ')) }
 $allIds = @($roster.eligible_models | ForEach-Object { $_.id })
-if ($allIds -contains $st.deep -and $allIds -contains $st.review -and $allIds -contains $st.routine) { Pass 'S2 lanes reference eligible roster models' }
+if ($allIds -contains $st.deep -and $allIds -contains $st.review -and $allIds -contains $st.routine -and $allIds -contains $st.worker) { Pass 'S2 lanes (incl. worker) reference eligible roster models' }
 else { Fail 'S2 lane references model outside eligible roster' }
 if (($st.deep -match '^openai/' -and -not $st.oauth.openai) -or ($st.review -match '^github-copilot/' -and -not $st.oauth.github_copilot)) { Fail 'S3 subscription lane without matching OAuth' }
 else { Pass 'S3 OAuth gating holds for subscription lanes' }

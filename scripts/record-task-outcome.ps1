@@ -13,7 +13,10 @@ param(
     [string]$ElapsedBand,
     [string]$TaskId = '',
     $ReviewFoundDefects = $false,
-    [switch]$MarkReviewDefect
+    [switch]$MarkReviewDefect,
+    [string]$Role = '',
+    [string]$DelegatedModel = '',
+    [string]$ParentModel = ''
 )
 
 function To-Bool($v) {
@@ -26,6 +29,20 @@ $Success = To-Bool $Success
 $TestsPassed = To-Bool $TestsPassed
 $Escalated = To-Bool $Escalated
 $ReviewFoundDefects = To-Bool $ReviewFoundDefects
+
+# Normalize task types: accept a comma-separated single string as well, since
+# arrays do not survive `powershell.exe -File` CLI parsing as multiple tokens
+# (extra elements spill into positional parameters). Callers should prefer the
+# single-string form: -TaskType "bounded_feature,architecture".
+$TaskTypeNorm = @()
+foreach ($t in @($TaskType)) {
+    if ($null -eq $t) { continue }
+    foreach ($part in ("$t".Split(','))) {
+        $p = $part.Trim().ToLower()
+        if ($p -ne '') { $TaskTypeNorm += $p }
+    }
+}
+if ($TaskTypeNorm.Count -eq 0 -and -not $MarkReviewDefect) { throw '-TaskType is required (e.g. -TaskType "bounded_feature").' }
 
 $ErrorActionPreference = 'Stop'
 $ToolkitRoot = Split-Path -Parent $PSScriptRoot
@@ -71,7 +88,7 @@ if ($MarkReviewDefect) {
         task_id = $TaskId
         timestamp = $now
         repo = $Repo
-        task_type = $TaskType
+        task_type = $TaskTypeNorm
         model = $Model
         access = $Access
         success = $Success
@@ -80,6 +97,9 @@ if ($MarkReviewDefect) {
         escalated = $Escalated
         review_found_defects = $ReviewFoundDefects
         elapsed_band = $ElapsedBand
+        role = $Role
+        delegated_model = $DelegatedModel
+        parent_model = $ParentModel
     }
     $existing += $entry
 }
@@ -145,11 +165,14 @@ if ($MarkReviewDefect) {
 Write-Output "Recorded task outcome:"
 Write-Output "  Task ID: $TaskId"
 Write-Output "  Repo: $Repo"
-Write-Output "  Task: $($TaskType -join ', ')"
+Write-Output "  Task: $($TaskTypeNorm -join ', ')"
 Write-Output "  Model: $Model"
 Write-Output "  Access: $Access"
 Write-Output "  Success: $Success"
 Write-Output "  Tests passed: $TestsPassed"
 Write-Output "  Attempts: $Attempts"
 Write-Output "  Elapsed band: $ElapsedBand"
+if ($Role) { Write-Output "  Role: $Role" }
+if ($DelegatedModel) { Write-Output "  Delegated model: $DelegatedModel" }
+if ($ParentModel) { Write-Output "  Parent model: $ParentModel" }
 Write-Output "  Total entries: $($existing.Count)"

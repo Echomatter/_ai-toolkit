@@ -292,4 +292,4 @@ if (Test-Path -LiteralPath $syncGlobal) {
 Save-Manifest $manifest
 Write-Output ""
 Write-Output "Toolkit install summary: $created created, $refreshed refreshed, $conflicts conflicts."
-Write-Output "OpenCode Desktop agents: native build override, index, deep, review; content-index tool and global toolkit guidance synchronized"
+Write-Output "OpenCode Desktop agents: native build override, index, worker, deep, review; content_index and delegate tools and global toolkit guidance synchronized"

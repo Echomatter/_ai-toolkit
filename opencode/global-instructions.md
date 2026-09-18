@@ -14,20 +14,25 @@ Current generated lanes:
 
 - Routine / Build: `opencode/muse-spark-1.3-contributor-free`
 - Index: `opencode/muse-spark-1.3-contributor-free` (free retrieval helper)
-- Deep: `openai/gpt-6-astra`
+- Worker: `opencode/muse-spark-1.3-contributor-free` (dynamic delegated execution; model chosen by evidence-aware selector)
+- Deep: `openai/gpt-6-astra` (explicit strong-model escalation only)
 - Review: `github-copilot/claude-sonnet-5`
 
-Start useful work immediately on the current free Build model. Use `@explore` for source-code search/tracing, `@index` for exhaustive mixed-corpus retrieval, and native web tools for current public information. Delegate only a narrowed hard chunk to `@deep` after the escalation criteria in `model-routing` are met. Use `@review` or `/audit` for independent verification.
+Start useful work immediately on the current free Build model. Use `@explore` for source-code search/tracing, `@index` for exhaustive mixed-corpus retrieval, and native web tools for current public information. For bounded delegated implementation, call the `delegate` tool first and invoke the recommended agent (`@worker` normally). Delegate only a narrowed hard chunk to `@deep` after the escalation criteria in `model-routing` are met, or when the user explicitly requests the strongest model. Use `@review` or `/audit` for independent verification.
 
 Do not announce routing tiers before doing work. Do not automatically switch the user's current model.
 
 ## Paid-lane failure
 
-If a Deep or Review invocation ultimately fails because of quota/rate/provider/auth availability, do not keep retrying or jump to a metered route. Continue in free Build with `@index`, `@explore`, web tools, and deterministic validation. Report a block only when the unresolved remainder genuinely requires stronger reasoning.
+If a Deep, Review, or Worker invocation ultimately fails because of quota/rate/provider/auth availability, do not keep retrying or jump to a metered route. Try the selector's fallback model when known, then continue in free Build with `@index`, `@explore`, web tools, and deterministic validation. Report a block only when the unresolved remainder genuinely requires stronger reasoning.
+
+## Delegation
+
+Roles are stable; models are dynamically selected. The `delegate` tool calls the deterministic evidence-aware selector over cached roster/evidence/history and returns the selected model plus execution guidance. Ordinary delegation uses cached evidence only and never triggers web research. If the result carries a stale-evidence warning on a consequential task, report the limitation but proceed; only `/refresh-model-evidence` performs live research. If `needs_models_switch` is true, the selected model is not pinned to any child agent: advise a manual `/models` switch rather than pretending delegation ran that model. Whole-session model changes always remain explicit user actions.
 
 ## Lane assignment vs recommendation invariant
 
-Lane assignment is NOT recommendation. `routine/index/deep/review` are execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Index/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
+Lane assignment is NOT recommendation. `routine/index/worker/deep/review` are execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Index/Worker/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
 
 ## Next-phase model advice
 
@@ -52,7 +57,7 @@ When those conditions are met, append one compact line at the end of the normal 
 
 `Next model: <model or lane> — <task-specific reason>. <action>`
 
-Valid actions are normally `stay`, `use @index/@explore`, `delegate the hard chunk to @deep`, `run /audit`, or `switch manually with /models`.
+Valid actions are normally `stay`, `use @index/@explore`, `delegate via @worker`, `delegate the hard chunk to @deep`, `run /audit`, or `switch manually with /models`.
 
 If the current model remains adequate, the next phase is unclear, or the difference is marginal, say nothing about model choice. Do not nag. Maximum 2–3 lines.
 

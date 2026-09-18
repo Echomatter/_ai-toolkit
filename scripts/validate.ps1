@@ -53,7 +53,7 @@ if(Test-Path -LiteralPath $config){
 }
 
 
-$agentTemplates=@('build','index','deep','review')
+$agentTemplates=@('build','index','worker','deep','review')
 foreach($a in $agentTemplates){
   $tp=Join-Path $ToolkitRoot "opencode\agents\$a.template.md"
   $gp=Join-Path $ToolkitRoot "opencode\agents\$a.md"
@@ -72,7 +72,7 @@ $globalGenerated=Join-Path $ToolkitRoot 'opencode\global-instructions.md'
 foreach($p in @($globalTemplate,$globalGenerated)){if(Test-Path -LiteralPath $p){OK "present: $([IO.Path]::GetFileName($p))"}else{F "missing: $p"}}
 if(Test-Path -LiteralPath $globalTemplate){
   $g=Get-Content -LiteralPath $globalTemplate -Raw
-  foreach($token in @('__ROUTINE_MODEL__','__DEEP_MODEL__','__REVIEW_MODEL__')){if($g.Contains($token)){OK "global instruction token: $token"}else{F "global instruction template missing token: $token"}}
+  foreach($token in @('__ROUTINE_MODEL__','__DEEP_MODEL__','__REVIEW_MODEL__','__WORKER_MODEL__')){if($g.Contains($token)){OK "global instruction token: $token"}else{F "global instruction template missing token: $token"}}
 }
 
 $roster=Join-Path $ToolkitRoot 'routing\model-roster.json'
@@ -115,7 +115,7 @@ if($ev){
 $history=Join-Path $ToolkitRoot 'routing\task-history.json'
 try{Get-Content -LiteralPath $history -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}
 
-$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index')
+$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index','delegate')
 foreach($c in $commands){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "opencode\commands\$c.md")){OK "command present: /$c"}else{F "command missing: /$c"}}
 
 foreach($cmdFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\commands') -File -Filter '*.md'){
@@ -128,13 +128,20 @@ if(Test-Path -LiteralPath $recommendCmd){
   $rt=Get-Content -LiteralPath $recommendCmd -Raw
   if($rt.Contains('select-model.ps1')){OK "/recommend-model invokes deterministic selector"}else{F "/recommend-model does not invoke select-model.ps1"}
 }
-foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','test-content-index.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
+$delegateCmd=Join-Path $ToolkitRoot 'opencode\commands\delegate.md'
+if(Test-Path -LiteralPath $delegateCmd){
+  $dt=Get-Content -LiteralPath $delegateCmd -Raw
+  if($dt.Contains('delegate')){OK "/delegate routes through delegate tool"}else{F "/delegate does not mention the delegate tool"}
+}
+foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','test-delegate.ps1','test-content-index.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
 
 
 $indexer=Join-Path $ToolkitRoot 'tools\Project_Content_Indexer.py'
 $indexTool=Join-Path $ToolkitRoot 'opencode\tools\content_index.ts'
+$delegateTool=Join-Path $ToolkitRoot 'opencode\tools\delegate.ts'
 if(Test-Path -LiteralPath $indexer){OK 'project content indexer present'}else{F 'project content indexer missing'}
 if(Test-Path -LiteralPath $indexTool){OK 'OpenCode content_index tool present'}else{F 'OpenCode content_index tool missing'}
+if(Test-Path -LiteralPath $delegateTool){OK 'OpenCode delegate tool present'}else{F 'OpenCode delegate tool missing'}
 
 $retiredLocal=@(
   'scripts\install-local-fallback.ps1',

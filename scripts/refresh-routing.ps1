@@ -62,18 +62,19 @@ function Invoke-OpenCodeCaptured([string[]]$Arguments) {
     }
     return [pscustomobject]@{ Output = $output; ExitCode = $exitCode }
 }
-function Render-Agent([string]$Name, [string]$OwnModel, [string]$RoutineModel, [string]$DeepModel, [string]$ReviewModel) {
+function Render-Agent([string]$Name, [string]$OwnModel, [string]$RoutineModel, [string]$DeepModel, [string]$ReviewModel, [string]$WorkerModel) {
     $templatePath = Join-Path $AgentsDir "$Name.template.md"
     $outputPath = Join-Path $AgentsDir "$Name.md"
     if (-not (Test-Path -LiteralPath $templatePath)) { throw "Missing agent template: $templatePath" }
     $text = Get-Content -LiteralPath $templatePath -Raw -Encoding UTF8
-    $text = $text.Replace('__ROUTINE_MODEL__',$RoutineModel).Replace('__DEEP_MODEL__',$DeepModel).Replace('__REVIEW_MODEL__',$ReviewModel)
+    $text = $text.Replace('__ROUTINE_MODEL__',$RoutineModel).Replace('__DEEP_MODEL__',$DeepModel).Replace('__REVIEW_MODEL__',$ReviewModel).Replace('__WORKER_MODEL__',$WorkerModel)
     if ($Name -eq 'build') { $text = $text.Replace('__MODEL__',$RoutineModel) }
     elseif ($Name -eq 'deep') { $text = $text.Replace('__MODEL__',$DeepModel) }
     elseif ($Name -eq 'review') { $text = $text.Replace('__MODEL__',$ReviewModel) }
     elseif ($Name -eq 'index') { $text = $text.Replace('__MODEL__',$RoutineModel) }
+    elseif ($Name -eq 'worker') { $text = $text.Replace('__MODEL__',$WorkerModel) }
     # Backward-compatible templates use their lane-specific placeholder as the model field.
-    $text = $text.Replace("model: __ROUTINE_MODEL__","model: $RoutineModel").Replace("model: __DEEP_MODEL__","model: $DeepModel").Replace("model: __REVIEW_MODEL__","model: $ReviewModel")
+    $text = $text.Replace("model: __ROUTINE_MODEL__","model: $RoutineModel").Replace("model: __DEEP_MODEL__","model: $DeepModel").Replace("model: __REVIEW_MODEL__","model: $ReviewModel").Replace("model: __WORKER_MODEL__","model: $WorkerModel")
     Write-Utf8NoBom $outputPath $text
 }
 function Surface-For([string]$Model) {
@@ -145,6 +146,11 @@ if (-not $reviewStatic) { $reviewStatic = $deepStatic }
 $routine = $routineStatic
 $deep = $deepStatic
 $review = $reviewStatic
+# Worker is the generic dynamic delegated execution role. Its default pins to
+# the routine model; evidence-aware selection below may promote it when the
+# selector finds a materially better implementation model. Per-task selection
+# still happens at delegation time via the delegate tool + select-model.ps1.
+$worker = $routineStatic
 
 # ---- Deterministic evidence-aware lane selection ---------------------------
 # Score the current eligible inventory with routing evidence + local history via
@@ -185,6 +191,12 @@ if ($selectorUsable) {
     # Deep: hard reasoning/terminal/large-context implementation.
     $d = Invoke-Selector @('architecture','debugging','terminal_heavy') $true $true 128000 $true $false $true
     if ($d -and $d.recommended -and ($available -contains $d.recommended)) { $deep = $d.recommended }
+    # Worker: generic bounded implementation (feature work, debugging, tests).
+    # Evidence-led; falls back to the routine model when the selector cannot
+    # run or returns an ineligible model.
+    $w = Invoke-Selector @('bounded_feature','debugging','test_generation') $true $false 0 $false $false $false
+    if ($w -and $w.recommended -and ($available -contains $w.recommended)) { $worker = $w.recommended }
+    else { $worker = $routine }
     # Review: independent verification, different model from Deep when possible.
     $v = Invoke-Selector @('code_review','independent_verification') $false $false 128000 $false $true $false $deep
     if ($v -and $v.recommended -and ($available -contains $v.recommended) -and ($v.recommended -ne $deep)) {
@@ -201,10 +213,11 @@ if ($selectorUsable) {
 }
 
 if (-not (Test-Path -LiteralPath $AgentsDir)) { New-Item -ItemType Directory -Path $AgentsDir -Force | Out-Null }
-Render-Agent 'build' $routine $routine $deep $review
-Render-Agent 'index' $routine $routine $deep $review
-Render-Agent 'deep' $deep $routine $deep $review
-Render-Agent 'review' $review $routine $deep $review
+Render-Agent 'build' $routine $routine $deep $review $worker
+Render-Agent 'index' $routine $routine $deep $review $worker
+Render-Agent 'deep' $deep $routine $deep $review $worker
+Render-Agent 'review' $review $routine $deep $review $worker
+Render-Agent 'worker' $worker $routine $deep $review $worker
 
 $templateText = Get-Content -LiteralPath $Template -Raw -Encoding UTF8
 $configText = $templateText.Replace('__ROUTINE_MODEL__',$routine)
@@ -212,7 +225,7 @@ Write-Utf8NoBom $Config $configText
 
 if (-not (Test-Path -LiteralPath $GlobalInstructionsTemplate)) { throw "Missing global instruction template: $GlobalInstructionsTemplate" }
 $globalText = Get-Content -LiteralPath $GlobalInstructionsTemplate -Raw -Encoding UTF8
-$globalText = $globalText.Replace('__ROUTINE_MODEL__',$routine).Replace('__DEEP_MODEL__',$deep).Replace('__REVIEW_MODEL__',$review)
+$globalText = $globalText.Replace('__ROUTINE_MODEL__',$routine).Replace('__DEEP_MODEL__',$deep).Replace('__REVIEW_MODEL__',$review).Replace('__WORKER_MODEL__',$worker)
 Write-Utf8NoBom $GlobalInstructions $globalText
 
 # ---- Build per-model roster objects ---------------------------------------
@@ -293,11 +306,12 @@ $state = [ordered]@{
     routine = $routine
     deep = $deep
     index = $routine
+    worker = $worker
     review = $review
     free_fallback = $routine
     review_is_distinct_model = ($review -ne $deep)
     review_is_independent = ($review -ne $deep) # legacy field: distinct ID, not necessarily different vendor
-    desktop_agents = @('build','index','deep','review')
+    desktop_agents = @('build','index','worker','deep','review')
     policy = 'free OpenCode first -> bounded OAuth subscription escalation; no local engine and no metered API gateways'
     promotion = 'search/narrow with free tools first; delegate bounded hard chunks to Deep; if paid escalation is unavailable, continue on free Build/index/Explore; full-session switching remains explicit'
 }
@@ -310,6 +324,7 @@ $roster = [ordered]@{
     assignments = [ordered]@{
         routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
         index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+        worker = [ordered]@{ id=$worker; surface=(Surface-For $worker) }
         deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
         review = [ordered]@{ id=$review; surface=(Surface-For $review) }
     }
@@ -359,7 +374,8 @@ if (Test-Path -LiteralPath $syncScript) {
 Say 'Routing refreshed:'
 Say "  Build/Routine: $routine"
 Say "  Index        : $routine (free retrieval helper)"
-Say "  Deep         : $deep"
+Say "  Worker       : $worker (dynamic delegated execution)"
+Say "  Deep         : $deep (explicit escalation)"
 Say "  Review       : $review"
 if ($hasOpenAIOAuth) { Say '  OpenAI OAuth  : detected' } else { Say '  OpenAI OAuth  : not detected' }
 if ($hasCopilotOAuth) { Say '  Copilot OAuth : detected' } else { Say '  Copilot OAuth : not detected' }
@@ -400,6 +416,7 @@ if (-not $evidenceExists) {
         current_assignments_snapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+            worker = [ordered]@{ id=$worker; surface=(Surface-For $worker) }
             deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
@@ -469,11 +486,12 @@ if (-not $evidenceExists) {
         $newSnapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+            worker = [ordered]@{ id=$worker; surface=(Surface-For $worker) }
             deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
         $storedSnapshot = $evidenceObj.current_assignments_snapshot
-        if ((-not $storedSnapshot) -or ($storedSnapshot.routine.id -ne $routine) -or ($storedSnapshot.index.id -ne $routine) -or ($storedSnapshot.deep.id -ne $deep) -or ($storedSnapshot.review.id -ne $review)) {
+        if ((-not $storedSnapshot) -or ($storedSnapshot.routine.id -ne $routine) -or ($storedSnapshot.index.id -ne $routine) -or ($storedSnapshot.deep.id -ne $deep) -or ($storedSnapshot.review.id -ne $review) -or ((-not $storedSnapshot.worker) -or ($storedSnapshot.worker.id -ne $worker))) {
             $evidenceObj.current_assignments_snapshot = $newSnapshot
             $evidenceDirty = $true
         }

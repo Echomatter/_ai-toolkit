@@ -1,6 +1,6 @@
 {
     "generated":  true,
-    "generated_at":  "2026-09-18T15:22:02.7952552Z",
+    "generated_at":  "2026-09-18T18:06:37.3275413Z",
     "assignments":  {
                         "routine":  {
                                         "id":  "opencode/muse-spark-1.3-contributor-free",
@@ -10,6 +10,10 @@
                                       "id":  "opencode/muse-spark-1.3-contributor-free",
                                       "surface":  "opencode-free"
                                   },
+                        "worker":  {
+                                       "id":  "opencode/muse-spark-1.3-contributor-free",
+                                       "surface":  "opencode-free"
+                                   },
                         "deep":  {
                                      "id":  "openai/gpt-6-astra",
                                      "surface":  "openai-oauth"
@@ -62,7 +66,13 @@
                                 "surface":  "opencode-free",
                                 "economics":  "currently-free",
                                 "observed":  {
-
+                                                 "total":  1,
+                                                 "successes":  1,
+                                                 "failures":  0,
+                                                 "success_rate":  1,
+                                                 "tests_passed":  1,
+                                                 "escalated":  0,
+                                                 "last_seen":  "2026-09-18T18:01:45.2347581Z"
                                              }
                             },
                             {
@@ -325,7 +335,6 @@
     "recommendation":  {
                            "automatic_session_switch":  false,
                            "automatic_chunk_delegation":  "Use free index/Explore/web retrieval first; Deep only when model-routing escalation criteria are met",
-                        "paid_failure_fallback":  "Return to free Build/index/Explore after quota/rate/provider failure; never auto-switch to metered APIs",
                            "end_of_task":  "recommend only when the next phase is clear and another lane has a material advantage",
                            "explicit_command":  "/recommend-model"
                        }

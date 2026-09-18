@@ -15,7 +15,9 @@ param(
     $HighConsequence = $false,
     [string]$CurrentModel = '',
     [string]$ExcludeModel = '',
-    [string]$LaneHint = ''
+    [string]$LaneHint = '',
+    [string]$Role = '',
+    [string]$PreferredCostClass = ''
 )
 $ErrorActionPreference = 'Stop'
 $ToolkitRoot = Split-Path -Parent $PSScriptRoot
@@ -33,6 +35,8 @@ $bNeedsWeb = To-Bool $NeedsWeb
 $bNeedsDeep = To-Bool $NeedsDeepReasoning
 $bNeedsDiversity = To-Bool $NeedsModelDiversity
 $bHighConseq = To-Bool $HighConsequence
+$roleNorm = ("$Role").Trim().ToLower()
+$prefCost = ("$PreferredCostClass").Trim().ToLower()
 
 # Normalize task types: accept comma-separated single string as well.
 $tasks = @()
@@ -156,6 +160,17 @@ if ($bNeedsDeep) { Add-W 'long_horizon_engineering' 2.0; Add-W 'deep_reasoning' 
 if ($bNeedsWeb) { Add-W 'research' 1.0; Add-W 'tool_use' 1.0 }
 if ($bHighConseq) { Add-W 'debugging' 1.0; Add-W 'architecture' 1.0 }
 if ($NeedsLargeContextTokens -gt 0) { Add-W 'long_context' 0.5 }
+# Role hint: stable role names influence weights without replacing task types.
+# worker = default implementation weights (no change). review adds verification
+# weights when the caller did not already specify a review task type.
+# index adds light retrieval weights; its strong free bias is applied in economics.
+if ($roleNorm -eq 'review') {
+    if (($tasks -notcontains 'code_review') -and ($tasks -notcontains 'independent_verification')) {
+        Add-W 'code_review' 3.0; Add-W 'coding' 0.5
+    }
+} elseif ($roleNorm -eq 'index') {
+    Add-W 'research' 1.0; Add-W 'repo_understanding' 1.0
+}
 
 # Trivial-task detection: inexpensive default must win without research.
 $nonTrivialTypes = @('architecture','large_refactor','debugging','terminal_heavy','ml','dsp','firmware','reverse_engineering','code_review','independent_verification','long_context_reading')
@@ -372,10 +387,21 @@ foreach ($rm in @($roster.eligible_models)) {
     }
 
     # Economics: trivial tasks prefer free; consequential tasks are evidence-led (no free penalty/bonus).
+    # Cost-aware policy: free adequate -> use free; paid must prove material advantage.
+    # Role/preference bias: index role and PreferredCostClass=free strongly prefer free candidates.
     $econAdj = 0.0
     if ($isTrivial) {
         if ($surface -eq 'opencode-free') { $econAdj = 1.0 }
         else { $econAdj = -0.25 }
+    } elseif ($isConsequential) {
+        if ($surface -ne 'opencode-free') { $econAdj = -0.15 }
+    }
+    if ($roleNorm -eq 'index') {
+        if ($surface -eq 'opencode-free') { $econAdj = $econAdj + 2.0 }
+        else { $econAdj = $econAdj - 1.0 }
+    } elseif ($prefCost -eq 'free') {
+        if ($surface -eq 'opencode-free') { $econAdj = $econAdj + 1.5 }
+        else { $econAdj = $econAdj - 1.0 }
     }
 
     $total = $capAvg + $benchBonus + $histAdj + $econAdj + $diversityAdj
@@ -533,6 +559,17 @@ if ($isTrivial) { $why += ("economics: trivial task prefers inexpensive free/loc
 else { $why += ("economics: evidence-led; subscription OAuth is quota-limited, and paid failures fall back to the best hosted-free candidate") }
 if ($bNeedsWrites -and $isReviewTask) { $why += ("compatibility: needs_writes=true rejects read-only @review as sole surface; split Phase1 diagnosis + Phase2 repair") }
 
+# Adequacy band for delegation consumers: derived from the winner's capability
+# average, not from price. strong>=3.0, adequate>=2.0, weak<2.0, unknown when 0.
+$adequacy = 'unknown'
+try {
+    $topCap = [double]$top.cap_avg
+    if ($topCap -le 0) { $adequacy = 'unknown' }
+    elseif ($topCap -ge 3.0) { $adequacy = 'strong' }
+    elseif ($topCap -ge 2.0) { $adequacy = 'adequate' }
+    else { $adequacy = 'weak' }
+} catch { $adequacy = 'unknown' }
+
 $result = [ordered]@{
     recommended = $finalRecommended
     top_scored = $top.id
@@ -555,9 +592,17 @@ $result = [ordered]@{
     top_scores = @($ranked | Select-Object -First 5 | ForEach-Object {
         [ordered]@{ id=$_.id; total=$_.total; cap_avg=$_.cap_avg; bench=$_.bench_bonus; hist_n=$_.hist_n; hist_adj=$_.hist_adj; econ=$_.econ_adj; diversity=$_.diversity_adj }
     })
+    selected_model = $finalRecommended
+    surface = $top.surface
+    role = $roleNorm
+    adequacy = $adequacy
+    reason_codes = $why
 }
 if ($fallback) {
     $result.fallback = [ordered]@{ id=$fallback.id; access=$fallback.access; total=$fallback.total }
+    $result['fallback_model'] = [string]$fallback.id
+} else {
+    $result['fallback_model'] = $null
 }
 if ($diagnosisModel) { $result['diagnosis_model'] = [ordered]@{ id=$diagnosisModel.id; access=$diagnosisModel.access; total=$diagnosisModel.total } }
 

@@ -4,7 +4,7 @@ The toolkit separates **delegation** from **promotion**.
 
 ## Delegation
 
-When one bounded part of an active task needs stronger reasoning, Build may send only that part to `@deep`. The parent session stays on its current model.
+When one bounded part of an active task needs a specific capability, Build calls the `delegate` tool (or `/delegate`), which runs the deterministic selector over cached roster/evidence/history and returns the selected model plus execution guidance. The normal target is `@worker`; `@deep` is reserved for explicit escalation and `@review` for independent verification with model diversity. The parent session stays on its current model. Ordinary delegation uses cached evidence only and never triggers web research.
 
 ## Promotion
 
@@ -31,6 +31,8 @@ Use:
 ```text
 /recommend-model <next phase>
 ```
+
+`/recommend-model` answers: what model should the whole session explicitly use for the next phase? `/delegate` answers the narrower question: what model should perform this bounded child task? Do not merge those concepts.
 
 The `model-advisor` skill can inventory current OpenCode models and connected OAuth providers. For a material or ambiguous choice, it can use current web research to compare official capabilities and task-relevant independent evidence.
 

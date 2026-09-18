@@ -37,17 +37,19 @@ foreach($s in $skills){ $p=Join-Path $env:USERPROFILE ".agents\skills\$s\SKILL.m
 
 
 $ocGlobal=Join-Path $env:USERPROFILE '.config\opencode'
-foreach($a in @('build','index','deep','review')){
+foreach($a in @('build','index','worker','deep','review')){
   $p=Join-Path $ocGlobal "agents\$a.md"
   if(Test-Path -LiteralPath $p){OK "Desktop agent installed: $a"}else{FAIL "Desktop agent missing: $a"}
 }
-foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index')){
+foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index','delegate')){
   $p=Join-Path $ocGlobal "commands\$c.md"
   if(Test-Path -LiteralPath $p){OK "Desktop command installed: /$c"}else{FAIL "Desktop command missing: /$c"}
 }
 
 $indexTool=Join-Path $env:USERPROFILE '.config\opencode\tools\content_index.ts'
 if(Test-Path -LiteralPath $indexTool){OK 'Desktop custom tool installed: content_index'}else{FAIL 'Desktop custom tool missing: content_index'}
+$delegateTool=Join-Path $env:USERPROFILE '.config\opencode\tools\delegate.ts'
+if(Test-Path -LiteralPath $delegateTool){OK 'Desktop custom tool installed: delegate'}else{FAIL 'Desktop custom tool missing: delegate'}
 $py=Get-Command python -ErrorAction SilentlyContinue
 if(-not $py){$py=Get-Command py -ErrorAction SilentlyContinue}
 if(-not $py){$py=Get-Command python3 -ErrorAction SilentlyContinue}
@@ -68,7 +70,7 @@ $statePath=Join-Path $ToolkitRoot 'routing\state.json'
 if(Test-Path -LiteralPath $statePath){
    try {
       $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
-      OK "Routine: $($st.routine)"; OK "Index: $($st.index)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
+       OK "Routine: $($st.routine)"; OK "Index: $($st.index)"; OK "Worker: $($st.worker)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
       $distinct = $true
       if($null -ne $st.review_is_distinct_model){ $distinct = [bool]$st.review_is_distinct_model }
       elseif($null -ne $st.review_is_independent){ $distinct = [bool]$st.review_is_independent }
@@ -151,7 +153,8 @@ Write-Output "Current lanes:"
 Write-Output "Routine (Build): $($st.routine)"
 Write-Output "Explore: native OpenCode agent (no fixed model)"
 Write-Output "Index: $($st.index) (free corpus retrieval)"
-Write-Output "Deep: $($st.deep)"
+Write-Output "Worker: $($st.worker) (dynamic delegated execution)"
+Write-Output "Deep: $($st.deep) (explicit escalation)"
 Write-Output "Review: $($st.review)"
 Write-Output ""
 $rosterAge = 'unknown'

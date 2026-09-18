@@ -14,7 +14,8 @@ OpenCode's Scout agent is experimental in the stable line and is **not required*
 
 - **Build** — OpenCode's native primary ID, pinned to the current free/routine model. Shell/tool approval behavior inherits your OpenCode permission settings.
 - **Index** — free read-only helper for exhaustive mixed-corpus discovery through the deterministic project content index.
-- **Deep** — subagent pinned to the strongest eligible subscription model available through OpenAI OAuth or GitHub Copilot OAuth.
+- **Worker** — generic implementation/reasoning subagent for bounded delegated tasks. Its model is chosen by the evidence-aware selector; use the `delegate` tool to confirm the best model/agent per task.
+- **Deep** — explicit strong-model escalation subagent. Reserved for deliberate escalation (user request, failed adequate-model attempts, or genuinely beyond-free reasoning).
 - **Review** — independent read-only subagent, preferably on a different provider/model.
 
 OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
@@ -43,20 +44,22 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 - `/refresh-model-evidence` — refresh sourced model capability evidence through current web research.
 - `/record-outcome` — record a meaningful task result so local success, retries, escalation, and later review defects can influence future routing.
 - `/index` — run the free corpus-retrieval helper for exhaustive project-content discovery.
+- `/delegate` — characterize a bounded child task and recommend the best model/agent combination without switching the session model.
 
 ## Routing and promotion
 
 1. Build starts immediately on a current free/routine model.
 2. Build uses native Explore for source-code search, `@index` for large mixed project corpora, and native web tools for current public research.
 3. Broad retrieval is narrowed on free/deterministic tools before paid escalation.
-4. A bounded hard portion may be delegated to Deep only when the remaining task warrants it.
-5. Review independently audits meaningful changes when requested or warranted.
-6. If a paid lane is unavailable because of quota/provider failure, work falls back to free Build + Index/Explore/web rather than looping or jumping to a metered route.
-7. The toolkit **never switches the whole session automatically**.
-8. When the next phase clearly benefits from another model, Build may append one compact `Next model:` recommendation. If there is no material advantage, it says nothing about models.
-9. `/recommend-model` performs the deeper evidence-backed comparison on demand.
+4. Bounded implementation work is delegated via the `delegate` tool, which selects the least-expensive adequate model from cached evidence and recommends `@worker` (or another agent) without switching the session.
+5. `@deep` is reserved for explicit strong-model escalation rather than every difficult task.
+6. Review independently audits meaningful changes when requested or warranted, seeking model/provider diversity from the implementation.
+7. If a paid lane is unavailable because of quota/provider failure, work falls back to free Build + Index/Explore/web rather than looping or jumping to a metered route.
+8. The toolkit **never switches the whole session automatically**.
+9. When the next phase clearly benefits from another model, Build may append one compact `Next model:` recommendation. If there is no material advantage, it says nothing about models.
+10. `/recommend-model` performs the deeper evidence-backed comparison on demand for whole-session promotion; `/delegate` answers the narrower question of what model should perform a bounded child task.
 
-`routing/model-roster.json` is regenerated from the models and non-metered access surfaces OpenCode can actually see. Capability claims live separately in `routing/model-evidence.json`; empirical outcomes live in `routing/task-history.json`.
+`routing/model-roster.json` is regenerated from the models and non-metered access surfaces OpenCode can actually see. Capability claims live separately in `routing/model-evidence.json`; empirical outcomes live in `routing/task-history.json`. Roles are stable agent definitions; the model behind a delegated role is selected dynamically by `scripts/select-model.ps1`, which remains the single source of capability truth. Free-first means cheapest adequate: free models are preferred when evidence says they are adequate, and subscription models are selected when task requirements justify them.
 
 Eligible automatic/recommended surfaces are OpenCode free models, OpenAI OAuth/ChatGPT subscription models, and GitHub Copilot OAuth models. Separately metered API gateways are excluded.
 
@@ -85,7 +88,8 @@ The toolkit does **not** set broad shell/PowerShell approval rules. Build and De
 
 Nested subagents are allowed selectively when your OpenCode `subagent_depth` permits them:
 
-- Build -> Explore / Index / Deep / Review
+- Build -> Explore / Index / Worker / Deep / Review
+- Worker -> Explore / Index / Review
 - Deep -> Explore / Index / Review
 - Review -> Explore / Index
 

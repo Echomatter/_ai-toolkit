@@ -9,6 +9,7 @@ permission:
     "*": deny
     explore: allow
     index: allow
+    worker: allow
     deep: allow
     review: allow
 ---

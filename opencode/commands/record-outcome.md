@@ -20,8 +20,20 @@ Do not record trivial orientation/search-only work. Do not invent results.
    - attempt count
    - whether escalation occurred
    - elapsed band: `short / medium / long`
+   - delegation role when the work was delegated: `worker / review / index` (omit for direct Build work)
+   - delegated model when it differs from the recorded model, and the parent session model at delegation time
 3. If any required value is genuinely unknown, ask one concise question rather than fabricate it.
-4. Invoke `scripts\record-task-outcome.ps1` with those values.
+4. Invoke `scripts\record-task-outcome.ps1` with those values. Pass `-Role`, `-DelegatedModel`, and `-ParentModel` when the task was delegated so future selection can learn from delegation outcomes.
+
+   ```powershell
+   $root = (Get-Content "$HOME\.config\opencode\ai-toolkit-root.txt" -Raw).Trim()
+   powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$root\scripts\record-task-outcome.ps1" `
+     -Repo "<repo>" -TaskType "bounded_feature" -Model "<model>" -Access "<surface>" `
+     -Success:$true -TestsPassed:$true -Attempts 1 -Escalated:$false -ElapsedBand "short" `
+     -Role "worker" -ParentModel "<parent-model>"
+   ```
+
+   Pass `-TaskType` as a single (optionally comma-separated) string. PowerShell `-File` CLI parsing does not preserve `@(...)` arrays; extra elements spill into other parameters.
 5. Return the emitted Task ID. Keep it with the task so a later independent review can mark defects against the same observation.
 
 To mark that a later review found a defect in an existing task, invoke:
