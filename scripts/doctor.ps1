@@ -25,6 +25,9 @@ if($oc){
   try { $models=@(& $oc.Source models 2>&1); if($LASTEXITCODE -eq 0 -and $models.Count -gt 0){ OK "OpenCode model inventory available ($($models.Count) entries)." } else { FAIL 'OpenCode model inventory failed.' } } catch { FAIL 'OpenCode model inventory failed.' }
 }else{ FAIL 'OpenCode command not found.' }
 
+$py=Get-Command python -ErrorAction SilentlyContinue
+if($py){ OK "Python found for content_index: $($py.Source)" }else{ WARN 'Python not found; content_index rebuild/search will be unavailable until Python is on PATH.' }
+
 $gh=Get-Command gh -ErrorAction SilentlyContinue
 if($gh){
   OK 'GitHub CLI found.'
@@ -213,8 +216,10 @@ if($st){
    if($st.review -match '^github-copilot/' -and -not $st.oauth.github_copilot){ FAIL 'Review lane selected GitHub Copilot without eligible Copilot OAuth route.' }
    # Check Deep/Review reference available models
    $allModelIds = @($roster.eligible_models).id
+   if($allModelIds -notcontains $st.search){ FAIL 'Search/Index lane references model not in eligible roster.' }
    if($allModelIds -notcontains $st.deep){ FAIL 'Deep lane references model not in eligible roster.' }
    if($allModelIds -notcontains $st.review){ FAIL 'Review lane references model not in eligible roster.' }
+   if($st.eligible.opencode_free -gt 0 -and $st.search -notmatch '^opencode/'){ WARN 'Hosted-free models exist but Search/Index is not using one.' }
    # Check no metered/excluded route in automatic routing
    $forbidden = @('openrouter','vercel','anthropic','google','xai','groq','together','fireworks')
    foreach($f in $forbidden){ if($st.deep -match "^$f" -or $st.review -match "^$f"){ FAIL 'Metered/excluded provider in automatic routing lane.' } }
