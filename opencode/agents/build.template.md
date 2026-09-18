@@ -8,8 +8,8 @@ permission:
   task:
     "*": deny
     explore: allow
-    worker: allow
-    index: allow
+    worker: __WORKER_TASK_PERMISSION__
+    index: __INDEX_TASK_PERMISSION__
     deep: __DEEP_TASK_PERMISSION__
     review: __REVIEW_TASK_PERMISSION__
 ---
