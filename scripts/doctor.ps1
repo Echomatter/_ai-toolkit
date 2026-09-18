@@ -32,12 +32,12 @@ if($gh){
   if($LASTEXITCODE -eq 0){ OK 'GitHub CLI authenticated.' } else { WARN 'GitHub CLI is installed but not authenticated; run gh auth login.' }
 }else{ WARN 'GitHub CLI not found; remote GitHub work will be unavailable.' }
 
-$skills=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','handoff-brief')
+$skills=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief')
 foreach($s in $skills){ $p=Join-Path $env:USERPROFILE ".agents\skills\$s\SKILL.md"; if(Test-Path -LiteralPath $p){OK "skill installed: $s"}else{FAIL "skill missing: $s"} }
 
 
 $ocGlobal=Join-Path $env:USERPROFILE '.config\opencode'
-foreach($a in @('build','deep','review')){
+foreach($a in @('build','index','deep','review')){
   $p=Join-Path $ocGlobal "agents\$a.md"
   if(Test-Path -LiteralPath $p){OK "Desktop agent installed: $a"}else{FAIL "Desktop agent missing: $a"}
 }
