@@ -1,78 +1,80 @@
 ---
 name: model-routing
-description: Use when deciding whether the current OpenCode Build session should handle work itself or delegate to Explore, Deep, or Review; route silently by task, risk, and evidence using only free, subscription-OAuth, or optional local model surfaces.
+description: Use when deciding whether free Build/Worker/Index/Explore can finish the task or whether to request approved subscription Deep/Review help; keep routing free-first, bounded, and non-blocking.
 ---
 
 # Model Routing
 
-Skills never change the active OpenCode mode. Never claim to be in Plan because a task begins with inspection, a skill is read-only, or a command requires approval. Only OpenCode runtime/user agent selection determines Build vs Plan.
+Skills never change the active OpenCode mode. Only the runtime/user agent selection determines Build vs Plan.
 
-Goal: get the work done with the least expensive adequate lane without turning routing into a conversation of its own.
+Goal: finish work with free hosted models and deterministic tools whenever practical. Escalation should improve a narrowed hard problem, not become a prerequisite for ordinary work.
 
 ## Lanes
 
-- **Build**: OpenCode native primary agent, configured with the routine/free model. Routine implementation, bounded debugging, tests, ordinary refactors, and ordinary web research.
-- **Explore**: OpenCode's built-in read-only active-repository search/tracing agent.
-- **Deep**: stronger-model implementation/reasoning lane. Use only when escalation criteria are met.
-- **Review**: independent read-only verification on a different model when possible.
+- **Build**: free primary model for normal implementation, debugging, tests, refactors, GitHub reads, and web research.
+- **Worker**: free bounded implementation/research child for parallel or context-isolated work.
+- **Index**: free mixed-content retrieval worker using `content_index`; best for exhaustive/cross-document lookup.
+- **Explore**: native OpenCode read-only repo/code search.
+- **Deep**: strongest eligible OAuth/subscription reasoning/implementation lane.
+- **Review**: independent read-only OAuth/subscription verifier when available.
 
-OpenCode's Scout agent is experimental in the stable line and is not required by this toolkit. For external docs/upstream research, Build should use its own `websearch`/`webfetch` tools. For sibling repositories, use `local-repo-research`.
+## Default route
 
-## Route silently
+Use free paths first when they can settle the task:
 
-Do not announce a tier, ask the user which lane to use, or stop before work just to describe routing. Start working. Delegate only when evidence justifies it.
+- deterministic tools before model speculation;
+- Explore/grep/LSP for code structure and call paths;
+- Index for mixed PDFs/docs/data and "find all" retrieval;
+- Worker for bounded implementation, tests, mechanical refactors, or parallel investigation;
+- native web tools for current external research.
 
-## Stay in Build when
+Do not use a paid lane merely because the task sounds sophisticated.
 
-- the task is localized or mechanically understandable;
-- validation can cheaply determine correctness;
-- one or two bounded attempts are reasonable;
-- targeted repository exploration or web research can reduce uncertainty;
-- the task can be completed safely on the routine/free model.
+## Paid escalation
 
-## Use Explore when
+Use Deep when:
+- bounded free attempts fail without a materially new hypothesis;
+- architecture/state/concurrency/persistence boundaries remain ambiguous;
+- correctness depends on subtle algorithms, DSP/ML, security, firmware/recovery, or irreversible data operations;
+- a meaningful validation failure cannot be explained;
+- the user explicitly asks for stronger reasoning.
 
-- finding files, symbols, call sites, tests, configuration, or data flow inside the active repository is the main work;
-- a read-only child context will keep the primary context smaller.
+Use Review when:
+- the user explicitly asks for audit/review;
+- a substantial/high-consequence implementation needs independent verification;
+- model diversity materially reduces risk.
 
-## Escalate to Deep when one or more are true
+The generated agent permissions are the economic boundary:
+- free subagents are `allow`;
+- subscription/OAuth subagents are `ask`.
 
-- two bounded implementation/debug attempts fail without a materially new hypothesis;
-- architecture, state, concurrency, persistence, or ownership boundaries remain ambiguous after targeted inspection;
-- the next change is broad and a wrong design would create substantial rework;
-- correctness depends on subtle algorithms, realtime/DSP/ML behavior, security, cryptography, firmware/recovery, or irreversible data operations;
-- the current model cannot explain a meaningful failing validation;
-- required context remains too large after narrowing and Explore delegation;
-- the user explicitly requests the strongest available reasoning model.
+The user can approve or decline the paid child call. Direct manual `@deep` / `@review` invocation is already an explicit user action.
 
-A task merely sounding sophisticated is not enough. If Build can implement it and tests can settle it, stay in Build.
+## Failure behavior
 
-## Use Review when
+Paid escalation is never a blocking dependency.
 
-- the user asks for review or audit;
-- a substantial implementation just completed;
-- Deep made broad changes;
-- the cost of a missed regression is meaningful;
-- independent model diversity is useful.
+If a paid child call is declined or fails due to quota exhaustion, rate limiting, authentication, provider outage, or model unavailability:
 
-Review should inspect request + diff + tests and should not rewrite the implementation unless the user explicitly starts a separate implementation task.
+1. do not repeatedly retry the paid model;
+2. return to the free parent;
+3. use Worker/Index/Explore/native web tools to narrow or complete the task;
+4. run deterministic validation when possible;
+5. report the specific unresolved gap only if the free path cannot settle it.
 
-## Promotion semantics
+Do not silently switch the whole session.
 
-- **Chunk escalation:** when only a bounded hard portion needs stronger reasoning, delegate that portion to `Deep` and keep the parent Build session where it is.
-- **Session promotion:** when the remainder of the phase broadly needs a stronger model, recommend the configured Deep model and tell the user to switch manually with `/models`. Never switch the session automatically.
-- **Verification:** when the next step is independent review, recommend `@review` or `/audit` rather than changing the implementation session.
-- **Stay put:** if the current Build model is adequate and validation can settle the next step, do not recommend a switch.
+## Promotion
 
-At the end of a meaningful completed task, recommend a different lane/model only when the likely next phase is clear and the capability difference is material. For a deeper comparison among currently available models, load `model-advisor` or use `/recommend-model`.
+For a whole phase that materially benefits from another model, recommend it and let the user switch explicitly with `/models`. For bounded work, prefer a child delegation.
+
+At the end of meaningful work, recommend another model only when the likely next phase is clear and the advantage is material.
 
 ## Economic boundary
 
-Automatic routing may use only model assignments generated by the toolkit from:
+Automatic routing and recommendations may use:
+- current hosted OpenCode free models;
+- OpenAI OAuth / ChatGPT subscription models;
+- GitHub Copilot OAuth subscription models.
 
-- current free OpenCode model SKUs;
-- ChatGPT subscription models connected through OpenAI OAuth;
-- GitHub Copilot subscription models connected through Copilot OAuth;
-- optional local Ollama models.
-
-Do not automatically route into separately metered API-key providers or gateways.
+Do not route to local model engines or separately metered API-key/gateway providers.
