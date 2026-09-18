@@ -235,6 +235,18 @@ try {
     }
 } catch { Fail ("E10 task linkage error: " + $_.Exception.Message) }
 
+# E11: paid recommendations always expose a hosted-free fallback.
+try {
+    $paidProbe = Invoke-Selection @('architecture','debugging','terminal_heavy') $true $true 128000 $true $false $true
+    if ($paidProbe.recommended -match '^(openai|github-copilot)/') {
+        if ($paidProbe.fallback -and $paidProbe.fallback.id -match '^opencode/') {
+            Pass ("E11 paid recommendation has hosted-free fallback (" + $paidProbe.fallback.id + ")")
+        } else { Fail 'E11 paid recommendation lacks hosted-free fallback' }
+    } else {
+        Pass 'E11 probe selected hosted-free model; paid fallback requirement not applicable'
+    }
+} catch { Fail ("E11 free fallback error: " + $_.Exception.Message) }
+
 # Structural: alias coverage, lanes eligible, OAuth gating, no metered, no Plan, provenance.
 $unmapped = @()
 foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {
