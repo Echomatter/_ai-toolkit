@@ -7,7 +7,7 @@ permission:
   plan_enter: deny
   task:
     "*": deny
-    explore: allow
+    explore: __EXPLORE_TASK_PERMISSION__
     worker: __WORKER_TASK_PERMISSION__
     index: __INDEX_TASK_PERMISSION__
     deep: __DEEP_TASK_PERMISSION__
