@@ -13,8 +13,13 @@ if(-not $python){
 if(-not $python){$python=Get-Command python3 -ErrorAction SilentlyContinue}
 if(-not $python){throw 'Python is required for the content index smoke test.'}
 
-function Invoke-Indexer([string[]]$Args){
-  $all=@($prefix + @($Indexer,'--db',$db) + $Args)
+function Invoke-Indexer([string[]]$CliArgs){
+  $all=@()
+  $all += @($prefix)
+  $all += $Indexer
+  $all += '--db'
+  $all += $db
+  $all += @($CliArgs)
   $errFile=[IO.Path]::GetTempFileName()
   $previous=$ErrorActionPreference
   try {
@@ -53,7 +58,7 @@ Status: active
 }
 '@ | Set-Content -LiteralPath (Join-Path $root 'data.json') -Encoding UTF8
 
-  $build=Invoke-Indexer @('rebuild','--root',$root,'--facts','general') | ConvertFrom-Json
+  $build=Invoke-Indexer -CliArgs @('rebuild','--root',$root,'--facts','general') | ConvertFrom-Json
   if($build.indexed_sources -lt 2){throw "Expected >=2 indexed sources, got $($build.indexed_sources)"}
   if($build.validation.integrity -ne 'ok'){throw 'SQLite integrity validation did not pass.'}
   if(-not $build.validation.units_equal_fts_rows){throw 'FTS/unit parity validation did not pass.'}
