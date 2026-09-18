@@ -61,8 +61,12 @@ $dexReviewOnly = $null
 $dexRepair = $null
 try {
     $dexReviewOnly = Invoke-Selection @('code_review','independent_verification','long_context_reading') $false $false 500000 $false $true $false
-    if ($dexReviewOnly.execution_surface -eq '@review') { Pass 'E3 DexFraggler review-only uses @review alone' }
-    else { Fail ("E3 wrong surface: " + $dexReviewOnly.execution_surface) }
+    if ($dexReviewOnly.execution_surface -eq '@review') {
+        if ($dexReviewOnly.recommended -eq $st.review) { Pass 'E3 @review surface matches the pinned Review model' }
+        else { Fail 'E3 @review would execute a different model than the recommendation' }
+    } elseif ($dexReviewOnly.execution_surface -eq '/models switch' -or $dexReviewOnly.execution_surface -eq 'build') {
+        Pass ("E3 review-only uses honest surface for selected model (" + $dexReviewOnly.execution_surface + ")")
+    } else { Fail ("E3 wrong surface: " + $dexReviewOnly.execution_surface) }
     if (@($dexReviewOnly.phases).Count -eq 1) { Pass 'E3 single diagnosis phase' }
     else { Fail 'E3 should have exactly one phase' }
 } catch { Fail ("E3 selector error: " + $_.Exception.Message) }
@@ -74,8 +78,12 @@ try {
     else { Fail 'E4 should have exactly two phases' }
     $p1 = @($dexRepair.phases | Where-Object { $_.phase -eq 1 })[0]
     $p2 = @($dexRepair.phases | Where-Object { $_.phase -eq 2 })[0]
-    if ($p1 -and $p2 -and $p1.surface -eq '@review' -and $p1.model -ne $p2.model) { Pass 'E4 Phase1 @review diagnosis distinct from Phase2 repair model' }
-    else { Fail 'E4 phase separation invalid (needs_writes must reject sole @review)' }
+    if ($p1 -and $p2 -and $p1.model -ne $p2.model) {
+        $p1Ok = (($p1.surface -eq '@review' -and $p1.model -eq $st.review) -or ($p1.surface -eq '/models switch') -or ($p1.surface -eq 'build'))
+        $p2Ok = (($p2.surface -eq '@deep chunk' -and $p2.model -eq $st.deep) -or ($p2.surface -eq '/models switch') -or ($p2.surface -eq 'build'))
+        if ($p1Ok -and $p2Ok) { Pass 'E4 phase models and execution surfaces are internally consistent' }
+        else { Fail 'E4 phase surface names do not match the models they would actually execute' }
+    } else { Fail 'E4 phase separation invalid (needs_writes must reject sole @review)' }
     if ($p1 -and $dexRepair.execution_surface -eq '@review') { Fail 'E4 must not collapse to sole @review when needs_writes=true' }
 } catch { Fail ("E4 selector error: " + $_.Exception.Message) }
 if ($dexReviewOnly -and $dexRepair) {
@@ -83,7 +91,7 @@ if ($dexReviewOnly -and $dexRepair) {
         Pass ("E3/E4 DexFraggler requirements change recommendation (" + $dexReviewOnly.recommended + " " + $dexReviewOnly.execution_surface + " -> " + $dexRepair.recommended + " " + $dexRepair.execution_surface + ")")
     } else { Fail 'E3/E4 identical despite changed requirements (needs_writes/terminal/deep)' }
     Write-Output ("INFO: DexFraggler review-only  = " + $dexReviewOnly.recommended + " via " + $dexReviewOnly.execution_surface)
-    Write-Output ("INFO: DexFraggler review+repair = " + $dexRepair.recommended + " via " + $dexRepair.execution_surface + " (Phase1 " + $dexRepair.diagnosis_model.id + " @review)")
+    Write-Output ("INFO: DexFraggler review+repair = " + $dexRepair.recommended + " via " + $dexRepair.execution_surface + " (Phase1 " + $dexRepair.diagnosis_model.id + ")")
 }
 
 # E5: history wiring - 3 failures for the trivial winner must move the ranking.
@@ -171,6 +179,30 @@ try {
     if ($notes -notmatch '2\.1') { Pass 'E8 selector reasoning excludes legacy version from bonus' }
     else { Fail 'E8 legacy version leaked into ranking bonus' }
 } catch { Fail ("E8 benchmark error: " + $_.Exception.Message) }
+
+# E9: an explicit diversity request should not reuse the excluded canonical model,
+# and should prefer a different model vendor when evidence is otherwise competitive.
+try {
+    $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $selectorPath -TaskType @('code_review','independent_verification') -NeedsWrites:$false -NeedsModelDiversity:$true -ExcludeModel $st.deep 2>$null
+    if ($LASTEXITCODE -ne 0) { throw 'select-model diversity probe failed' }
+    $div = (($out -join "`n") | ConvertFrom-Json)
+    $deepCanon = Get-CanonicalKey $ev $st.deep
+    $recCanon = Get-CanonicalKey $ev $div.recommended
+    if ($deepCanon -and $recCanon -and $deepCanon -ne $recCanon) { Pass 'E9 diversity excludes the Deep canonical model from Review selection' }
+    else { Fail 'E9 diversity reused the Deep canonical model' }
+
+    function ProviderFor([string]$rid) {
+        $ck = Get-CanonicalKey $ev $rid
+        foreach ($p in @($ev.models.PSObject.Properties)) {
+            if ($p.Name -eq $ck -and $p.Value.provider) { return ([string]$p.Value.provider).ToLower() }
+        }
+        return ''
+    }
+    $deepProvider = ProviderFor $st.deep
+    $recProvider = ProviderFor $div.recommended
+    if ($deepProvider -and $recProvider -and $deepProvider -ne $recProvider) { Pass 'E9 diversity selected a different model vendor from Deep' }
+    else { Write-Output ("INFO: E9 selected same vendor despite diversity preference: " + $div.recommended) }
+} catch { Fail ("E9 diversity error: " + $_.Exception.Message) }
 
 # Structural: alias coverage, lanes eligible, OAuth gating, no metered, no Plan, provenance.
 $unmapped = @()
