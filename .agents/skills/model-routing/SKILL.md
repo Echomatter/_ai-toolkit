@@ -14,7 +14,7 @@ Goal: finish work with free hosted models and deterministic tools whenever pract
 - **Build**: free primary model for normal implementation, debugging, tests, refactors, GitHub reads, and web research.
 - **Worker**: free bounded implementation/research child for parallel or context-isolated work.
 - **Index**: free mixed-content retrieval worker using `content_index`; best for exhaustive/cross-document lookup.
-- **Explore**: native OpenCode read-only repo/code search.
+- **Explore**: OpenCode's built-in search agent ID pinned to the free search model; read-only repo/code search.
 - **Deep**: strongest eligible OAuth/subscription reasoning/implementation lane.
 - **Review**: independent read-only OAuth/subscription verifier when available.
 
