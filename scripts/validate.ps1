@@ -82,7 +82,34 @@ $state=Join-Path $ToolkitRoot 'routing\state.json'
 foreach($p in @($policy,$state)){try{Get-Content -LiteralPath $p -Raw | ConvertFrom-Json | Out-Null;OK "valid JSON: $([IO.Path]::GetFileName($p))"}catch{F "invalid JSON: $p"}}
 
 $evidence=Join-Path $ToolkitRoot 'routing\model-evidence.json'
-try{Get-Content -LiteralPath $evidence -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: model-evidence.json'}catch{F "invalid JSON: $evidence"}
+$ev=$null
+try{$ev=Get-Content -LiteralPath $evidence -Raw | ConvertFrom-Json;OK 'valid JSON: model-evidence.json'}catch{F "invalid JSON: $evidence"}
+if($ev){
+  if($ev.schema_version -ne 2){F "model-evidence.json schema_version is $($ev.schema_version), expected 2"}
+  $sources=@(); if($ev.sources){$sources=@($ev.sources.PSObject.Properties.Name)}
+  $modelProps=@(); if($ev.models){$modelProps=@($ev.models.PSObject.Properties)}
+  if($modelProps.Count -eq 0){F 'model-evidence.json contains no models'}else{OK "model-evidence.json has $($modelProps.Count) canonical models"}
+  $missingSrc=New-Object System.Collections.ArrayList
+  foreach($m in $modelProps){
+    $mn=$m.Name; $md=$m.Value
+    foreach($k in @($md.source_keys)){if($sources -notcontains $k){[void]$missingSrc.Add("$mn.source_keys -> $k")}}
+    foreach($b in @($md.benchmarks)){if($b -and $sources -notcontains $b.source){[void]$missingSrc.Add("$mn.benchmarks -> $($b.source)")}}
+    foreach($cap in @($md.capabilities.PSObject.Properties)){
+      foreach($k in @($cap.Value.evidence)){if($sources -notcontains $k){[void]$missingSrc.Add("$mn.capabilities.$($cap.Name) -> $k")}}
+    }
+  }
+  if($missingSrc.Count -gt 0){F ("model-evidence.json references unregistered sources: " + ($missingSrc -join ', '))}else{OK 'model-evidence.json source_keys/benchmarks/capability evidence all reference registered sources'}
+  if($ev.alias_index){
+    $aliasProps=@($ev.alias_index.PSObject.Properties)
+    $modelNames=@($modelProps|ForEach-Object{$_.Name})
+    $badAlias=@($aliasProps|Where-Object{$modelNames -notcontains ([string]$_.Value)}|ForEach-Object{"$($_.Name) -> $($_.Value)"})
+    if($badAlias.Count -gt 0){F ("model-evidence.json alias_index targets missing models: " + ($badAlias -join ', '))}else{OK "alias_index maps $($aliasProps.Count) roster aliases to $($modelProps.Count) models"}
+    $used=@($modelProps|ForEach-Object{@($_.Value.source_keys)})
+    $orphan=@($sources|Where-Object{$used -notcontains $_})
+    if($orphan.Count -gt 0){W "registered sources never referenced by any model source_keys: $($orphan -join ', ')"}
+  }
+  OK "model-evidence.json counts: $($modelProps.Count) models, $($sources.Count) sources, $((@($ev.alias_index.PSObject.Properties)).Count) aliases"
+}
 
 $history=Join-Path $ToolkitRoot 'routing\task-history.json'
 try{Get-Content -LiteralPath $history -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}

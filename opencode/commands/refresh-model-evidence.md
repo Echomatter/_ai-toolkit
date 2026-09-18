@@ -26,11 +26,12 @@ Repopulate `routing/model-evidence.json` with current, sourced capability eviden
    - plausible competing OpenAI OAuth models;
    - plausible competing Copilot OAuth models.
 
-3. For each serious candidate, in priority order:
-   - Search the current web for official provider/model documentation (context window, tool support, coding focus, reasoning controls).
-   - Search for current independent coding-agent evidence (long-horizon software engineering, terminal-agent work, repository understanding, code repair, debugging, token usage, latency).
-   - Verify exact model/version identity before storing anything.
-   - Record source URL, retrieval date, benchmark/harness name, metric, and applicability. Store only claims the sources actually support.
+3. For each serious candidate, in priority order, run this search loop with the session's `websearch`/`webfetch` tools. Every claim must come from actual retrieval in this run; never from model memory or inference.
+
+   a. Identity first: `websearch "<model> <provider alias> release"` and `webfetch` the provider or catalog page for the exact roster ID. Confirm the version and the hosted surface you are evidencing (OpenCode free, OpenAI OAuth, GitHub Copilot). Prefer evidence measured on the same surface when one exists; never substitute a different SKU/variant silently.
+   b. Provider evidence: `websearch "<model> <docs|release|benchmarks>"`, then `webfetch` the official documentation/release page for context window, tool support, coding focus, and reasoning controls.
+   c. Independent evidence: `websearch "<model> <Terminal-Bench|SWE-bench|DeepSWE|Coding Agent Index|SWE-Atlas> <Artificial Analysis|BenchmarkList|Vals>"`, then `webfetch` at least one independent benchmark article or comparison. Prefer agent-harness runs (CAI v1.5 / TB4) over model-level scores, and version-pinned numbers over aggregate rankings.
+   d. Record, do not summarize away: after each fetch, capture the source URL, a `retrieved_at` date, and only the claims that page actually supports (benchmark/harness/version/config). Merge or discard near-duplicate sources before they enter `sources`.
 
 4. Update `routing/model-evidence.json` (schema_version 2 — keep this exact shape):
    - Top level: `schema_version`, `generated_at`, `evidence_as_of` (date), `advisor_readiness` + honest `readiness_reason`, `policy` invariants, `current_assignments_snapshot`, `serious_candidate_set`, `evidence_classes`, `sources` registry, `alias_index` covering **every** roster eligible ID, `models` keyed by canonical ID, prioritized `research_queue`.
