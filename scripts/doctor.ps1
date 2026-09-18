@@ -68,7 +68,7 @@ $statePath=Join-Path $ToolkitRoot 'routing\state.json'
 if(Test-Path -LiteralPath $statePath){
    try {
       $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
-      OK "Routine: $($st.routine)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
+      OK "Routine: $($st.routine)"; OK "Index: $($st.index)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
       $distinct = $true
       if($null -ne $st.review_is_distinct_model){ $distinct = [bool]$st.review_is_distinct_model }
       elseif($null -ne $st.review_is_independent){ $distinct = [bool]$st.review_is_independent }
@@ -150,6 +150,7 @@ Write-Output ""
 Write-Output "Current lanes:"
 Write-Output "Routine (Build): $($st.routine)"
 Write-Output "Explore: native OpenCode agent (no fixed model)"
+Write-Output "Index: $($st.index) (free corpus retrieval)"
 Write-Output "Deep: $($st.deep)"
 Write-Output "Review: $($st.review)"
 Write-Output ""
