@@ -1,37 +1,52 @@
 # Routing
 
-## Build — routine/free
+## Build — free primary
 
-Primary interactive mode for the toolkit. It starts work immediately and handles ordinary implementation, debugging, tests, refactors, GitHub reads, and web research.
+Normal interactive work starts on the hosted free routine model. Build handles ordinary implementation, debugging, tests, refactors, GitHub reads, and web research.
 
-## Explore — native OpenCode
+## Worker — free bounded work
 
-Read-only active-repository search and tracing. Build delegates here when a child context will reduce noise.
+Use `@worker` for context-isolated implementation, tests, mechanical refactors, or targeted investigation. Worker is pinned to the free routine model.
 
-## Deep — strong subscription lane
+## Index — free corpus retrieval
 
-Used only after concrete escalation conditions: repeated bounded failure, unresolved architecture/state boundaries, hard algorithmic or high-consequence work, unexplained validation failures, or explicit request for strongest reasoning.
+Use `@index` for exhaustive mixed-content search, cross-document evidence mapping, and "find all" requests. It is pinned to the free search model and uses the deterministic `content_index` tool.
 
-A hard **chunk** can be delegated to Deep automatically while the parent Build session remains on its current model.
+Native Explore/grep/LSP remain the preferred code-structure search path.
 
-## Review — independent read-only lane
+## Deep — subscription escalation
 
-Used for explicit audits and consequential changes. Prefer a different provider/model from Deep.
+Deep is used only after the free path has narrowed a genuinely hard problem: repeated bounded failure, unresolved architecture/state boundaries, subtle algorithmic/DSP/ML/security/firmware work, unexplained validation failures, or explicit strongest-model requests.
+
+When Deep is a subscription/OAuth model, an agent attempting to launch it gets an OpenCode approval prompt. Declining that prompt does not stop the task.
+
+## Review — subscription independent verification
+
+Review is read-only and used for explicit audits or consequential changes. When it is a subscription/OAuth model, agent-initiated Review also requires approval.
+
+## Paid failure behavior
+
+Paid subagents are optional accelerators, not dependencies.
+
+If Deep/Review is declined or fails because quota, rate limit, authentication, outage, or model availability is exhausted:
+
+1. do not repeatedly retry it;
+2. return to the free parent;
+3. use Worker/Index/Explore/native web tools;
+4. validate deterministically where possible;
+5. report only the remaining unresolved gap.
 
 ## Session promotion
 
-The toolkit never changes the current session model automatically.
-
-When the next phase broadly benefits from a stronger model, Build may recommend the exact configured model and tell the user to switch explicitly with `/models`. Use `/recommend-model` for an evidence-backed recommendation on demand.
-
-At the end of a meaningful completed task, a one-line recommendation appears only when the likely next phase is clear and changing models would materially improve the work. Otherwise there is no routing commentary.
-
-## External research
-
-Build uses native `websearch` and `webfetch`. The experimental Scout agent is intentionally not required.
+The toolkit never changes the current session model automatically. If a whole phase materially benefits from another model, recommend it and let the user switch explicitly with `/models`.
 
 ## Economic boundary
 
-Automatic routing and model advice may use only current OpenCode free models, OpenAI OAuth models, GitHub Copilot OAuth models, and optional local Ollama. API-key/gateway models are excluded unless the user explicitly changes the policy.
+Automatic routing/model advice may use:
+- current hosted OpenCode free models;
+- OpenAI OAuth / ChatGPT subscription models;
+- GitHub Copilot OAuth subscription models.
 
-See `MODEL-ADVISOR.md` for evidence and recommendation rules.
+Local model engines and separately metered API-key/gateway providers are intentionally outside the toolkit.
+
+See `MODEL-ADVISOR.md` and `CONTENT-INDEX.md`.
