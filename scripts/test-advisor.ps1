@@ -204,6 +204,37 @@ try {
     else { Write-Output ("INFO: E9 selected same vendor despite diversity preference: " + $div.recommended) }
 } catch { Fail ("E9 diversity error: " + $_.Exception.Message) }
 
+# E10: a later Review can update the original task observation by TaskId
+# without appending a disconnected second record.
+try {
+    $histBak2 = $null; $rosterBak2 = $null
+    if (Test-Path -LiteralPath $historyPath) { $histBak2 = Get-Content -LiteralPath $historyPath -Raw -Encoding UTF8 }
+    if (Test-Path -LiteralPath $rosterPath) { $rosterBak2 = Get-Content -LiteralPath $rosterPath -Raw -Encoding UTF8 }
+    try {
+        $tid = 'advisor-review-link-test'
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $recordPath -Repo 'advisor-test' -TaskType @('bounded_feature') -Model $st.routine -Access 'test' -Success:$true -TestsPassed:$true -Attempts 1 -Escalated:$false -ElapsedBand 'short' -TaskId $tid | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'initial task history record failed' }
+        $beforeMark = Get-Content -LiteralPath $historyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $countBeforeMark = @($beforeMark.entries).Count
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $recordPath -TaskId $tid -MarkReviewDefect | Out-Null
+        if ($LASTEXITCODE -ne 0) { throw 'review-defect update failed' }
+        $afterMark = Get-Content -LiteralPath $historyPath -Raw -Encoding UTF8 | ConvertFrom-Json
+        $linked = @($afterMark.entries | Where-Object { $_.task_id -eq $tid })[0]
+        if ($linked -and $linked.review_found_defects -eq $true -and @($afterMark.entries).Count -eq $countBeforeMark) {
+            Pass 'E10 review defect updates the original task observation'
+        } else { Fail 'E10 review defect was not linked to the original task' }
+    } finally {
+        if ($null -ne $histBak2) {
+            $enc3 = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($historyPath, $histBak2, $enc3)
+        }
+        if ($null -ne $rosterBak2) {
+            $enc4 = New-Object System.Text.UTF8Encoding($false)
+            [System.IO.File]::WriteAllText($rosterPath, $rosterBak2, $enc4)
+        }
+    }
+} catch { Fail ("E10 task linkage error: " + $_.Exception.Message) }
+
 # Structural: alias coverage, lanes eligible, OAuth gating, no metered, no Plan, provenance.
 $unmapped = @()
 foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {
