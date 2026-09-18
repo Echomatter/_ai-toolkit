@@ -1,0 +1,1105 @@
+{
+    "generated":  true,
+    "generated_at":  "2026-09-18T04:59:16.9274363Z",
+    "assignments":  {
+                        "routine":  {
+                                        "id":  "opencode/muse-spark-1.3-contributor-free",
+                                        "surface":  "opencode-free"
+                                    },
+                        "deep":  {
+                                     "id":  "openai/gpt-6-astra",
+                                     "surface":  "openai-oauth"
+                                 },
+                        "review":  {
+                                       "id":  "github-copilot/gpt-5.3-codex",
+                                       "surface":  "github-copilot-oauth"
+                                   }
+                    },
+    "economics":  {
+                      "opencode_free":  "currently free hosted model; availability may change",
+                      "openai_oauth":  "ChatGPT subscription/quota access; not API token billing",
+                      "github_copilot_oauth":  "GitHub Copilot subscription/quota access; not API token billing",
+                      "ollama_local":  "local inference; no marginal model charge"
+                  },
+    "eligible_models":  [
+                            {
+                                "id":  "opencode/big-pickle",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "opencode/ling-3.0-flash-fin-free",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "opencode/mimo-v2.5-free",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "opencode/muse-spark-1.2-contributor-free",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "opencode/muse-spark-1.3-contributor-free",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "opencode/nemotron-3.5-lightning-free",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "opencode/nemotron-3-ultra-free",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.3-codex-spark",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.4",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.4-fast",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.4-mini",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.4-mini-fast",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.5",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.5-fast",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.6-luna",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.6-luna-fast",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.6-sol",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.6-sol-fast",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.6-terra",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-5.6-terra-fast",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-6-astra",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "openai/gpt-6-astra-fast",
+                                "surface":  "openai-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/claude-haiku-4.5",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/claude-sonnet-5",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gemini-3.5-flash",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gemini-3.6-flash",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gemini-3.7-flash",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gemini-3.8-flash",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gpt-5.3-codex",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gpt-5.4",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gpt-5.4-mini",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/gpt-5-mini",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/grok-4.5",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/grok-4.6",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/kimi-k2.7-code",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/kimi-k3",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            },
+                            {
+                                "id":  "github-copilot/mai-code-1.1-flash",
+                                "surface":  "github-copilot-oauth",
+                                "economics":  "subscription-quota",
+                                "context":  {
+                                                "output_tokens":  null,
+                                                "input_tokens":  null
+                                            },
+                                "capabilities":  {
+                                                     "long_context":  "unknown",
+                                                     "architecture":  "unknown",
+                                                     "tool_use":  "unknown",
+                                                     "research":  "unknown",
+                                                     "terminal_agent_work":  "unknown",
+                                                     "long_horizon_engineering":  "unknown",
+                                                     "debugging":  "unknown",
+                                                     "code_review":  "unknown",
+                                                     "repo_understanding":  "unknown",
+                                                     "speed":  "unknown",
+                                                     "coding":  "unknown"
+                                                 },
+                                "evidence":  [
+
+                                             ],
+                                "observed":  {
+
+                                             },
+                                "last_evidence_refresh":  null
+                            }
+                        ],
+    "recommendation":  {
+                           "automatic_session_switch":  false,
+                           "automatic_chunk_delegation":  "Deep when model-routing escalation criteria are met",
+                           "end_of_task":  "recommend only when the next phase is clear and another lane has a material advantage",
+                           "explicit_command":  "/recommend-model"
+                       }
+}
