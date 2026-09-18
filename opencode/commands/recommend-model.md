@@ -79,7 +79,7 @@ Return:
 Recommended: <model>
 
 Access:
-<free / ChatGPT OAuth / Copilot OAuth / local>
+<free / ChatGPT OAuth / Copilot OAuth>
 
 Why:
 - task-specific evidence-backed reason
