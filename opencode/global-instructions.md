@@ -67,8 +67,8 @@ When making an end-of-task next-model recommendation, use the deterministic sele
 5. Use native web search/fetch for current external research; do not depend on experimental Scout.
 6. Use `@index` / `content_index` for exhaustive mixed-content corpus retrieval or "find all" work; use native Explore/grep/LSP for source-code structure.
 7. Search sibling repos only when prior work is likely to matter.
-7. Validate changed behavior with the smallest meaningful test, build, or reproduction.
-8. Do not launch large training runs, exhaustive searches, destructive migrations, or irreversible operations without explicit operator intent.
-9. Use `git` locally and authenticated `gh` for remote GitHub. Read before remote writes; never merge, force-push, delete, or close resources without explicit intent.
-10. Keep claims tied to evidence and state what remains unverified.
-11. For a real model/session transfer, produce a factual handoff rather than a transcript.
+8. Validate changed behavior with the smallest meaningful test, build, or reproduction.
+9. Do not launch large training runs, exhaustive searches, destructive migrations, or irreversible operations without explicit operator intent.
+10. Use `git` locally and authenticated `gh` for remote GitHub. Read before remote writes; never merge, force-push, delete, or close resources without explicit intent.
+11. Keep claims tied to evidence and state what remains unverified.
+12. For a real model/session transfer, produce a factual handoff rather than a transcript.
