@@ -62,13 +62,13 @@ function Invoke-OpenCodeCaptured([string[]]$Arguments) {
     }
     return [pscustomobject]@{ Output = $output; ExitCode = $exitCode }
 }
-function Render-Agent([string]$Name, [string]$RoutineModel, [string]$SearchModel, [string]$DeepModel, [string]$ReviewModel, [string]$WorkerTaskPermission, [string]$IndexTaskPermission, [string]$DeepTaskPermission, [string]$ReviewTaskPermission) {
+function Render-Agent([string]$Name, [string]$RoutineModel, [string]$SearchModel, [string]$DeepModel, [string]$ReviewModel, [string]$ExploreTaskPermission, [string]$WorkerTaskPermission, [string]$IndexTaskPermission, [string]$DeepTaskPermission, [string]$ReviewTaskPermission) {
     $templatePath = Join-Path $AgentsDir "$Name.template.md"
     $outputPath = Join-Path $AgentsDir "$Name.md"
     if (-not (Test-Path -LiteralPath $templatePath)) { throw "Missing agent template: $templatePath" }
     $text = Get-Content -LiteralPath $templatePath -Raw -Encoding UTF8
     $text = $text.Replace('__ROUTINE_MODEL__',$RoutineModel).Replace('__SEARCH_MODEL__',$SearchModel).Replace('__DEEP_MODEL__',$DeepModel).Replace('__REVIEW_MODEL__',$ReviewModel)
-    $text = $text.Replace('__WORKER_TASK_PERMISSION__',$WorkerTaskPermission).Replace('__INDEX_TASK_PERMISSION__',$IndexTaskPermission)
+    $text = $text.Replace('__EXPLORE_TASK_PERMISSION__',$ExploreTaskPermission).Replace('__WORKER_TASK_PERMISSION__',$WorkerTaskPermission).Replace('__INDEX_TASK_PERMISSION__',$IndexTaskPermission)
     $text = $text.Replace('__DEEP_TASK_PERMISSION__',$DeepTaskPermission).Replace('__REVIEW_TASK_PERMISSION__',$ReviewTaskPermission)
     Write-Utf8NoBom $outputPath $text
 }
@@ -206,15 +206,17 @@ if ($selectorUsable) {
 }
 
 if (-not (Test-Path -LiteralPath $AgentsDir)) { New-Item -ItemType Directory -Path $AgentsDir -Force | Out-Null }
+$exploreTaskPermission = Task-PermissionFor $search
 $workerTaskPermission = Task-PermissionFor $routine
 $indexTaskPermission = Task-PermissionFor $search
 $deepTaskPermission = Task-PermissionFor $deep
 $reviewTaskPermission = Task-PermissionFor $review
-Render-Agent 'build' $routine $search $deep $review $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
-Render-Agent 'worker' $routine $search $deep $review $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
-Render-Agent 'index' $routine $search $deep $review $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
-Render-Agent 'deep' $routine $search $deep $review $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
-Render-Agent 'review' $routine $search $deep $review $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
+Render-Agent 'build' $routine $search $deep $review $exploreTaskPermission $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
+Render-Agent 'explore' $routine $search $deep $review $exploreTaskPermission $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
+Render-Agent 'worker' $routine $search $deep $review $exploreTaskPermission $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
+Render-Agent 'index' $routine $search $deep $review $exploreTaskPermission $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
+Render-Agent 'deep' $routine $search $deep $review $exploreTaskPermission $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
+Render-Agent 'review' $routine $search $deep $review $exploreTaskPermission $workerTaskPermission $indexTaskPermission $deepTaskPermission $reviewTaskPermission
 
 $templateText = Get-Content -LiteralPath $Template -Raw -Encoding UTF8
 $configText = $templateText.Replace('__ROUTINE_MODEL__',$routine).Replace('__SEARCH_MODEL__',$search)
@@ -306,7 +308,7 @@ $state = [ordered]@{
     review = $review
     review_is_distinct_model = ($review -ne $deep)
     review_is_independent = ($review -ne $deep) # legacy field: distinct ID, not necessarily different vendor
-    desktop_agents = @('build','worker','index','deep','review')
+    desktop_agents = @('build','explore','worker','index','deep','review')
     policy = 'free hosted workers first -> OAuth subscription escalation with approval; no local engine and no metered API gateways'
     paid_subagents_require_approval = $true
     promotion = 'free workers run normally; paid Deep/Review delegation asks first; full-session switches remain explicit /models actions'
