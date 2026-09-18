@@ -1,78 +1,88 @@
 ---
 name: model-routing
-description: Use when deciding whether the current OpenCode Build session should handle work itself or delegate to Explore, Deep, or Review; route silently by task, risk, and evidence using only free, subscription-OAuth, or optional local model surfaces.
+description: Use when deciding whether the current OpenCode Build session should handle work itself or delegate to Explore, Index, Deep, or Review; prefer deterministic/free retrieval and escalate to subscription models only when the task evidence justifies it.
 ---
 
 # Model Routing
 
-Skills never change the active OpenCode mode. Never claim to be in Plan because a task begins with inspection, a skill is read-only, or a command requires approval. Only OpenCode runtime/user agent selection determines Build vs Plan.
+Skills never change the active OpenCode mode. Only OpenCode runtime/user agent selection determines Build vs Plan.
 
-Goal: get the work done with the least expensive adequate lane without turning routing into a conversation of its own.
+Goal: finish the work with the cheapest adequate path without turning routing into a conversation of its own.
 
 ## Lanes
 
-- **Build**: OpenCode native primary agent, configured with the routine/free model. Routine implementation, bounded debugging, tests, ordinary refactors, and ordinary web research.
-- **Explore**: OpenCode's built-in read-only active-repository search/tracing agent.
-- **Deep**: stronger-model implementation/reasoning lane. Use only when escalation criteria are met.
-- **Review**: independent read-only verification on a different model when possible.
+- **Build**: native primary agent on the routine/free model. Normal implementation, bounded debugging, tests, and ordinary research.
+- **Explore**: native read-only source-code/repository search and tracing.
+- **Index**: free read-only mixed-corpus retrieval over docs, structured data, PDFs, spreadsheets, archives, and other indexed project sources.
+- **Deep**: subscription-model implementation/reasoning for a bounded hard part after the problem has been narrowed.
+- **Review**: independent read-only verification when warranted.
 
-OpenCode's Scout agent is experimental in the stable line and is not required by this toolkit. For external docs/upstream research, Build should use its own `websearch`/`webfetch` tools. For sibling repositories, use `local-repo-research`.
+For public/upstream information use native web tools. For source-code symbols/call paths use Explore. For mixed project content and "find all" work use Index.
 
-## Route silently
+## Free-first retrieval
 
-Do not announce a tier, ask the user which lane to use, or stop before work just to describe routing. Start working. Delegate only when evidence justifies it.
+Before escalating:
+1. inspect the actual repo state;
+2. use grep/LSP/Explore for code;
+3. use Index for large mixed corpora or completeness searches;
+4. use native web tools for current public information;
+5. run bounded deterministic validation.
+
+Do not spend paid-model context rediscovering material that a free/deterministic tool can narrow first.
 
 ## Stay in Build when
 
 - the task is localized or mechanically understandable;
-- validation can cheaply determine correctness;
+- tests or bounded validation can settle correctness;
 - one or two bounded attempts are reasonable;
-- targeted repository exploration or web research can reduce uncertainty;
-- the task can be completed safely on the routine/free model.
+- retrieval can reduce uncertainty enough to continue safely;
+- a free model can complete the work.
 
-## Use Explore when
+## Escalate to Deep when
 
-- finding files, symbols, call sites, tests, configuration, or data flow inside the active repository is the main work;
-- a read-only child context will keep the primary context smaller.
-
-## Escalate to Deep when one or more are true
-
-- two bounded implementation/debug attempts fail without a materially new hypothesis;
-- architecture, state, concurrency, persistence, or ownership boundaries remain ambiguous after targeted inspection;
-- the next change is broad and a wrong design would create substantial rework;
-- correctness depends on subtle algorithms, realtime/DSP/ML behavior, security, cryptography, firmware/recovery, or irreversible data operations;
-- the current model cannot explain a meaningful failing validation;
-- required context remains too large after narrowing and Explore delegation;
+Use Deep only when at least one is true after narrowing:
+- bounded implementation/debug attempts failed without a materially new hypothesis;
+- architecture/state/concurrency/persistence ownership remains ambiguous;
+- a wrong broad design would create substantial rework;
+- subtle algorithms, realtime/DSP/ML, security, firmware/recovery, or irreversible data operations dominate correctness;
+- the free model cannot explain meaningful failing validation;
 - the user explicitly requests the strongest available reasoning model.
 
-A task merely sounding sophisticated is not enough. If Build can implement it and tests can settle it, stay in Build.
+Prefer a **bounded @deep chunk** over switching the whole session. This preserves the free Build parent as a natural fallback.
 
-## Use Review when
+## Paid-model failure handling
 
-- the user asks for review or audit;
-- a substantial implementation just completed;
-- Deep made broad changes;
-- the cost of a missed regression is meaningful;
-- independent model diversity is useful.
+A failed paid escalation is not automatically a failed task.
 
-Review should inspect request + diff + tests and should not rewrite the implementation unless the user explicitly starts a separate implementation task.
+If Deep or Review becomes unavailable because of quota exhaustion, rate limiting, provider outage, authentication failure, or another provider-side error after OpenCode's own retry handling:
+- do not loop on the same paid lane;
+- return to the free Build parent;
+- continue with Index, Explore, native web tools, and deterministic tests where useful;
+- narrow the unresolved problem as far as possible on free tools;
+- do not silently jump to a different paid provider or a metered API route;
+- if the remaining work truly requires stronger reasoning to be safe, report the unavailable escalation and the specific unresolved point.
+
+If the user manually switched the whole session to a paid model, automatic session failover is outside this toolkit's control. Prefer chunk delegation when graceful fallback matters.
+
+## Review
+
+Use Review for explicit audits, consequential changes, broad Deep changes, or when independent model diversity materially reduces risk. Review is read-only.
+
+If Review is unavailable, perform a best-effort free verification pass using Build plus Index/Explore/tests and state that independent paid verification was unavailable if it matters.
 
 ## Promotion semantics
 
-- **Chunk escalation:** when only a bounded hard portion needs stronger reasoning, delegate that portion to `Deep` and keep the parent Build session where it is.
-- **Session promotion:** when the remainder of the phase broadly needs a stronger model, recommend the configured Deep model and tell the user to switch manually with `/models`. Never switch the session automatically.
-- **Verification:** when the next step is independent review, recommend `@review` or `/audit` rather than changing the implementation session.
-- **Stay put:** if the current Build model is adequate and validation can settle the next step, do not recommend a switch.
-
-At the end of a meaningful completed task, recommend a different lane/model only when the likely next phase is clear and the capability difference is material. For a deeper comparison among currently available models, load `model-advisor` or use `/recommend-model`.
+- **Retrieval delegation:** use `@index` or `@explore` freely to keep the parent context small.
+- **Chunk escalation:** send only the narrowed hard part to `@deep`.
+- **Session promotion:** recommend `/models` only when the remaining phase broadly needs the stronger model and the benefit is material.
+- **Verification:** use `@review` / `/audit` when independent verification is worth the extra model call.
+- **Stay put:** if free Build plus validation is adequate, do not recommend a switch.
 
 ## Economic boundary
 
-Automatic routing may use only model assignments generated by the toolkit from:
-
-- current free OpenCode model SKUs;
+Automatic routing may use only:
+- current OpenCode free hosted models;
 - ChatGPT subscription models connected through OpenAI OAuth;
-- GitHub Copilot subscription models connected through Copilot OAuth;
-- optional local Ollama models.
+- GitHub Copilot subscription models connected through Copilot OAuth.
 
-Do not automatically route into separately metered API-key providers or gateways.
+There is no local-model engine path. Do not automatically route into separately metered API-key providers or gateways.
