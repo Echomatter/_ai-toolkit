@@ -22,7 +22,7 @@ foreach($ps1 in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'scripts') -F
   } else { OK "PowerShell parses: $($ps1.Name)" }
 }
 
-$expected=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','handoff-brief')
+$expected=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','handoff-brief','content-index-research')
 $skillsDir=Join-Path $ToolkitRoot '.agents\skills'
 $actual=@(Get-ChildItem -LiteralPath $skillsDir -Directory | ForEach-Object{$_.Name})
 foreach($s in $expected){$p=Join-Path $skillsDir "$s\SKILL.md";if(Test-Path -LiteralPath $p){OK "skill present: $s"}else{F "skill missing: $s"}}
@@ -42,7 +42,7 @@ $config=Join-Path $ToolkitRoot 'opencode\opencode.jsonc'
 foreach($p in @($template,$config)){if(Test-Path -LiteralPath $p){OK "present: $([IO.Path]::GetFileName($p))"}else{F "missing: $p"}}
 if(Test-Path -LiteralPath $template){
   $t=Get-Content -LiteralPath $template -Raw
-  foreach($token in @('__ROUTINE_MODEL__','__LOCAL_PROVIDER_BLOCK__')){if($t.Contains($token)){OK "template token: $token"}else{F "template missing token: $token"}}
+  foreach($token in @('__ROUTINE_MODEL__','__SEARCH_MODEL__')){if($t.Contains($token)){OK "template token: $token"}else{F "template missing token: $token"}}
 }
 if(Test-Path -LiteralPath $config){
   $c=Get-Content -LiteralPath $config -Raw
@@ -52,7 +52,7 @@ if(Test-Path -LiteralPath $config){
 }
 
 
-$agentTemplates=@('build','deep','review')
+$agentTemplates=@('build','worker','index','deep','review')
 foreach($a in $agentTemplates){
   $tp=Join-Path $ToolkitRoot "opencode\agents\$a.template.md"
   $gp=Join-Path $ToolkitRoot "opencode\agents\$a.md"
@@ -71,7 +71,7 @@ $globalGenerated=Join-Path $ToolkitRoot 'opencode\global-instructions.md'
 foreach($p in @($globalTemplate,$globalGenerated)){if(Test-Path -LiteralPath $p){OK "present: $([IO.Path]::GetFileName($p))"}else{F "missing: $p"}}
 if(Test-Path -LiteralPath $globalTemplate){
   $g=Get-Content -LiteralPath $globalTemplate -Raw
-  foreach($token in @('__ROUTINE_MODEL__','__DEEP_MODEL__','__REVIEW_MODEL__')){if($g.Contains($token)){OK "global instruction token: $token"}else{F "global instruction template missing token: $token"}}
+  foreach($token in @('__ROUTINE_MODEL__','__SEARCH_MODEL__','__DEEP_MODEL__','__REVIEW_MODEL__')){if($g.Contains($token)){OK "global instruction token: $token"}else{F "global instruction template missing token: $token"}}
 }
 
 $roster=Join-Path $ToolkitRoot 'routing\model-roster.json'
@@ -114,7 +114,7 @@ if($ev){
 $history=Join-Path $ToolkitRoot 'routing\task-history.json'
 try{Get-Content -LiteralPath $history -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}
 
-$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome')
+$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index')
 foreach($c in $commands){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "opencode\commands\$c.md")){OK "command present: /$c"}else{F "command missing: /$c"}}
 
 foreach($cmdFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\commands') -File -Filter '*.md'){
@@ -127,7 +127,21 @@ if(Test-Path -LiteralPath $recommendCmd){
   $rt=Get-Content -LiteralPath $recommendCmd -Raw
   if($rt.Contains('select-model.ps1')){OK "/recommend-model invokes deterministic selector"}else{F "/recommend-model does not invoke select-model.ps1"}
 }
-foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','install-local-fallback.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
+foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','test-content-index.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
+
+$indexer=Join-Path $ToolkitRoot 'tools\Project_Content_Indexer.py'
+if(Test-Path -LiteralPath $indexer){OK 'project content indexer present'}else{F 'project content indexer missing'}
+
+$indexTool=Join-Path $ToolkitRoot 'opencode\tools\content_index.ts'
+if(Test-Path -LiteralPath $indexTool){OK 'content_index OpenCode tool present'}else{F 'content_index OpenCode tool missing'}
+
+$localArtifacts=@(
+  (Join-Path $ToolkitRoot 'scripts\install-local-fallback.ps1'),
+  (Join-Path $ToolkitRoot 'scripts\install-local-fallback.cmd'),
+  (Join-Path $ToolkitRoot 'docs\LOCAL-FALLBACK.md'),
+  (Join-Path $ToolkitRoot 'ollama')
+)
+foreach($p in $localArtifacts){if(Test-Path -LiteralPath $p){F "retired local-engine artifact still present: $p"}else{OK "retired local-engine artifact absent: $([IO.Path]::GetFileName($p))"}}
 
 Write-Output ''
 Write-Output "Validation summary: $($fail.Count) failures, $($warn.Count) warnings."
