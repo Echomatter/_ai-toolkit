@@ -52,7 +52,7 @@ if(Test-Path -LiteralPath $config){
 }
 
 
-$agentTemplates=@('build','worker','index','deep','review')
+$agentTemplates=@('build','explore','worker','index','deep','review')
 foreach($a in $agentTemplates){
   $tp=Join-Path $ToolkitRoot "opencode\agents\$a.template.md"
   $gp=Join-Path $ToolkitRoot "opencode\agents\$a.md"
