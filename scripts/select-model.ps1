@@ -222,10 +222,14 @@ function Get-ExecutionSurface([string]$ModelId, [string]$Purpose) {
 
 $excludeCanonical = $null
 $excludeProvider = ''
-if ($ExcludeModel -ne '') {
-    $excludeCanonical = Get-Canonical-Key $ev $ExcludeModel
+$diversityReferenceModel = $ExcludeModel
+if ($bNeedsDiversity -and -not $diversityReferenceModel -and $CurrentModel) {
+    $diversityReferenceModel = $CurrentModel
+}
+if ($diversityReferenceModel -ne '') {
+    $excludeCanonical = Get-Canonical-Key $ev $diversityReferenceModel
     $excludeEntry = Get-Canonical-Entry $ev $excludeCanonical
-    $excludeProvider = Get-ModelProvider $excludeEntry $ExcludeModel
+    $excludeProvider = Get-ModelProvider $excludeEntry $diversityReferenceModel
 }
 
 $scored = @()
