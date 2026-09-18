@@ -3,9 +3,8 @@
   Bootstraps the OpenCode routed toolkit on Windows without adding metered API gateways.
 
 .DESCRIPTION
-  Cleans recognized artifacts from earlier toolkit editions, installs portable skills,
-  stable OpenCode, and GitHub CLI if missing. Local Ollama is optional and intentionally
-  handled by install-local-fallback.cmd. Provider OAuth remains interactive.
+  Cleans recognized artifacts from earlier toolkit editions and installs portable skills,
+  stable OpenCode, and GitHub CLI if missing. Provider OAuth remains interactive.
 #>
 param(
     [switch]$SkipSoftwareInstall,
