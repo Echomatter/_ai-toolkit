@@ -4,8 +4,8 @@
 
 .DESCRIPTION
   Cleans recognized artifacts from earlier toolkit editions, installs portable skills,
-  stable OpenCode, and GitHub CLI if missing. Local Ollama is optional and intentionally
-  handled by install-local-fallback.cmd. Provider OAuth remains interactive.
+  OpenCode integration files, stable OpenCode, and GitHub CLI if missing.
+  Provider OAuth remains interactive. No local model engine is installed or managed.
 #>
 param(
     [switch]$SkipSoftwareInstall,
