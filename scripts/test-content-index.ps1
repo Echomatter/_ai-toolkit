@@ -5,6 +5,19 @@ $script=Join-Path $ToolkitRoot 'tools\Project_Content_Indexer.py'
 $python=Get-Command python -ErrorAction SilentlyContinue
 if(-not $python){throw 'python not found'}
 
+function Invoke-IndexJson([string[]]$Arguments) {
+  $previous=$ErrorActionPreference
+  try {
+    $ErrorActionPreference='Continue'
+    $out=@(& $python.Source $script @Arguments 2>$null)
+    $code=$LASTEXITCODE
+  } finally {
+    $ErrorActionPreference=$previous
+  }
+  if($code -ne 0){ throw "index command failed ($code): $($Arguments -join ' ')" }
+  return (($out -join "`n") | ConvertFrom-Json)
+}
+
 $root=Join-Path $env:TEMP ("ai-toolkit-index-test-" + [guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 try{
@@ -24,24 +37,17 @@ Its encounter token is QO-64.
 '@
 
   $db=Join-Path $root '.content-index\Project_Content_Index.sqlite'
-  $build=@(& $python.Source $script --db $db rebuild --root $root --facts general 2>$null)
-  if($LASTEXITCODE -ne 0){throw 'index rebuild failed'}
-  $bj=($build -join "`n") | ConvertFrom-Json
+  $bj=Invoke-IndexJson @('--db',$db,'rebuild','--root',$root,'--facts','general')
   if($bj.schema_version -ne '3.0'){throw "unexpected schema version: $($bj.schema_version)"}
   if($bj.validation.integrity -ne 'ok'){throw 'index integrity validation failed'}
 
-  $search=@(& $python.Source $script --db $db search 'Quantum Ogre' --phrase --limit 20 2>$null)
-  if($LASTEXITCODE -ne 0){throw 'index search failed'}
-  $sj=($search -join "`n") | ConvertFrom-Json
+  $sj=Invoke-IndexJson @('--db',$db,'search','Quantum Ogre','--phrase','--limit','20')
   if(@($sj).Count -lt 2){throw "expected cross-source search hits, got $(@($sj).Count)"}
 
-  $facts=@(& $python.Source $script --db $db facts --family identity --limit 20 2>$null)
-  if($LASTEXITCODE -ne 0){throw 'index fact query failed'}
-  if(-not (($facts -join "`n") -match 'Quantum Ogre')){throw 'structured fact layer did not retain expected identity value'}
+  $facts=Invoke-IndexJson @('--db',$db,'facts','--family','identity','--limit','20')
+  if(-not (($facts | ConvertTo-Json -Depth 6) -match 'Quantum Ogre')){throw 'structured fact layer did not retain expected identity value'}
 
-  $status=@(& $python.Source $script --db $db status --root $root 2>$null)
-  if($LASTEXITCODE -ne 0){throw 'index status failed'}
-  $st=($status -join "`n") | ConvertFrom-Json
+  $st=Invoke-IndexJson @('--db',$db,'status','--root',$root)
   if($st.stale){throw 'freshly rebuilt index reports stale'}
 
   Write-Output 'Content index smoke test: PASS'
