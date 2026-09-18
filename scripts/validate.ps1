@@ -85,12 +85,7 @@ foreach($c in $commands){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "open
 
 foreach($cmdFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\commands') -File -Filter '*.md'){
   $cmdText=Get-Content -LiteralPath $cmdFile.FullName -Raw
-  if($cmdText -match '(?m)^agent:\s*plan\s*foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','install-local-fallback.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
-
-Write-Output ''
-Write-Output "Validation summary: $($fail.Count) failures, $($warn.Count) warnings."
-if($fail.Count -gt 0){exit 1}else{exit 0}
-){F "command silently forces Plan: $($cmdFile.Name)"}
+  if($cmdText -match '(?m)^agent:\s*plan\s*$'){F "command silently forces Plan: $($cmdFile.Name)"}
 }
 
 $recommendCmd=Join-Path $ToolkitRoot 'opencode\commands\recommend-model.md'
@@ -102,8 +97,9 @@ if(Test-Path -LiteralPath $recommendCmd){
 $installScript=Join-Path $ToolkitRoot 'scripts\install.ps1'
 if(Test-Path -LiteralPath $installScript){
   $it=Get-Content -LiteralPath $installScript -Raw
-  $retiredLine=@($it -split "`r?`n" | Where-Object { $_ -match 'retiredSkills' -or $_ -match 'local-first-escalation' }) -join ' '
-  if($retiredLine -notmatch "'model-advisor'"){OK "model-advisor is not marked retired"}else{F "model-advisor is still listed in retiredSkills"}
+  $retiredBlock=''
+  if($it -match '(?s)\$retiredSkills\s*=\s*@\((.*?)\)'){ $retiredBlock=$Matches[1] }
+  if($retiredBlock -notmatch "'model-advisor'"){OK "model-advisor is not marked retired"}else{F "model-advisor is still listed in retiredSkills"}
 }
 foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','install-local-fallback.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
 
