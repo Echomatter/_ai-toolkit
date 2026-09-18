@@ -102,7 +102,7 @@ if (Test-Path -LiteralPath $CommandSrc) {
 }
 
 # Prune anything previously installed by this toolkit that is not part of the current
-# eight-skill edition, even if an old source folder still exists after an overlay.
+# skill set, even if an old source folder still exists after an overlay.
 # Also prune managed entries whose canonical source disappeared.
 foreach ($entry in @($manifest)) {
     $isCurrent = $entry.target -and ($currentTargets -contains $entry.target)
@@ -126,7 +126,7 @@ $manifest = $nextManifest
 # same-named user files alone and report them for manual cleanup.
 $retiredSkills = @(
     'cost-aware-routing','task-contract','workspace-map','public-repo-research',
-    'local-first-escalation','model-advisor','external-research','model-escalation'
+    'local-first-escalation','external-research','model-escalation'
 )
 foreach ($name in $retiredSkills) {
     $target = Join-Path $SkillsDst $name
