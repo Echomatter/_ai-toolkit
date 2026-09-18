@@ -19,8 +19,7 @@ Automatic or recommended routes may use only:
 
 - current OpenCode free models;
 - models available through OpenAI OAuth / the user's ChatGPT subscription;
-- models available through GitHub Copilot OAuth / the user's Copilot subscription;
-- optional local Ollama models.
+- models available through GitHub Copilot OAuth / the user's Copilot subscription.
 
 Do not recommend metered API-key providers, OpenRouter, Vercel AI Gateway, or other separately billed gateways unless the user explicitly changes this policy.
 
@@ -28,7 +27,6 @@ Treat economics accurately:
 
 - OpenCode free models: currently free, but availability can change.
 - OpenAI OAuth and GitHub Copilot OAuth: subscription/quota access, not a per-token API price.
-- local Ollama: no marginal model charge, but local compute/time still matters.
 
 Never claim remaining subscription quota unless a tool actually reports it.
 
@@ -112,7 +110,6 @@ Execution-surface integrity is mandatory: use `@deep` or `@review` only when the
    - Copilot OAuth present → eligible.
    - OpenCode free model → eligible while currently listed.
    - API-key-only provider → excluded from automatic routing.
-   - Ollama model → eligible only when actually installed locally.
 3. Load the generated roster from `routing/model-roster.json`.
 4. Load capability evidence from `routing/model-evidence.json`.
 
@@ -240,6 +237,10 @@ Only after selecting the model determine whether the task should:
 - run an independent read-only pass through `@review`;
 - use `@explore`.
 
+## Paid escalation behavior
+
+Paid escalation is approval-gated by the generated agent task permissions. If the user declines a paid child call, or it fails because quota/rate/auth/service availability is exhausted, continue with the best hosted-free path instead of blocking the task or repeatedly retrying.
+
 ## Promotion versus delegation
 
 - If only one hard bounded chunk needs stronger reasoning, recommend delegating that chunk to `@deep` while keeping the parent Build session where it is.
@@ -291,10 +292,10 @@ Return at most:
 
 - **Recommendation:** one model/lane or "stay on current model".
 - **Why:** one or two task-specific reasons referencing evidence.
-- **Access:** free, subscription OAuth, or local.
+- **Access:** free or subscription OAuth.
 - **Execution surface:** build / @deep chunk / @review / /models switch / combination.
 - **Action:** stay, delegate to `@deep`, run `/audit`, or switch manually with `/models`.
-- **Fallback:** at most one alternative, only if materially useful.
+- **Fallback:** at most one alternative. When the recommendation is subscription/OAuth, prefer the best eligible hosted-free model as the graceful quota/service fallback.
 
 Do not dump a leaderboard unless the user explicitly asks for one.
 
