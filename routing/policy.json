@@ -16,13 +16,15 @@
     "fireworks"
   ],
   "routine_priority": [
+    "opencode/muse-spark-1.3-contributor-free",
     "opencode/mimo-v2.5-free",
-    "opencode/ling-3.0-flash-fin-free",
     "opencode/nemotron-3.5-lightning-free",
+    "opencode/ling-3.0-flash-fin-free",
     "opencode/big-pickle",
     "opencode/nemotron-3-ultra-free"
   ],
   "deep_priority": [
+    "openai/gpt-6-astra",
     "openai/gpt-5.6-sol",
     "openai/gpt-5.6-terra",
     "openai/gpt-5.5",
@@ -33,28 +35,31 @@
     "github-copilot/claude-sonnet-4.6",
     "github-copilot/gpt-5.5",
     "opencode/nemotron-3-ultra-free",
-    "opencode/mimo-v2.5-free",
-    "opencode/big-pickle"
+    "opencode/muse-spark-1.3-contributor-free",
+    "opencode/mimo-v2.5-free"
   ],
   "review_priority": [
     "github-copilot/claude-sonnet-5",
     "github-copilot/claude-opus-5",
     "github-copilot/claude-sonnet-4.6",
+    "github-copilot/claude-opus-4.8",
+    "github-copilot/gpt-5.3-codex",
     "github-copilot/gpt-5.5",
     "openai/gpt-5.6-terra",
     "openai/gpt-5.6-luna",
     "openai/gpt-5.6-sol",
     "opencode/ling-3.0-flash-fin-free",
     "opencode/nemotron-3-ultra-free",
+    "opencode/muse-spark-1.3-contributor-free",
     "opencode/mimo-v2.5-free"
   ],
   "notes": [
     "OpenCode free-model availability changes; refresh-routing only chooses IDs that opencode models currently reports.",
     "Automatic subscription routing requires OpenAI OAuth and/or GitHub Copilot OAuth to appear in opencode auth list; API-key or environment-only credentials are ignored.",
     "GitHub Copilot gpt-5.6-* is temporarily excluded from automatic routing because current OpenCode/Copilot builds have reported integration failures for that family.",
-    "Review prefers a model different from Deep when one is available.",
     "OpenCode Scout is experimental in the stable line and is not required; Build uses native web tools for external research.",
     "Full-session model changes are always explicit user actions through /models; automatic routing delegates only bounded chunks to Deep.",
-    "Model advice should be task-specific and evidence-informed; do not turn benchmark results into a universal ranking."
+    "Model advice should be task-specific and evidence-informed; do not turn benchmark results into a universal ranking.",
+    "Review prefers a different canonical model vendor from Deep when evidence is otherwise comparable; exact model-ID difference alone is not treated as independent review."
   ]
 }
