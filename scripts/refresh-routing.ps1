@@ -199,10 +199,10 @@ if ($selectorUsable) {
         }
     }
     # Deep: hard reasoning/terminal/large-context implementation.
-    $d = Invoke-Selector @('architecture','debugging','terminal_heavy') $true $true 500000 $true $false $true
+    $d = Invoke-Selector @('architecture','debugging','terminal_heavy') $true $true 128000 $true $false $true
     if ($d -and $d.recommended -and ($available -contains $d.recommended)) { $deep = $d.recommended }
     # Review: independent verification, different model from Deep when possible.
-    $v = Invoke-Selector @('code_review','independent_verification') $false $false 500000 $false $true $false $deep
+    $v = Invoke-Selector @('code_review','independent_verification') $false $false 128000 $false $true $false $deep
     if ($v -and $v.recommended -and ($available -contains $v.recommended) -and ($v.recommended -ne $deep)) {
         $review = $v.recommended
     } elseif ($review -eq $deep) {
@@ -258,26 +258,9 @@ function New-ModelObject([string]$Id, [string]$Surface, [string]$Economics) {
         id = $Id
         surface = $Surface
         economics = $Economics
-        context = @{
-            input_tokens = $null
-            output_tokens = $null
-        }
-        capabilities = @{
-            coding = "unknown"
-            repo_understanding = "unknown"
-            long_horizon_engineering = "unknown"
-            terminal_agent_work = "unknown"
-            debugging = "unknown"
-            code_review = "unknown"
-            architecture = "unknown"
-            research = "unknown"
-            tool_use = "unknown"
-            long_context = "unknown"
-            speed = "unknown"
-        }
-        evidence = @()
+        # Availability belongs in the roster. Capability claims and research
+        # freshness live only in routing/model-evidence.json.
         observed = @{}
-        last_evidence_refresh = $null
     }
 }
 
@@ -350,7 +333,8 @@ $state = [ordered]@{
     routine = $routine
     deep = $deep
     review = $review
-    review_is_independent = ($review -ne $deep)
+    review_is_distinct_model = ($review -ne $deep)
+    review_is_independent = ($review -ne $deep) # legacy field: distinct ID, not necessarily different vendor
     desktop_agents = @('build','deep','review')
     policy = 'free OpenCode -> OAuth subscriptions -> optional local fallback; no metered API gateways'
     promotion = 'delegate hard chunks to Deep automatically; switch the whole session only by explicit user /models selection'
@@ -459,7 +443,7 @@ if (-not $evidenceExists) {
         evidence_classes = [ordered]@{
             VERIFIED_LOCAL = 'Observed in this installation or task history.'
             VERIFIED_CATALOG = 'Current provider/catalog identity or availability fact.'
-            'PROVIDER-REPORTED' = 'Official provider documentation or release claims.'
+            PROVIDER_REPORTED = 'Official provider documentation or release claims.'
             INDEPENDENT = 'Third-party benchmark/evaluation evidence.'
             INFERRED = 'Advisor conclusion derived from evidence; never stored as source fact.'
         }
@@ -475,8 +459,47 @@ if (-not $evidenceExists) {
     Write-Utf8NoBom $evidencePath ($stub | ConvertTo-Json -Depth 4)
     Say '  Evidence      : stub created (UNPOPULATED - run /refresh-model-evidence)'
 } else {
-    # Preserve researched evidence; only sync the lane snapshot + sync timestamp.
+    # Preserve researched evidence; sync lane snapshot and register newly available
+    # model IDs as identity-only research targets without inventing capabilities.
     try {
+        if (-not $evidenceObj.alias_index) { $evidenceObj | Add-Member -NotePropertyName alias_index -NotePropertyValue ([pscustomobject]@{}) -Force }
+        if (-not $evidenceObj.models) { $evidenceObj | Add-Member -NotePropertyName models -NotePropertyValue ([pscustomobject]@{}) -Force }
+        if (-not $evidenceObj.research_queue) {
+            $evidenceObj | Add-Member -NotePropertyName research_queue -NotePropertyValue ([pscustomobject]@{ high_priority=@(); medium_priority=@(); deprioritized=@() }) -Force
+        }
+        foreach ($rm in @($eligibleModels)) {
+            $rid = [string]$rm.id
+            $mapped = $false
+            foreach ($p in @($evidenceObj.alias_index.PSObject.Properties)) {
+                if ($p.Name -eq $rid) { $mapped = $true; break }
+            }
+            if ($mapped) { continue }
+
+            $safeKey = 'unresearched:' + $rid
+            $providerName = ''
+            if ($rid -match '^([^/]+)/') { $providerName = $Matches[1] }
+            $evidenceObj.alias_index | Add-Member -NotePropertyName $rid -NotePropertyValue $safeKey -Force
+            $identityEntry = [pscustomobject]@{
+                provider = $providerName
+                aliases = @($rid)
+                research_status = 'identity_only'
+                positioning = 'Newly discovered eligible model; capability evidence not yet researched.'
+                context = [pscustomobject]@{ input_tokens=$null; output_tokens=$null; confidence='low' }
+                capabilities = [pscustomobject]@{}
+                benchmarks = @()
+                efficiency = [pscustomobject]@{ interpretation='unresearched' }
+                research_gaps = @('Official model documentation','Independent coding-agent evidence')
+                cautions = @('Do not recommend for consequential work until current evidence is collected.')
+                source_keys = @()
+                last_researched_at = $null
+            }
+            $evidenceObj.models | Add-Member -NotePropertyName $safeKey -NotePropertyValue $identityEntry -Force
+            $mq = @($evidenceObj.research_queue.medium_priority)
+            if ($mq -notcontains $rid) {
+                $evidenceObj.research_queue.medium_priority = @($mq + $rid)
+            }
+        }
+
         $evidenceObj.current_assignments_snapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
