@@ -42,7 +42,7 @@ foreach($a in @('build','deep','review')){
   $p=Join-Path $ocGlobal "agents\$a.md"
   if(Test-Path -LiteralPath $p){OK "Desktop agent installed: $a"}else{FAIL "Desktop agent missing: $a"}
 }
-foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model')){
+foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome')){
   $p=Join-Path $ocGlobal "commands\$c.md"
   if(Test-Path -LiteralPath $p){OK "Desktop command installed: /$c"}else{FAIL "Desktop command missing: /$c"}
 }
@@ -60,7 +60,14 @@ if(Test-Path -LiteralPath $rosterPath){
 
 $statePath=Join-Path $ToolkitRoot 'routing\state.json'
 if(Test-Path -LiteralPath $statePath){
-   try { $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json; OK "Routine: $($st.routine)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"; if(-not $st.review_is_independent){WARN 'Review currently uses the same model as Deep.'} } catch { FAIL 'routing state is invalid JSON.' }
+   try {
+      $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
+      OK "Routine: $($st.routine)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
+      $distinct = $true
+      if($null -ne $st.review_is_distinct_model){ $distinct = [bool]$st.review_is_distinct_model }
+      elseif($null -ne $st.review_is_independent){ $distinct = [bool]$st.review_is_independent }
+      if(-not $distinct){ WARN 'Review currently uses the same model ID as Deep.' }
+    } catch { FAIL 'routing state is invalid JSON.' }
 } else { FAIL 'routing state missing.' }
 
 $evidencePath = Join-Path $ToolkitRoot 'routing\model-evidence.json'
