@@ -12,7 +12,7 @@ OpenCode's Scout agent is experimental in the stable line and is **not required*
 
 ### Desktop agents
 
-- **Build** — OpenCode's native primary ID, pinned to the current free/routine model with guarded permissions.
+- **Build** — OpenCode's native primary ID, pinned to the current free/routine model. Shell/tool approval behavior inherits your OpenCode permission settings.
 - **Deep** — subagent pinned to the strongest eligible subscription model available through OpenAI OAuth or GitHub Copilot OAuth.
 - **Review** — independent read-only subagent, preferably on a different provider/model.
 
@@ -73,6 +73,18 @@ F:\_ai-toolkit\scripts\refresh-routing.cmd
 ```
 
 Then start a new OpenCode session (or restart Desktop) so the refreshed model assignments and global guidance are cleanly loaded.
+
+## Permissions and nested agents
+
+The toolkit does **not** set broad shell/PowerShell approval rules. Build and Deep inherit your OpenCode permission settings; Review adds only the role-defining `edit: deny` restriction.
+
+Nested subagents are allowed selectively when your OpenCode `subagent_depth` permits them:
+
+- Build -> Explore / Deep / Review
+- Deep -> Explore / Review
+- Review -> Explore
+
+The toolkit does not set `subagent_depth` for you. OpenCode defaults to depth 1; set it to 2 in your own OpenCode configuration if you want one additional nested level.
 
 ## GitHub
 
