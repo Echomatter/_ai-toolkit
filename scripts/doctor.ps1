@@ -40,7 +40,7 @@ foreach($s in $skills){ $p=Join-Path $env:USERPROFILE ".agents\skills\$s\SKILL.m
 
 
 $ocGlobal=Join-Path $env:USERPROFILE '.config\opencode'
-foreach($a in @('build','worker','index','deep','review')){
+foreach($a in @('build','explore','worker','index','deep','review')){
   $p=Join-Path $ocGlobal "agents\$a.md"
   if(Test-Path -LiteralPath $p){OK "Desktop agent installed: $a"}else{FAIL "Desktop agent missing: $a"}
 }
