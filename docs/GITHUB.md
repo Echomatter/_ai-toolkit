@@ -36,6 +36,6 @@ gh run list
 gh run view <id>
 ```
 
-The toolkit permissions allow common remote reads without repeated approval. Remote mutations still fall back to approval, while PR merging and repository deletion are denied in the default Build lane.
+The toolkit does not impose shell/Git approval policy. Remote reads and mutations follow your OpenCode permission settings; the `github-ops` skill still requires explicit intent for destructive operations such as merging, deleting, force-pushing, or rewriting published history.
 
 The `github-ops` skill defines the operating rules.
