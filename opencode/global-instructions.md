@@ -27,7 +27,7 @@ If a Deep or Review invocation ultimately fails because of quota/rate/provider/a
 
 ## Lane assignment vs recommendation invariant
 
-Lane assignment is NOT recommendation. `routine/deep/review` are inexpensive execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
+Lane assignment is NOT recommendation. `routine/index/deep/review` are execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Index/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
 
 ## Next-phase model advice
 
@@ -52,7 +52,7 @@ When those conditions are met, append one compact line at the end of the normal 
 
 `Next model: <model or lane> — <task-specific reason>. <action>`
 
-Valid actions are normally `stay`, `delegate the hard chunk to @deep`, `run /audit`, or `switch manually with /models`.
+Valid actions are normally `stay`, `use @index/@explore`, `delegate the hard chunk to @deep`, `run /audit`, or `switch manually with /models`.
 
 If the current model remains adequate, the next phase is unclear, or the difference is marginal, say nothing about model choice. Do not nag. Maximum 2–3 lines.
 
