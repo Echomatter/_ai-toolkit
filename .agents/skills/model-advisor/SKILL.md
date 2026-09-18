@@ -92,6 +92,16 @@ verification_demand: low / medium / high
 
 Do not invent exact token needs unless actual information is available.
 
+## Deterministic selector
+
+After task characterization, invoke `scripts/select-model.ps1` and treat its JSON result as the ranking source of truth. The LLM's job is to characterize the task and explain the result, not to manually re-rank the library from lane names.
+
+Resolve the toolkit root from `$HOME\.config\opencode\ai-toolkit-root.txt` when running from another repository.
+
+If the selector reports `needs_research = true`, collect current web evidence, update `routing/model-evidence.json`, and rerun the selector before finalizing the recommendation.
+
+Execution-surface integrity is mandatory: use `@deep` or `@review` only when the recommended model is actually pinned to that subagent. Otherwise recommend an explicit `/models` switch.
+
 ## Inventory the eligible library
 
 1. Run `opencode models --refresh` and inspect `opencode auth list` to discover what is actually available.
