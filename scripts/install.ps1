@@ -22,6 +22,8 @@ $AgentSrc     = Join-Path $ToolkitRoot 'opencode\agents'
 $AgentDst     = Join-Path $OpenCodeRoot 'agents'
 $CommandSrc   = Join-Path $ToolkitRoot 'opencode\commands'
 $CommandDst   = Join-Path $OpenCodeRoot 'commands'
+$ToolSrc      = Join-Path $ToolkitRoot 'opencode\tools'
+$ToolDst      = Join-Path $OpenCodeRoot 'tools'
 
 function Ensure-Dir([string]$Path) {
     if (-not (Test-Path -LiteralPath $Path)) {
@@ -99,6 +101,9 @@ if (Test-Path -LiteralPath $AgentSrc) {
 }
 if (Test-Path -LiteralPath $CommandSrc) {
     $currentTargets += @(Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | ForEach-Object { Join-Path $CommandDst $_.Name })
+}
+if (Test-Path -LiteralPath $ToolSrc) {
+    $currentTargets += @(Get-ChildItem -LiteralPath $ToolSrc -File -Filter '*.ts' | ForEach-Object { Join-Path $ToolDst $_.Name })
 }
 $currentTargets += (Join-Path $OpenCodeRoot 'ai-toolkit-root.txt')
 
@@ -255,11 +260,15 @@ function Install-ManagedFile([string]$Source, [string]$Target) {
 
 Ensure-Dir $AgentDst
 Ensure-Dir $CommandDst
+Ensure-Dir $ToolDst
 foreach ($src in Get-ChildItem -LiteralPath $AgentSrc -File -Filter '*.md' | Where-Object { $_.Name -notlike '*.template.md' }) {
     Install-ManagedFile $src.FullName (Join-Path $AgentDst $src.Name)
 }
 foreach ($src in Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | Where-Object { $_.Name -notlike '*.template.md' }) {
     Install-ManagedFile $src.FullName (Join-Path $CommandDst $src.Name)
+}
+foreach ($src in Get-ChildItem -LiteralPath $ToolSrc -File -Filter '*.ts') {
+    Install-ManagedFile $src.FullName (Join-Path $ToolDst $src.Name)
 }
 
 # Publish a tiny managed locator so global commands can invoke deterministic toolkit
@@ -281,4 +290,4 @@ if (Test-Path -LiteralPath $syncGlobal) {
 Save-Manifest $manifest
 Write-Output ""
 Write-Output "Toolkit install summary: $created created, $refreshed refreshed, $conflicts conflicts."
-Write-Output "OpenCode Desktop agents: native build override, deep, review; global toolkit guidance synchronized"
+Write-Output "OpenCode Desktop agents: build, worker, index, deep, review; content index tool + global toolkit guidance synchronized"
