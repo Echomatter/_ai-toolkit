@@ -14,7 +14,7 @@ if(-not $python){$python=Get-Command python3 -ErrorAction SilentlyContinue}
 if(-not $python){throw 'Python is required for the content index smoke test.'}
 
 function Invoke-Indexer([string[]]$Args){
-  $all=@($prefix + @($Indexer) + $Args)
+  $all=@($prefix + @($Indexer,'--db',$db) + $Args)
   $errFile=[IO.Path]::GetTempFileName()
   try {
     $out=@(& $python.Source @all 2>$errFile)
@@ -29,6 +29,7 @@ function Invoke-Indexer([string[]]$Args){
 }
 
 $root=Join-Path ([IO.Path]::GetTempPath()) ("ai-toolkit-index-test-" + [guid]::NewGuid().ToString('N'))
+$db=Join-Path $root '.content-index\Project_Content_Index.sqlite'
 New-Item -ItemType Directory -Path $root -Force | Out-Null
 try {
   @'
