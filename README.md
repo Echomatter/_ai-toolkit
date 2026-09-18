@@ -13,7 +13,7 @@ OpenCode owns Build, Plan, native Explore, tools, permissions, provider authenti
 - **Build** — free primary model for normal work.
 - **Worker** — free bounded coding/research subagent.
 - **Index** — free retrieval subagent for exhaustive mixed-content corpus search.
-- **Explore** — OpenCode's native read-only repo/code search.
+- **Explore** — OpenCode's built-in search agent ID overridden only to pin the free search model; remains read-only.
 - **Deep** — strongest eligible OpenAI/Copilot subscription model.
 - **Review** — independent read-only subscription verifier.
 
@@ -85,7 +85,7 @@ F:\_ai-toolkit\scripts\doctor.cmd -Deep
 
 Bootstrap preserves user-authored global OpenCode instructions outside the toolkit-managed block.
 
-After bootstrap, fully quit and reopen OpenCode Desktop. Build and Plan remain the primary modes. Typing `@` should expose `worker`, `index`, `deep`, `review`, and OpenCode's native `explore`.
+After bootstrap, fully quit and reopen OpenCode Desktop. Build and Plan remain the primary modes. Typing `@` should expose `explore`, `worker`, `index`, `deep`, and `review`.
 
 Refresh routing after provider/model inventory changes:
 
