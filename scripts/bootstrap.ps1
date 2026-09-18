@@ -126,6 +126,12 @@ function Remove-LegacyToolkitArtifacts {
     }
 }
 
+$retiredLocalFlag = Join-Path $ToolkitRoot '.state\local-enabled'
+if (Test-Path -LiteralPath $retiredLocalFlag) {
+    Remove-Item -LiteralPath $retiredLocalFlag -Force -Confirm:$false
+    Write-Output "removed retired local-engine state: $retiredLocalFlag"
+}
+
 Write-Output '== Preflight toolkit scripts =='
 & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'validate.ps1')
 if ($LASTEXITCODE -ne 0) { throw 'Toolkit preflight validation failed.' }
