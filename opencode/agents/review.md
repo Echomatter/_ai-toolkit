@@ -1,7 +1,7 @@
 ---
 description: Independent read-only verifier for consequential changes and explicit audits. Shell/tool approvals inherit the user's OpenCode permission settings.
 mode: subagent
-model: github-copilot/gpt-5.3-codex
+model: github-copilot/claude-sonnet-5
 steps: 18
 permission:
   edit: deny

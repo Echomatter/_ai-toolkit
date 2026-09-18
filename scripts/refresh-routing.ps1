@@ -242,6 +242,11 @@ if (Test-Path -LiteralPath $localFlag) {
 '@
 }
 $configText = $templateText.Replace('__LOCAL_PROVIDER_BLOCK__',$localBlock).Replace('__ROUTINE_MODEL__',$routine)
+if (-not $localBlock) {
+    # An empty provider block leaves bare indentation behind; fold it back
+    # into a single blank line so the generated config stays tidy on refresh.
+    $configText = $configText -replace "`r`n`r`n  `r`n`r`n", "`r`n`r`n"
+}
 Write-Utf8NoBom $Config $configText
 
 if (-not (Test-Path -LiteralPath $GlobalInstructionsTemplate)) { throw "Missing global instruction template: $GlobalInstructionsTemplate" }
@@ -467,6 +472,7 @@ if (-not $evidenceExists) {
         if (-not $evidenceObj.research_queue) {
             $evidenceObj | Add-Member -NotePropertyName research_queue -NotePropertyValue ([pscustomobject]@{ high_priority=@(); medium_priority=@(); deprioritized=@() }) -Force
         }
+        $evidenceDirty = $false
         foreach ($rm in @($eligibleModels)) {
             $rid = [string]$rm.id
             $mapped = $false
@@ -498,16 +504,25 @@ if (-not $evidenceExists) {
             if ($mq -notcontains $rid) {
                 $evidenceObj.research_queue.medium_priority = @($mq + $rid)
             }
+            $evidenceDirty = $true
         }
 
-        $evidenceObj.current_assignments_snapshot = [ordered]@{
+        $newSnapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
-        $evidenceObj | Add-Member -NotePropertyName last_routing_sync_at -NotePropertyValue $evidenceNow -Force
-        Write-Utf8NoBom $evidencePath ($evidenceObj | ConvertTo-Json -Depth 12)
-        Say '  Evidence      : preserved researched evidence; synced lane snapshot'
+        $storedSnapshot = $evidenceObj.current_assignments_snapshot
+        if ((-not $storedSnapshot) -or ($storedSnapshot.routine.id -ne $routine) -or ($storedSnapshot.deep.id -ne $deep) -or ($storedSnapshot.review.id -ne $review)) {
+            $evidenceObj.current_assignments_snapshot = $newSnapshot
+            $evidenceDirty = $true
+        }
+        if ($evidenceDirty) {
+            Write-Utf8NoBom $evidencePath ($evidenceObj | ConvertTo-Json -Depth 12)
+            Say '  Evidence      : preserved researched evidence; synced lane snapshot'
+        } else {
+            Say '  Evidence      : unchanged; left untouched'
+        }
     } catch {
         Say '  Evidence      : preserved existing model-evidence.json'
     }

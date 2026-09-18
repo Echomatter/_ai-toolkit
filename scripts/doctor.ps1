@@ -8,7 +8,6 @@ function WARN([string]$m){ $script:warn++; Write-Output "WARN: $m" }
 function FAIL([string]$m){ $script:fail++; Write-Output "FAIL: $m" }
 $env:OPENCODE_CONFIG = Join-Path $ToolkitRoot 'opencode\opencode.jsonc'
 $env:OPENCODE_CONFIG_DIR = Join-Path $ToolkitRoot 'opencode'
-$env:OPENCODE_ENABLE_EXA = '1'
 
 $oc=Get-Command opencode -ErrorAction SilentlyContinue
 function Invoke-OpenCodeCaptured([string[]]$Arguments) {

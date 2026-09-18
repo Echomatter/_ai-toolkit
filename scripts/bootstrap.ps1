@@ -177,7 +177,6 @@ if ($LASTEXITCODE -ne 0) { throw 'Toolkit validation failed.' }
 # If the user already has providers connected, generate the best current routes now.
 $env:OPENCODE_CONFIG = Join-Path $ToolkitRoot 'opencode\opencode.jsonc'
 $env:OPENCODE_CONFIG_DIR = Join-Path $ToolkitRoot 'opencode'
-$env:OPENCODE_ENABLE_EXA = '1'
 try {
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $PSScriptRoot 'refresh-routing.ps1') -NoRefresh
     if ($LASTEXITCODE -eq 0) {

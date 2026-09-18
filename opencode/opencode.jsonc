@@ -12,8 +12,6 @@
 
   "instructions": ["../global/WORKSTYLE.md"],
 
-  
-
   "compaction": {
     "auto": true,
     "prune": true,

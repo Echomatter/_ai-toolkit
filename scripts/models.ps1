@@ -3,7 +3,6 @@ $ErrorActionPreference = 'Stop'
 $ToolkitRoot = Split-Path -Parent $PSScriptRoot
 $env:OPENCODE_CONFIG = Join-Path $ToolkitRoot 'opencode\opencode.jsonc'
 $env:OPENCODE_CONFIG_DIR = Join-Path $ToolkitRoot 'opencode'
-$env:OPENCODE_ENABLE_EXA = '1'
 $oc = Get-Command opencode -ErrorAction Stop
 function Invoke-OpenCodeCaptured([string[]]$Arguments) {
     $previous = $ErrorActionPreference

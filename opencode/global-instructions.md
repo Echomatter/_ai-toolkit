@@ -14,7 +14,7 @@ Current generated lanes:
 
 - Routine / Build: `opencode/muse-spark-1.3-contributor-free`
 - Deep: `openai/gpt-6-astra`
-- Review: `github-copilot/gpt-5.3-codex`
+- Review: `github-copilot/claude-sonnet-5`
 
 Start useful work immediately on the current Build model. Use `@explore` for active-repository search when a child context helps. Delegate a genuinely hard bounded chunk to `@deep` only after the escalation criteria in `model-routing` are met. Use `@review` or `/audit` for independent verification.
 
