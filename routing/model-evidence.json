@@ -28,6 +28,10 @@
     "review": {
       "id": "github-copilot/claude-sonnet-5",
       "surface": "github-copilot-oauth"
+    },
+    "search": {
+      "id": "opencode/nemotron-3.5-lightning-free",
+      "surface": "opencode-free"
     }
   },
   "serious_candidate_set": [
