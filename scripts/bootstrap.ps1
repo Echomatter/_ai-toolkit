@@ -82,7 +82,7 @@ function Remove-LegacyToolkitArtifacts {
     $knownToolkitSkills = @(
         'bounded-experiment','change-audit','cost-aware-routing','evidence-ledger',
         'external-research','github-ops','handoff-brief','local-first-escalation',
-        'local-repo-research','model-advisor','model-escalation','model-routing',
+        'local-repo-research','model-advisor','model-escalation','model-routing','content-index-research',
         'public-repo-research','repo-reorient','task-contract','workspace-map'
     )
 
