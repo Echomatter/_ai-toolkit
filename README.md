@@ -1,24 +1,45 @@
-# OpenCode Build Routing Toolkit
+# OpenCode Free-First Toolkit
 
-A small workflow layer for OpenCode Desktop and CLI. OpenCode remains the execution harness; this toolkit adds model-aware Build routing, portable skills, strong-model delegation, independent review, and explicit next-phase model advice.
+A thin workflow layer for OpenCode Desktop and CLI. OpenCode remains the execution harness; this toolkit adds free-first delegation, approval-gated subscription escalation, evidence-aware model advice, and deterministic mixed-content project retrieval.
 
 ## What OpenCode already owns
 
-OpenCode owns Build, Plan, Explore, tools, permissions, provider authentication, websearch/webfetch, context management, model discovery, `/models`, and child sessions. The toolkit does not replace those capabilities.
+OpenCode owns Build, Plan, native Explore, tools, permissions, provider authentication, web search/fetch, context management, model discovery, `/models`, and child sessions. The toolkit does not replace those systems.
 
-OpenCode's Scout agent is experimental in the stable line and is **not required** here. Build performs external research with native web tools and uses Explore for active-repository search.
+## Runtime model
 
-## What this toolkit adds
+### Agents
 
-### Desktop agents
+- **Build** — free primary model for normal work.
+- **Worker** — free bounded coding/research subagent.
+- **Index** — free retrieval subagent for exhaustive mixed-content corpus search.
+- **Explore** — OpenCode's native read-only repo/code search.
+- **Deep** — strongest eligible OpenAI/Copilot subscription model.
+- **Review** — independent read-only subscription verifier.
 
-- **Build** — OpenCode's native primary ID, pinned to the current free/routine model. Shell/tool approval behavior inherits your OpenCode permission settings.
-- **Deep** — subagent pinned to the strongest eligible subscription model available through OpenAI OAuth or GitHub Copilot OAuth.
-- **Review** — independent read-only subagent, preferably on a different provider/model.
+Free subagents are allowed normally. When Deep or Review resolves to a subscription/OAuth model, agent-to-agent invocation is configured as **ask**, so OpenCode asks before spending that quota.
 
-OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
+If a paid call is declined or fails because quota/rate/auth/provider availability is exhausted, the parent continues with free Worker/Index/Explore/native tools. Paid escalation is useful, not a blocking dependency.
 
-### Portable skills
+Manual `@deep`, `@review`, or `/models` use remains explicit user control.
+
+## Project content index
+
+The toolkit includes `tools/Project_Content_Indexer.py` plus a global OpenCode custom tool named `content_index`.
+
+The index is a deterministic SQLite/FTS5 retrieval layer for mixed project corpora including Markdown/text, JSON/XML/TOML/INI, CSV/TSV/XLSX, DOCX, PDF, and safe ZIP members. It is useful for requests such as:
+
+- "find all references to..."
+- cross-document comparisons
+- repeated identifiers/values
+- large rules/reference corpora
+- structured fact inventory
+
+Use `@index` or `/index` for this work. Native Explore/grep/LSP remain the preferred path for source-code symbols and call graphs.
+
+The index is a locator/completeness aid, not source authority. Exact claims and edits should be checked against the governing source.
+
+## Portable skills
 
 - `repo-reorient`
 - `local-repo-research`
@@ -29,31 +50,31 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 - `model-routing`
 - `model-advisor`
 - `handoff-brief`
+- `content-index-research`
 
-### Commands
+## Commands
 
-- `/reorient` — refresh repository context without entering Plan.
-- `/prior-art` — search sibling local repos through Explore.
-- `/github` — use local git + authenticated `gh`; writes follow normal OpenCode approval.
-- `/audit` — independent Review child session.
-- `/routing` — explain current lane assignments.
-- `/recommend-model` — characterize the task, invoke the deterministic evidence-aware selector, and recommend the best current model without switching it.
-- `/refresh-model-evidence` — refresh sourced model capability evidence through current web research.
-- `/record-outcome` — record a meaningful task result so local success, retries, escalation, and later review defects can influence future routing.
+- `/reorient` — refresh repository context.
+- `/prior-art` — search sibling local repos.
+- `/github` — use local git + authenticated `gh`.
+- `/index` — use the free index worker for mixed-content retrieval/rebuilds.
+- `/audit` — request independent Review.
+- `/routing` — explain current routing.
+- `/recommend-model` — deterministic evidence-aware model recommendation.
+- `/refresh-model-evidence` — refresh sourced model evidence through current web research.
+- `/record-outcome` — record local empirical model performance.
 
-## Routing and promotion
+## Routing principles
 
-1. Build starts immediately on a current free/routine model.
-2. Build uses native Explore for active-repo search and native web tools for current external research.
-3. A bounded hard portion may be delegated automatically to Deep.
-4. Review independently audits meaningful changes when requested or warranted.
-5. The toolkit **never switches the whole session automatically**.
-6. When the next phase clearly benefits from another model, Build may append one compact `Next model:` recommendation. If there is no material advantage, it says nothing about models.
-7. `/recommend-model` performs the deeper evidence-backed comparison on demand.
+1. Start on hosted free models.
+2. Prefer deterministic tools, native web/search, Explore, Index, and Worker.
+3. Ask before agent-initiated subscription Deep/Review calls.
+4. If paid escalation fails or is declined, continue free-first rather than stopping.
+5. Never switch the whole session automatically.
+6. Keep separately metered API-key/gateway providers outside automatic routing.
+7. Use `/recommend-model` only when model choice materially matters.
 
-`routing/model-roster.json` is regenerated from the models and non-metered access surfaces OpenCode can actually see. Capability claims live separately in `routing/model-evidence.json`; empirical outcomes live in `routing/task-history.json`.
-
-Eligible automatic/recommended surfaces are OpenCode free models, OpenAI OAuth/ChatGPT subscription models, GitHub Copilot OAuth models, and optional local Ollama. Separately metered API gateways are excluded.
+`routing/model-roster.json` records current eligible access. `routing/model-evidence.json` records sourced capability evidence. `routing/task-history.json` records local outcomes.
 
 ## Install / refresh
 
@@ -62,29 +83,21 @@ F:\_ai-toolkit\scripts\bootstrap.cmd
 F:\_ai-toolkit\scripts\doctor.cmd -Deep
 ```
 
-Bootstrap preserves any user-authored `%USERPROFILE%\.config\opencode\AGENTS.md` content and maintains the toolkit guidance inside a marked block.
+Bootstrap preserves user-authored global OpenCode instructions outside the toolkit-managed block.
 
-After bootstrap, **fully quit and reopen OpenCode Desktop**. You should see **Build** and **Plan**. Typing `@` should expose `deep`, `review`, and OpenCode's built-in `explore`.
+After bootstrap, fully quit and reopen OpenCode Desktop. Build and Plan remain the primary modes. Typing `@` should expose `worker`, `index`, `deep`, `review`, and OpenCode's native `explore`.
 
-When your connected model inventory changes:
+Refresh routing after provider/model inventory changes:
 
 ```powershell
 F:\_ai-toolkit\scripts\refresh-routing.cmd
 ```
 
-Then start a new OpenCode session (or restart Desktop) so the refreshed model assignments and global guidance are cleanly loaded.
+## Permissions
 
-## Permissions and nested agents
+The toolkit does not set broad shell/PowerShell approval rules. Those remain under your OpenCode settings.
 
-The toolkit does **not** set broad shell/PowerShell approval rules. Build and Deep inherit your OpenCode permission settings; Review adds only the role-defining `edit: deny` restriction.
-
-Nested subagents are allowed selectively when your OpenCode `subagent_depth` permits them:
-
-- Build -> Explore / Deep / Review
-- Deep -> Explore / Review
-- Review -> Explore
-
-The toolkit does not set `subagent_depth` for you. OpenCode defaults to depth 1; set it to 2 in your own OpenCode configuration if you want one additional nested level.
+The only agent-specific permission rules are role/routing rules such as Review being read-only and paid subagent invocation requiring approval.
 
 ## GitHub
 
@@ -96,16 +109,8 @@ gh auth login
 
 No GitHub MCP is required.
 
-## Optional local fallback
-
-Ollama/Qwen is not required. Install it only if you want an offline/private fallback:
-
-```powershell
-F:\_ai-toolkit\scripts\install-local-fallback.cmd
-```
-
 ## MCP
 
-No MCP server is required for the default workflow. Add one only for a capability OpenCode and the CLI tools do not already provide.
+No MCP server is required for the default workflow. Add one only when OpenCode and local CLI/custom tools do not already provide the capability.
 
-See `docs/ROUTING.md` and `docs/MODEL-ADVISOR.md` for the routing and promotion model.
+See `docs/ROUTING.md`, `docs/MODEL-ADVISOR.md`, and `docs/CONTENT-INDEX.md`.
