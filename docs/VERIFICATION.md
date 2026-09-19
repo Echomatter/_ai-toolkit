@@ -34,6 +34,9 @@ Live free validation:
   subscription inference. The initial Desktop test also exercised no-route reporting
   and correctly said no child ran. Native permission allows explicit saved approvals;
   it does not guarantee a new prompt after the user chooses Always Allow.
+  Nemotron's final decline summary was garbled. The prompt, durable receipt and
+  independently inspected empty child list verify the gate despite that model-output
+  failure. The Muse-to-MiMo plain-language test returned a clear final summary.
 
 The updated plugin/profiles were installed and Desktop restarted. No paid model
 inference was used in this follow-up. Session counters remain separate from parent
