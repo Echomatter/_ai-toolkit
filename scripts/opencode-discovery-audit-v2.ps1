@@ -10,7 +10,7 @@
   Reports:
     - exact duplicate names
     - same-name/different-content conflicts
-    - cross-type semantic collisions (github vs github-ops)
+    - cross-type semantic collisions (e.g. stale github vs retired github-ops)
     - old singular discovery roots
     - remote skill-cache collisions
     - toolkit manifest drift/stale copies
@@ -174,8 +174,12 @@ function IsSemanticallySimilar([string]$a,[string]$b){
     $ba=SemanticBase $a;$bb=SemanticBase $b
     if($ba -and $ba -eq $bb -and $ba.Length -ge 3){return $true}
 
-    # Explicit common wrapper pattern: github <-> github-ops.
-    if(($na -eq 'github' -and $nb -eq 'githubops') -or ($nb -eq 'github' -and $na -eq 'githubops')){return $true}
+    # Retired wrapper patterns: github<->github-ops, repo-reorient<->reorient,
+    # content-index-research<->search-index, model-advisor<->model-routing.
+    # These flag stale deployed copies, not live collisions.
+    foreach($pair in @(@('github','githubops'),@('reporeorient','reorient'),@('contentindexresearch','searchindex'),@('modeladvisor','modelrouting'))){
+        if(($na -eq $pair[0] -and $nb -eq $pair[1]) -or ($nb -eq $pair[0] -and $na -eq $pair[1])){return $true}
+    }
     return $false
 }
 

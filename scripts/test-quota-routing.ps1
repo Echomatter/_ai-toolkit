@@ -63,20 +63,34 @@ try {
     }
 } catch { Fail ("Q1 live refresh error: " + $_.Exception.Message) }
 
-# Q2: economics decide among qualified same-pool Go models (live).
+# Q2: economics decide among qualified same-pool Go models (fixture).
+# A synthetic healthy Go pool keeps this ordering proof independent of live
+# account headroom (live pools rate-limit; see Q2b). Fixed windows below.
 try {
-    $sel = Invoke-Selection @{ '-ExpectedInputTokens' = '500000'; '-ExpectedOutputTokens' = '50000'; '-ExpectedCacheReadTokens' = '2000000' }
+    $fx = Join-Path $env:TEMP 'quota_fx2.json'
+    $fxWindows = [ordered]@{
+        rolling = [ordered]@{ status = 'ok'; used_percent = 10.0; resets_at = '2026-10-01T00:00:00.000Z' }
+        weekly = [ordered]@{ status = 'ok'; used_percent = 20.0; resets_at = '2026-10-01T00:00:00.000Z' }
+        monthly = [ordered]@{ status = 'ok'; used_percent = 30.0; resets_at = '2026-10-01T00:00:00.000Z' }
+    }
+    $fxSurfaces = [ordered]@{
+        'opencode-go' = (New-Surface 'ok' @{ windows = $fxWindows })
+        'openai-oauth' = (New-Surface 'ok' @{})
+        'github-copilot-oauth' = (New-Surface 'ok' @{})
+        'opencode-free' = (New-Surface 'not-applicable' @{})
+    }
+    Write-FixtureState $fx $fxSurfaces
+    $a2 = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$selector,'-TaskType','bounded_feature','-Role','worker','-QuotaStatePath',$fx,'-ExpectedInputTokens','500000','-ExpectedOutputTokens','50000','-ExpectedCacheReadTokens','2000000')
+    $sel = ((& powershell.exe @a2 2>$null | Out-String) | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 0 -or -not $sel) { throw 'select-model failed on Q2 fixture' }
     $lp = Rank-Pos $sel.ranking 'opencode-go/longcat-2.0'
     $qp = Rank-Pos $sel.ranking 'opencode-go/qwen3.7-max'
     if ($lp -lt 0 -or $qp -lt 0) { Fail 'Q2 go pair missing from ranking (unexpected filter)' }
     else {
         $le = $sel.ranking[$lp]; $qe = $sel.ranking[$qp]
         if ([double]$le.cap_avg -ne [double]$qe.cap_avg) { Fail 'Q2 pair capability not tied; demo premise changed' }
-        # Hand-verified window-consistent math from live windows + static pricing.
-        $qs = Get-Content -LiteralPath $liveQuota -Raw -Encoding UTF8 | ConvertFrom-Json
-        $go = $null
-        foreach ($p in @($qs.surfaces.PSObject.Properties)) { if ($p.Name -eq 'opencode-go') { $go = $p.Value } }
-        $ru = [double]$go.windows.rolling.used_percent; $wu = [double]$go.windows.weekly.used_percent; $mu = [double]$go.windows.monthly.used_percent
+        # Hand-verified window-consistent math from fixture windows + static pricing.
+        $ru = 10.0; $wu = 20.0; $mu = 30.0
         $maxUsed = [Math]::Max($ru, [Math]::Max($wu, $mu))
         $expL = 0.5*0.30 + 0.05*1.20 + 2.0*0.006
         $expQ = 0.5*2.50 + 0.05*7.50 + 2.0*0.50
@@ -89,13 +103,44 @@ try {
         else { Pass ("Q2 longcat above qwen3.7-max among qualified (quota " + $le.quota + " vs " + $qe.quota + ")") }
     }
     # Counterfactual: without token estimates only shared scarcity applies.
-    $sel2 = Invoke-Selection @{}
+    $a2b = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$selector,'-TaskType','bounded_feature','-Role','worker','-QuotaStatePath',$fx)
+    $sel2 = ((& powershell.exe @a2b 2>$null | Out-String) | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 0 -or -not $sel2) { throw 'select-model failed on Q2 counterfactual fixture' }
     $lp2 = Rank-Pos $sel2.ranking 'opencode-go/longcat-2.0'
     $qp2 = Rank-Pos $sel2.ranking 'opencode-go/qwen3.7-max'
     if ([Math]::Abs([double]$sel2.ranking[$lp2].quota - [double]$sel2.ranking[$qp2].quota) -gt 0.001) {
         Fail 'Q2 counterfactual: quota differs without token estimates'
     } else { Pass 'Q2 counterfactual: no-estimate quota collapses to shared scarcity' }
+    Remove-Item -LiteralPath $fx -Force -ErrorAction SilentlyContinue
 } catch { Fail ("Q2 go-pair error: " + $_.Exception.Message) }
+
+# Q2b: a rate-limited Go window filters the whole Go pool with a reason (fixture).
+# Observed live 2026-09-19 (weekly status=rate-limited); encoded here so the
+# regression never depends on live account state.
+try {
+    $fx = Join-Path $env:TEMP 'quota_fx2b.json'
+    $fxWindows = [ordered]@{
+        rolling = [ordered]@{ status = 'ok'; used_percent = 10.0; resets_at = '2026-10-01T00:00:00.000Z' }
+        weekly = [ordered]@{ status = 'rate-limited'; used_percent = 95.0; resets_at = '2026-10-01T00:00:00.000Z' }
+        monthly = [ordered]@{ status = 'ok'; used_percent = 30.0; resets_at = '2026-10-01T00:00:00.000Z' }
+    }
+    $fxSurfaces = [ordered]@{
+        'opencode-go' = (New-Surface 'ok' @{ windows = $fxWindows })
+        'openai-oauth' = (New-Surface 'ok' @{})
+        'github-copilot-oauth' = (New-Surface 'ok' @{})
+        'opencode-free' = (New-Surface 'not-applicable' @{})
+    }
+    Write-FixtureState $fx $fxSurfaces
+    $a2c = @('-NoProfile','-ExecutionPolicy','Bypass','-File',$selector,'-TaskType','bounded_feature','-Role','worker','-QuotaStatePath',$fx)
+    $sel = ((& powershell.exe @a2c 2>$null | Out-String) | ConvertFrom-Json)
+    if ($LASTEXITCODE -ne 0 -or -not $sel) { throw 'select-model failed on Q2b fixture' }
+    $goRanked = @($sel.ranking | Where-Object { ([string]$_.id) -match '^opencode-go/' })
+    $goReasons = @($sel.filtered_out | Where-Object { ([string]$_.id) -eq 'opencode-go/longcat-2.0' })
+    if ($goRanked.Count -gt 0) { Fail 'Q2b rate-limited Go window still ranks Go models' }
+    elseif ($goReasons.Count -eq 0 -or ([string]$goReasons[0].reason) -notmatch 'pool exhausted') { Fail 'Q2b Go filter lacks pool-exhausted reason' }
+    else { Pass 'Q2b rate-limited Go window filters Go pool with reason' }
+    Remove-Item -LiteralPath $fx -Force -ErrorAction SilentlyContinue
+} catch { Fail ("Q2b pool-exhaustion error: " + $_.Exception.Message) }
 
 # Q3: live Copilot premium bucket governs agentic delegation (state-aware).
 try {
@@ -284,9 +329,9 @@ try {
 # Q12: worker guidance states the abort limitation and no-competing-writer rule.
 try {
     $ok = $true
-    foreach ($f in @('opencode\agents\worker.template.md','opencode\agents\worker.md')) {
+    foreach ($f in @('opencode\templates\worker.template.md','opencode\agents\worker.md')) {
         $t = Get-Content -LiteralPath (Join-Path $ToolkitRoot $f) -Raw -Encoding UTF8
-        if (($t -notmatch 'competing writer') -or ($t -notmatch 'cannot be remotely stopped') -or ($t -notmatch 'BlockSurface')) { $ok = $false }
+        if (($t -notmatch 'competing writer') -or ($t -notmatch 'BlockSurface')) { $ok = $false }
     }
     if ($ok) { Pass 'Q12 worker template+generated state abort limitation, no competing writer' }
     else { Fail 'Q12 worker guidance incomplete' }

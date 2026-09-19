@@ -257,12 +257,13 @@ if ($NeedsLargeContextTokens -gt 0) { Add-W 'long_context' 0.5 }
 # Role hint: stable role names influence weights without replacing task types.
 # worker = default implementation weights (no change). review adds verification
 # weights when the caller did not already specify a review task type.
-# index adds light retrieval weights; its strong free bias is applied in economics.
+# researcher adds light retrieval weights; its strong free bias is applied in
+# economics. 'index' is accepted as a legacy alias of 'researcher'.
 if ($roleNorm -eq 'review') {
     if (($tasks -notcontains 'code_review') -and ($tasks -notcontains 'independent_verification')) {
         Add-W 'code_review' 3.0; Add-W 'coding' 0.5
     }
-} elseif ($roleNorm -eq 'index') {
+} elseif ($roleNorm -eq 'researcher' -or $roleNorm -eq 'index') {
     Add-W 'research' 1.0; Add-W 'repo_understanding' 1.0
 }
 
@@ -322,7 +323,10 @@ function Get-ExecutionSurface([string]$ModelId, [string]$Purpose) {
     if ($CurrentModel -and $ModelId -eq $CurrentModel) { return 'build' }
     if ($state) {
         if ($Purpose -eq 'review' -and $state.review -and $ModelId -eq [string]$state.review) { return '@review' }
-        if ($Purpose -eq 'implementation' -and $state.deep -and $ModelId -eq [string]$state.deep) { return '@deep chunk' }
+        $archModel = $null
+        if ($state.architect) { $archModel = [string]$state.architect }
+        elseif ($state.deep) { $archModel = [string]$state.deep }
+        if ($Purpose -eq 'implementation' -and $archModel -and $ModelId -eq $archModel) { return '@architect chunk' }
         if ($state.routine -and $ModelId -eq [string]$state.routine) { return 'build' }
     }
     return '/models switch'
@@ -344,6 +348,15 @@ $scored = @()
 $filtered = @()
 $appliedBlocks = @()
 $quotaNotes = @()
+$quotaTelemetryOut = [ordered]@{}
+foreach ($sn in @('opencode-go', 'openai-oauth', 'github-copilot-oauth', 'opencode-free')) {
+    $qs = Get-QuotaSurface $sn
+    if ($qs -and $qs.telemetry) {
+        $quotaTelemetryOut[$sn] = [ordered]@{ status = [string]$qs.telemetry.status; source = [string]$qs.telemetry.source; as_of = [string]$qs.telemetry.as_of }
+    } else {
+        $quotaTelemetryOut[$sn] = [ordered]@{ status = 'unknown'; source = 'none'; as_of = '' }
+    }
+}
 
 # ---- Execution availability (separate from telemetry health) ----
 # A block applies when: reset is known and in the future; or reset is unknown
@@ -612,7 +625,7 @@ foreach ($rm in @($roster.eligible_models)) {
     } elseif ($isConsequential) {
         if ($surface -ne 'opencode-free') { $econBase = -0.15 }
     }
-    if ($roleNorm -eq 'index') {
+    if ($roleNorm -eq 'researcher' -or $roleNorm -eq 'index') {
         if ($surface -eq 'opencode-free') { $econBase = $econBase + 2.0 }
         else { $econBase = $econBase - 1.0 }
     } elseif ($prefCost -eq 'free') {
@@ -767,7 +780,55 @@ foreach ($rm in @($roster.eligible_models)) {
     }
 }
 
-if ($scored.Count -eq 0) { throw 'No eligible models survived hard filters.' }
+if ($scored.Count -eq 0) {
+    # Zero eligible candidates: return a well-formed null result instead of
+    # throwing, and never invent a null-model reviewer. Callers (delegate tool,
+    # tests) must handle selected_model=null as "no adequate route right now".
+    $emptyResult = [ordered]@{
+        recommended = $null
+        top_scored = $null
+        access = $null
+        why = @('no eligible models survived hard filters')
+        execution_surface = $null
+        action = $null
+        phases = @()
+        fallback = $null
+        current_lane = $LaneHint
+        evidence_freshness = $freshness
+        evidence_age_days = $evidenceAgeDays
+        evidence_readiness = $readiness
+        needs_research = ($isConsequential -and $readiness -ne 'READY')
+        research_reason = 'no eligible model; evidence or inventory may be insufficient'
+        is_trivial = $isTrivial
+        is_consequential = $isConsequential
+        stay_put = $false
+        filtered_out = @($filtered | ForEach-Object { [ordered]@{ id=$_.id; reason=$_.reason } })
+        top_scores = @()
+        ranking = @()
+        quota_state = [ordered]@{
+            fresh = $quotaFresh
+            telemetry = $quotaTelemetryOut
+            blocks = @($appliedBlocks)
+            notes = @($quotaNotes)
+            overage = $copilotOverage
+        }
+        consumption_estimate = [ordered]@{
+            allocation_estimate_dollars = 0
+            monthly_fraction = $null
+            window_pressure = $null
+            quota_detail = 'no eligible model'
+            note = 'allocation estimate against subscription capacity, not a charge or cash saving'
+        }
+        selected_model = $null
+        surface = $null
+        role = $roleNorm
+        adequacy = 'unknown'
+        reason_codes = @('no eligible models survived hard filters')
+        fallback_model = $null
+    }
+    $emptyResult | ConvertTo-Json -Depth 6
+    return
+}
 $ranked = @($scored | Sort-Object -Property @{Expression='total';Descending=$true}, @{Expression='priority';Descending=$false}, @{Expression='id';Descending=$false})
 
 $top = $ranked[0]
@@ -914,16 +975,6 @@ try {
     elseif ($topCap -ge 2.0) { $adequacy = 'adequate' }
     else { $adequacy = 'weak' }
 } catch { $adequacy = 'unknown' }
-
-$quotaTelemetryOut = [ordered]@{}
-foreach ($sn in @('opencode-go', 'openai-oauth', 'github-copilot-oauth', 'opencode-free')) {
-    $qs = Get-QuotaSurface $sn
-    if ($qs -and $qs.telemetry) {
-        $quotaTelemetryOut[$sn] = [ordered]@{ status = [string]$qs.telemetry.status; source = [string]$qs.telemetry.source; as_of = [string]$qs.telemetry.as_of }
-    } else {
-        $quotaTelemetryOut[$sn] = [ordered]@{ status = 'unknown'; source = 'none'; as_of = '' }
-    }
-}
 
 $result = [ordered]@{
     recommended = $finalRecommended

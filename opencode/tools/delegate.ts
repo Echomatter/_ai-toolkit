@@ -44,8 +44,8 @@ export default tool({
     "AI-delegation advisor. Characterizes a bounded task, calls the deterministic evidence-aware model selector over cached roster/evidence/history, and returns a cheaper adequate route plus execution guidance. User-invoked routes inherit the initiating model and are never blocked by this advisor. Uses cached evidence only; never performs live web research.",
   args: {
     role: tool.schema
-      .enum(["worker", "review", "index"])
-      .describe("Delegation role: worker (generic implementation), review (independent verification), index (free retrieval)"),
+      .enum(["worker", "architect", "researcher", "review"])
+      .describe("Delegation role: worker (bounded implementation), architect (hard tradeoff/plan), researcher (orientation/investigation), review (independent verification)"),
     task: tool.schema.string().describe("Brief bounded task description"),
     taskTypes: tool.schema
       .array(tool.schema.string())
@@ -86,7 +86,7 @@ export default tool({
     preferredCostClass: tool.schema
       .enum(["free", "any"])
       .optional()
-      .describe("Cost preference; index defaults to free-biased"),
+      .describe("Cost preference; researcher defaults to free-biased"),
   },
   async execute(args, context: Ctx) {
     const root = path.resolve(context.worktree || context.directory)
@@ -130,8 +130,8 @@ export default tool({
       psArgs.push("-ExpectedCacheReadTokens", String(Math.floor(args.expectedCacheReadTokens)))
     }
     psArgs.push("-Role", role)
-    // AI-driven index delegation is free-biased; user-invoked /index does not use this path.
-    if (role === "index" || args.preferredCostClass === "free") {
+    // AI-driven researcher delegation is free-biased.
+    if (role === "researcher" || args.preferredCostClass === "free") {
       psArgs.push("-PreferredCostClass", "free")
     }
 
@@ -142,7 +142,7 @@ export default tool({
     const stale =
       freshness === "stale" || freshness === "very stale" || freshness === "partially stale"
     const staleWarning = stale
-      ? `Evidence is ${freshness}; selection used the cache per policy. Run /refresh-model-evidence to refresh, but do not block delegation on it.`
+      ? `Evidence is ${freshness}; selection used the cache per policy. Run the model-routing skill explicit refresh to refresh, but do not block delegation on it.`
       : null
 
     const selected: string = String(sel.selected_model || sel.recommended || "")
@@ -157,10 +157,10 @@ export default tool({
     } else if (surface === "/models switch") {
       // Exact selected-model execution requires an explicit session switch.
       needsSwitch = true
-    } else if (surface === "@deep chunk" && role === "worker") {
+    } else if (surface === "@architect chunk" && role === "worker") {
       // Report the evidence-preferred role honestly; its model still comes
       // from the invoking session unless explicitly switched.
-      recommendedAgent = "deep"
+      recommendedAgent = "architect"
       canDelegate = true
     } else if (surface === "@review" && role !== "review") {
       recommendedAgent = "review"

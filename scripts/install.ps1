@@ -139,7 +139,10 @@ $manifest = $nextManifest
 # same-named user files alone and report them for manual cleanup.
 $retiredSkills = @(
     'cost-aware-routing','task-contract','workspace-map','public-repo-research',
-    'local-first-escalation','external-research','model-escalation'
+    'local-first-escalation','external-research','model-escalation',
+    'bounded-experiment','change-audit','content-index-research','enhanced-explore',
+    'evidence-ledger','github-ops','handoff-brief','local-repo-research',
+    'model-advisor','repo-reorient'
 )
 foreach ($name in $retiredSkills) {
     $target = Join-Path $SkillsDst $name

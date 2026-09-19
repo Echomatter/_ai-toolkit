@@ -1,92 +1,47 @@
 ---
 name: model-routing
-description: Use when deciding whether the current OpenCode Build session should handle work itself or delegate to Explore, Index, Deep, or Review; prefer deterministic/free retrieval and escalate to subscription models only when the task evidence justifies it.
+description: Own model-choice guidance, evidence refresh, quota economics, and explanation of delegated selections. Advice does not switch a session. Child selection must execute on the chosen model via the delegate tool.
 ---
 
 # Model Routing
 
-Skills never change the active OpenCode mode. Only OpenCode runtime/user agent selection determines Build vs Plan.
+Skills never change the active OpenCode mode. Parent models never change silently.
 
-Goal: finish the work with the cheapest adequate path without turning routing into a conversation of its own.
+## Two jobs
 
-## Lanes
+- **Advice** for the user's next phase: recommend; do not switch.
+- **Child selection**: call `delegate`, then the selected child must actually run on the chosen model. A recommendation that another role ignores is not execution.
 
-- **Build**: native primary agent on the routine/free model. Normal implementation, bounded debugging, tests, and ordinary research.
-- **Explore**: native read-only code search/tracing; prefer the `enhanced-explore` skill (index-guided Explore) for where/how code questions.
-- **Index**: read-only mixed-corpus retrieval over docs, structured data, PDFs, spreadsheets, archives, and other indexed non-code sources.
-- **Worker**: generic implementation/reasoning subagent for bounded delegated tasks. The selector chooses which model performs the role; call the `delegate` tool first and invoke the recommended agent.
-- **Deep**: explicit strong-model escalation lane. Reserved for deliberate escalation, not every difficult task.
-- **Review**: independent read-only verification when warranted, seeking model/provider diversity from the implementation.
+Use `scripts/select-model.ps1`. Do not rank models from memory or lane names. Capability qualification is separate from economics. Unknown capability is not adequate. Unknown price or missing telemetry is not free or unlimited. No unapproved overage.
 
-For public/upstream information use native web tools. For source-code symbols/call paths use `enhanced-explore`. For mixed project content and "find all" work use Index.
+## Roles (jobs, not models)
 
-## Free-first retrieval
+- **Build**: customized parent. User's selected model.
+- **Worker**: bounded implementation when assigned.
+- **Architect**: hard tradeoffs / architecture. Name does not force Plan or an expensive model.
+- **Researcher**: orientation and investigation. Read-only on project source.
+- **Review**: independent read-only verification. Prefer a different model family when a capable alternative exists. Same-model review is not cross-model verification.
 
-Before escalating:
-1. inspect the actual repo state;
-2. use grep/LSP/Explore for code;
-3. use Index for large mixed corpora or completeness searches;
-4. use native web tools for current public information;
-5. run bounded deterministic validation.
-
-Do not spend paid-model context rediscovering material that a free/deterministic tool can narrow first.
+User-invoked skills/helpers inherit the selected parent model unless the user overrides. Agent-initiated children use `delegate`. Explicit user model override wins.
 
 ## Stay in Build when
 
-- the task is localized or mechanically understandable;
-- tests or bounded validation can settle correctness;
-- one or two bounded attempts are reasonable;
-- retrieval can reduce uncertainty enough to continue safely;
-- a free model can complete the work.
+Localized work, tests can settle it, retrieval reduced uncertainty, a free/adequate model can finish it.
 
-## Escalate to Deep when
+## Delegate a child when
 
-`@deep` means explicitly requesting strong-model escalation. Use it only when at least one is true after narrowing:
+Bounded extra work, orientation (Researcher), independent review, or a narrowed hard decision (Architect). Call `delegate` first for agent-initiated work. Preserve parent. One attempt; no competing writer.
 
-- the user explicitly requests the strongest available reasoning model;
-- bounded implementation/debug attempts with adequate models failed without a materially new hypothesis;
-- the remaining work genuinely exceeds what free/adequate models can handle (ambiguous architecture/state ownership, subtle algorithms, realtime/DSP/ML, security, firmware/recovery, irreversible data operations, or unexplained validation failures the free model cannot explain).
+## Advice line (optional)
 
-For ordinary difficult tasks, prefer `delegate(role="worker", ...)` and let the selector choose the least-expensive adequate model.
+After a meaningful completed task, one line only when the next phase is clear and another model has a material advantage:
 
-Prefer a **bounded @deep chunk** over switching the whole session. This preserves the free Build parent as a natural fallback.
+`Next model: <id> — <reason>. <stay | use @researcher/@explore | delegate via @worker | @architect | @review | switch with /models>`
 
-## Paid-model failure handling
+Otherwise say nothing about models.
 
-A failed paid escalation is not automatically a failed task.
+## Refresh
 
-If Deep, Review, or Worker becomes unavailable because of quota exhaustion, rate limiting, provider outage, authentication failure, or another provider-side error after OpenCode's own retry handling:
-- try the selector's fallback model when known;
-- do not loop on the same paid lane;
-- return to the free Build parent;
-- continue with Index, Explore, native web tools, and deterministic tests where useful;
-- narrow the unresolved problem as far as possible on free tools;
-- do not silently jump to a different paid provider or a metered API route;
-- if the remaining work truly requires stronger reasoning to be safe, report the unavailable escalation and the specific unresolved point.
+Only an explicit evidence refresh does live model research. Ordinary routing uses cached evidence. Coordinated index refresh may light-check inventory/quota once; do not cycle index → routing → research → index.
 
-If the user manually switched the whole session to a paid model, automatic session failover is outside this toolkit's control. Prefer chunk delegation when graceful fallback matters.
-
-## Review
-
-Use Review for explicit audits, consequential changes, broad Deep changes, or when independent model diversity materially reduces risk. Review is read-only.
-
-If Review is unavailable, perform a best-effort free verification pass using Build plus Index/Explore/tests and state that independent paid verification was unavailable if it matters.
-
-## Promotion semantics
-
-- **Retrieval delegation:** use `@index` or `@explore` freely to keep the parent context small.
-- **Implementation delegation:** call the `delegate` tool, then invoke the recommended agent (normally `@worker`).
-- **Chunk escalation:** send only the narrowed hard part to `@deep` when explicit escalation is warranted.
-- **Session promotion:** recommend `/models` only when the remaining phase broadly needs the stronger model and the benefit is material.
-- **Verification:** use `@review` / `/audit` when independent verification is worth the extra model call, seeking diversity from the implementation model.
-- **Stay put:** if free Build plus validation is adequate, do not recommend a switch.
-
-## Economic boundary
-
-Automatic routing may use only:
-- current OpenCode free hosted models;
-- OpenCode Go subscription/quota models, preserving the `opencode-go/` provider identity;
-- ChatGPT subscription models connected through OpenAI OAuth;
-- GitHub Copilot subscription models connected through Copilot OAuth.
-
-There is no local-model engine path. Do not automatically route into separately metered API-key providers or gateways.
+Eligible surfaces: OpenCode free, OpenCode Go, OpenAI OAuth, GitHub Copilot OAuth. Provider-qualified IDs stay distinct. No metered API gateways.

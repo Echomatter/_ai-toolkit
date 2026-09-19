@@ -2,7 +2,7 @@
 
 The toolkit includes a deterministic mixed-corpus retrieval layer based on `tools/Project_Content_Indexer.py`.
 
-OpenCode exposes it through the global `content_index` custom tool and the free `@index` subagent.
+OpenCode exposes it through the global `content_index` custom tool, used directly or via the `search-index` skill and the `@researcher` helper.
 
 ## Why it exists
 
@@ -33,9 +33,9 @@ Rebuilds are atomic and validated before replacing the stable database.
 
 ## Retrieval policy
 
-Use `/index` or `@index` freely for exhaustive corpus research. User-invoked retrieval inherits the initiating model and never waits for a configured free model. AI-driven delegation may use the selector to choose a cheaper adequate route.
+Use the `search-index` skill or `@researcher` freely for exhaustive corpus research. User-invoked retrieval inherits the initiating model. AI-driven delegation may use the selector to choose a cheaper adequate route.
 
-For code symbols and call paths, use native `@explore`. For current public information, use native web tools. For mixed project content, use `@index` / `content_index`.
+For code symbols and call paths, use native `@explore`. For current public information, use native web tools. For mixed project content, use `search-index` / `content_index`.
 
 ## Fact modes
 

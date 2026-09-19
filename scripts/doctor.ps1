@@ -32,19 +32,19 @@ if($gh){
   if($LASTEXITCODE -eq 0){ OK 'GitHub CLI authenticated.' } else { WARN 'GitHub CLI is installed but not authenticated; run gh auth login.' }
 }else{ WARN 'GitHub CLI not found; remote GitHub work will be unavailable.' }
 
-$skills=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief','enhanced-explore')
+$skills=@('reorient','search-index','sync','model-routing','record-outcome')
 foreach($s in $skills){ $p=Join-Path $env:USERPROFILE ".agents\skills\$s\SKILL.md"; if(Test-Path -LiteralPath $p){OK "skill installed: $s"}else{FAIL "skill missing: $s"} }
 
 
 $ocGlobal=Join-Path $env:USERPROFILE '.config\opencode'
-foreach($a in @('build','index','worker','deep','review')){
+foreach($a in @('build','researcher','worker','architect','review')){
   $p=Join-Path $ocGlobal "agents\$a.md"
   if(Test-Path -LiteralPath $p){OK "Desktop agent installed: $a"}else{FAIL "Desktop agent missing: $a"}
 }
-foreach($c in @('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index','delegate')){
-  $p=Join-Path $ocGlobal "commands\$c.md"
-  if(Test-Path -LiteralPath $p){OK "Desktop command installed: /$c"}else{FAIL "Desktop command missing: /$c"}
-}
+$cmdDir=Join-Path $ocGlobal 'commands'
+$cmdLeft=@()
+if(Test-Path -LiteralPath $cmdDir){$cmdLeft=@(Get-ChildItem -LiteralPath $cmdDir -File -Filter '*.md')}
+if($cmdLeft.Count -eq 0){OK 'no toolkit slash-command wrappers installed'}else{WARN ("command wrappers still present: " + (($cmdLeft|ForEach-Object{$_.Name}) -join ', '))}
 
 $indexTool=Join-Path $env:USERPROFILE '.config\opencode\tools\content_index.ts'
 if(Test-Path -LiteralPath $indexTool){OK 'Desktop custom tool installed: content_index'}else{FAIL 'Desktop custom tool missing: content_index'}
@@ -70,11 +70,15 @@ $statePath=Join-Path $ToolkitRoot 'routing\state.json'
 if(Test-Path -LiteralPath $statePath){
    try {
       $st=Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json
-       OK "Routine: $($st.routine)"; OK "Index: $($st.index)"; OK "Worker: $($st.worker)"; OK "Deep: $($st.deep)"; OK "Review: $($st.review)"
+       $archShow = $null
+      if($st.architect){ $archShow = [string]$st.architect } elseif($st.deep){ $archShow = [string]$st.deep }
+      $resShow = $null
+      if($st.researcher){ $resShow = [string]$st.researcher } elseif($st.index){ $resShow = [string]$st.index }
+      OK "Routine: $($st.routine)"; OK "Researcher: $resShow"; OK "Worker: $($st.worker)"; OK "Architect: $archShow"; OK "Review: $($st.review)"
       $distinct = $true
       if($null -ne $st.review_is_distinct_model){ $distinct = [bool]$st.review_is_distinct_model }
       elseif($null -ne $st.review_is_independent){ $distinct = [bool]$st.review_is_independent }
-      if(-not $distinct){ WARN 'Review currently uses the same model ID as Deep.' }
+      if(-not $distinct){ WARN 'Review currently uses the same model ID as Architect.' }
     } catch { FAIL 'routing state is invalid JSON.' }
 } else { FAIL 'routing state missing.' }
 
@@ -127,10 +131,12 @@ if($evidenceData -and $st -and $evidenceData.alias_index -and $evidenceData.mode
         }
         return ''
     }
-    $deepVendor = Get-EvidenceProvider ([string]$st.deep)
+    $archId = ''
+    if($st.architect){ $archId = [string]$st.architect } elseif($st.deep){ $archId = [string]$st.deep }
+    $deepVendor = Get-EvidenceProvider $archId
     $reviewVendor = Get-EvidenceProvider ([string]$st.review)
-    if($deepVendor -and $reviewVendor -and $deepVendor -eq $reviewVendor -and $st.deep -ne $st.review){
-        WARN "Review uses a different model ID but the same model vendor as Deep ($deepVendor); cross-vendor independence is reduced."
+    if($deepVendor -and $reviewVendor -and $deepVendor -eq $reviewVendor -and $archId -ne [string]$st.review){
+        WARN "Review uses a different model ID but the same model vendor as Architect ($deepVendor); cross-vendor independence is reduced."
     }
 }
 
@@ -154,9 +160,9 @@ Write-Output ""
 Write-Output "Current lanes:"
 Write-Output "Routine (Build): $($st.routine)"
 Write-Output "Explore: native OpenCode agent (no fixed model)"
-Write-Output "Index: $($st.index) (free corpus retrieval)"
+Write-Output "Researcher: $($st.researcher) (orientation/investigation)"
 Write-Output "Worker: $($st.worker) (dynamic delegated execution)"
-Write-Output "Deep: $($st.deep) (explicit escalation)"
+Write-Output "Architect: $($st.architect) (hard tradeoffs)"
 Write-Output "Review: $($st.review)"
 Write-Output ""
 $rosterAge = 'unknown'
@@ -220,15 +226,17 @@ if($rosterFreshness -ne 'current'){ WARN "Availability roster is $rosterFreshnes
 # ---- Enhanced validation ------------------------------------------
 # Check subscription model without corresponding OAuth
 if($st){
-   if($st.deep -match '^openai/' -and -not $st.oauth.openai){ FAIL 'Deep lane selected OpenAI without eligible OpenAI OAuth route.' }
+   $archLane = $null
+   if($st.architect){ $archLane = [string]$st.architect } elseif($st.deep){ $archLane = [string]$st.deep }
+   if($archLane -match '^openai/' -and -not $st.oauth.openai){ FAIL 'Architect lane selected OpenAI without eligible OpenAI OAuth route.' }
    if($st.review -match '^github-copilot/' -and -not $st.oauth.github_copilot){ FAIL 'Review lane selected GitHub Copilot without eligible Copilot OAuth route.' }
-   # Check Deep/Review reference available models
+   # Check Architect/Review reference available models
    $allModelIds = @($roster.eligible_models).id
-   if($allModelIds -notcontains $st.deep){ FAIL 'Deep lane references model not in eligible roster.' }
+   if($archLane -and ($allModelIds -notcontains $archLane)){ FAIL 'Architect lane references model not in eligible roster.' }
    if($allModelIds -notcontains $st.review){ FAIL 'Review lane references model not in eligible roster.' }
    # Check no metered/excluded route in automatic routing
    $forbidden = @('openrouter','vercel','anthropic','google','xai','groq','together','fireworks')
-   foreach($f in $forbidden){ if($st.deep -match "^$f" -or $st.review -match "^$f"){ FAIL 'Metered/excluded provider in automatic routing lane.' } }
+   foreach($f in $forbidden){ if($archLane -match "^$f" -or $st.review -match "^$f"){ FAIL 'Metered/excluded provider in automatic routing lane.' } }
 }
 # Check generated files are valid JSON
 @($rosterPath,$statePath) | ForEach-Object {
@@ -256,7 +264,9 @@ if($Deep -and $oc){
          $authHasCopilot=($authText -match '(?im)^.*GitHub\s+Copilot.*oauth.*$')
          if($authHasOpenAI -and -not $fresh.oauth.openai){ FAIL 'OpenAI OAuth is connected but routing did not detect it.' }
          if($authHasCopilot -and -not $fresh.oauth.github_copilot){ FAIL 'GitHub Copilot OAuth is connected but routing did not detect it.' }
-         if((-not $fresh.oauth.openai) -and ($fresh.deep -match '^openai/')){ FAIL 'Deep lane selected OpenAI without an eligible OpenAI OAuth route.' }
+         $freshArch = $null
+         if($fresh.architect){ $freshArch = [string]$fresh.architect } elseif($fresh.deep){ $freshArch = [string]$fresh.deep }
+         if((-not $fresh.oauth.openai) -and ($freshArch -match '^openai/')){ FAIL 'Architect lane selected OpenAI without an eligible OpenAI OAuth route.' }
          if((-not $fresh.oauth.github_copilot) -and ($fresh.review -match '^github-copilot/')){ FAIL 'Review lane selected GitHub Copilot without an eligible Copilot OAuth route.' }
       } catch { FAIL 'post-refresh routing state validation failed.' }
    } else { FAIL 'routing refresh failed.' }

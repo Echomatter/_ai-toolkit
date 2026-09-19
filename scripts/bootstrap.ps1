@@ -115,7 +115,9 @@ function Remove-LegacyToolkitArtifacts {
         (Join-Path $env:USERPROFILE '.codex\agents\local-repo-researcher.toml'),
         (Join-Path $env:USERPROFILE '.codex\agents\independent-verifier.toml'),
         (Join-Path $env:USERPROFILE '.codex\agents\task-switchboard.toml'),
-        (Join-Path $env:USERPROFILE '.config\opencode\agents\auto.md')
+        (Join-Path $env:USERPROFILE '.config\opencode\agents\auto.md'),
+        (Join-Path $env:USERPROFILE '.config\opencode\agents\deep.md'),
+        (Join-Path $env:USERPROFILE '.config\opencode\agents\index.md')
     )
     foreach ($path in $legacyAgentFiles) {
         if (-not (Test-Path -LiteralPath $path)) { continue }

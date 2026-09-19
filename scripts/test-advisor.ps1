@@ -50,7 +50,7 @@ try {
     $e2 = Invoke-Selection @('architecture','large_refactor') $true $false 500000 $true $false $true
     if ($e2.recommended -match '^(openai|github-copilot)/') { Pass 'E2 hard refactor recommends frontier subscription model' }
     else { Fail ("E2 hard refactor not subscription: " + $e2.recommended) }
-    if ($e2.execution_surface -eq '@deep chunk' -or $e2.execution_surface -eq '/models switch') { Pass ("E2 hard refactor promotes/delegates (" + $e2.execution_surface + ")") }
+    if ($e2.execution_surface -eq '@architect chunk' -or $e2.execution_surface -eq '/models switch') { Pass ("E2 hard refactor promotes/delegates (" + $e2.execution_surface + ")") }
     else { Fail ("E2 wrong surface: " + $e2.execution_surface) }
     if ($e1 -and ($e2.recommended -ne $e1.recommended)) { Pass 'E2 differs from trivial E1 by requirements' }
     elseif ($e1) { Fail 'E2 same model as trivial E1 despite different requirements' }
@@ -60,7 +60,7 @@ try {
 $dexReviewOnly = $null
 $dexRepair = $null
 try {
-    $dexReviewOnly = Invoke-Selection @('code_review','independent_verification','long_context_reading') $false $false 500000 $false $true $false
+    $dexReviewOnly = Invoke-Selection @('code_review','independent_verification','long_context_reading') $false $false 128000 $false $true $false
     if ($dexReviewOnly.execution_surface -eq '@review') {
         if ($dexReviewOnly.recommended -eq $st.review) { Pass 'E3 @review surface matches the configured Review role' }
         else { Fail 'E3 @review would execute a different model than the recommendation' }
@@ -79,8 +79,10 @@ try {
     $p1 = @($dexRepair.phases | Where-Object { $_.phase -eq 1 })[0]
     $p2 = @($dexRepair.phases | Where-Object { $_.phase -eq 2 })[0]
     if ($p1 -and $p2 -and $p1.model -ne $p2.model) {
+        $archModel = $null
+        if ($st.architect) { $archModel = [string]$st.architect } elseif ($st.deep) { $archModel = [string]$st.deep }
         $p1Ok = (($p1.surface -eq '@review' -and $p1.model -eq $st.review) -or ($p1.surface -eq '/models switch') -or ($p1.surface -eq 'build'))
-        $p2Ok = (($p2.surface -eq '@deep chunk' -and $p2.model -eq $st.deep) -or ($p2.surface -eq '/models switch') -or ($p2.surface -eq 'build'))
+        $p2Ok = (($p2.surface -eq '@architect chunk' -and $p2.model -eq $archModel) -or ($p2.surface -eq '/models switch') -or ($p2.surface -eq 'build'))
         if ($p1Ok -and $p2Ok) { Pass 'E4 phase models and execution surfaces are internally consistent' }
         else { Fail 'E4 phase surface names do not match the models they would actually execute' }
     } else { Fail 'E4 phase separation invalid (needs_writes must reject sole @review)' }
@@ -93,6 +95,19 @@ if ($dexReviewOnly -and $dexRepair) {
     Write-Output ("INFO: DexFraggler review-only  = " + $dexReviewOnly.recommended + " via " + $dexReviewOnly.execution_surface)
     Write-Output ("INFO: DexFraggler review+repair = " + $dexRepair.recommended + " via " + $dexRepair.execution_surface + " (Phase1 " + $dexRepair.diagnosis_model.id + ")")
 }
+
+# E23: impossible requirements return a well-formed null result, not a throw
+# and never a null-model reviewer. 500K context + diversity exceeds current
+# evidence for review tasks, so the selector must report no route honestly.
+try {
+    $e23 = Invoke-Selection @('code_review','independent_verification','long_context_reading') $false $false 500000 $false $true $false
+    if ($null -eq $e23.selected_model -and $null -eq $e23.recommended) { Pass 'E23 zero candidates returns null selection' }
+    else { Fail ("E23 expected null selection, got: " + $e23.selected_model) }
+    if (@($e23.phases).Count -eq 0) { Pass 'E23 zero candidates yields zero phases (no null reviewer)' }
+    else { Fail 'E23 phases invented for zero candidates' }
+    if ($e23.reason_codes -and @($e23.reason_codes).Count -gt 0) { Pass 'E23 null result carries a machine-readable reason' }
+    else { Fail 'E23 null result lacks a reason' }
+} catch { Fail ("E23 null-result error: " + $_.Exception.Message) }
 
 # E5: history wiring - 3 failures for the trivial winner must move the ranking.
 try {
@@ -160,7 +175,7 @@ try {
     $nbspMojibake = [string]([char]0x00C2) + [string]([char]0x00A0)
     $bad = @($emDashMojibake, $enDashMojibake, $eAcuteMojibake, $nbspMojibake)
     $foundBad = @()
-    foreach ($f in @((Join-Path $ToolkitRoot 'opencode\global-instructions.md'), (Join-Path $ToolkitRoot 'opencode\agents\build.md'), (Join-Path $ToolkitRoot 'opencode\agents\deep.md'), (Join-Path $ToolkitRoot 'opencode\agents\review.md'))) {
+    foreach ($f in @((Join-Path $ToolkitRoot 'opencode\global-instructions.md'), (Join-Path $ToolkitRoot 'opencode\agents\build.md'), (Join-Path $ToolkitRoot 'opencode\agents\architect.md'), (Join-Path $ToolkitRoot 'opencode\agents\review.md'))) {
         if (Test-Path -LiteralPath $f) {
             $t = Get-Content -LiteralPath $f -Raw -Encoding UTF8
             foreach ($b in $bad) { if ($t.Contains($b)) { $foundBad += ([IO.Path]::GetFileName($f) + ":" + $b) } }
@@ -235,16 +250,12 @@ try {
     }
 } catch { Fail ("E10 task linkage error: " + $_.Exception.Message) }
 
-# E11: index/free-fallback lane stays on the routine hosted-free model.
+# E11: researcher helper inherits the parent; no pinned model in the agent file.
 try {
-    if($st.index -eq $st.routine -and $st.free_fallback -eq $st.routine -and $st.routine -match '^opencode/'){
-        Pass 'E11 Index and free fallback remain hosted-free routing preferences'
-    } else {
-        Fail ("E11 index/free fallback mismatch: routine=" + $st.routine + " index=" + $st.index + " fallback=" + $st.free_fallback)
-    }
-    $indexAgent=Get-Content -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents\index.md') -Raw -Encoding UTF8
-    if($indexAgent.Contains("model: $($st.routine)")){Pass 'E11 generated Index agent uses Routine model'}else{Fail 'E11 generated Index agent model does not match Routine'}
-} catch { Fail ("E11 index lane error: " + $_.Exception.Message) }
+    $researcherAgent=Get-Content -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents\researcher.md') -Raw -Encoding UTF8
+    if($researcherAgent -match '(?m)^model:\s*'){Fail 'E11 researcher agent still hard-pins a model'}else{Pass 'E11 researcher inherits the invoking model'}
+    if($st.desktop_agents -contains 'researcher' -and $st.desktop_agents -notcontains 'index'){Pass 'E11 state lists researcher, not index'}else{Fail 'E11 state still lists retired index helper'}
+} catch { Fail ("E11 researcher lane error: " + $_.Exception.Message) }
 
 # E12: local model engines are outside the eligible/routing surface.
 try {
@@ -333,12 +344,12 @@ try {
     else { Fail 'E18 review role reused the Deep canonical model' }
 } catch { Fail ("E18 review diversity error: " + $_.Exception.Message) }
 
-# E19: index role with free preference stays on a free candidate.
+# E19: researcher role with free preference stays on a free candidate.
 try {
-    $e19 = Invoke-SelectionWithRole @('research') $false $false 0 $false $false $false 'index' 'free' ''
-    if ($e19.selected_model -match '^opencode/') { Pass 'E19 index role stays free-biased' }
-    else { Fail ("E19 index role not on free model: " + $e19.selected_model) }
-} catch { Fail ("E19 index bias error: " + $_.Exception.Message) }
+    $e19 = Invoke-SelectionWithRole @('research') $false $false 0 $false $false $false 'researcher' 'free' ''
+    if ($e19.selected_model -match '^opencode/') { Pass 'E19 researcher role stays free-biased' }
+    else { Fail ("E19 researcher role not on free model: " + $e19.selected_model) }
+} catch { Fail ("E19 researcher bias error: " + $_.Exception.Message) }
 
 # E20: identical inputs/evidence produce deterministic output.
 try {
@@ -384,7 +395,11 @@ foreach ($rid in @($roster.eligible_models | ForEach-Object { $_.id })) {
 if ($unmapped.Count -eq 0) { Pass 'S1 all eligible roster IDs map to canonical evidence entries' }
 else { Fail ("S1 unmapped roster IDs: " + ($unmapped -join ', ')) }
 $allIds = @($roster.eligible_models | ForEach-Object { $_.id })
-if ($allIds -contains $st.deep -and $allIds -contains $st.review -and $allIds -contains $st.routine -and $allIds -contains $st.worker) { Pass 'S2 lanes (incl. worker) reference eligible roster models' }
+$laneIds=@($st.review,$st.routine,$st.worker)
+if($st.architect){$laneIds+=$st.architect}elseif($st.deep){$laneIds+=$st.deep}
+$laneOk=$true
+foreach($lid in $laneIds){if($lid -and ($allIds -notcontains $lid)){$laneOk=$false}}
+if ($laneOk) { Pass 'S2 lanes reference eligible roster models' }
 else { Fail 'S2 lane references model outside eligible roster' }
 if (($st.deep -match '^openai/' -and -not $st.oauth.openai) -or ($st.review -match '^github-copilot/' -and -not $st.oauth.github_copilot)) { Fail 'S3 subscription lane without matching OAuth' }
 else { Pass 'S3 OAuth gating holds for subscription lanes' }

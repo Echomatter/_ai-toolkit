@@ -1,23 +1,23 @@
 {
     "generated":  true,
-    "generated_at":  "2026-09-19T03:09:33.9462809Z",
+    "generated_at":  "2026-09-19T05:27:34.9879252Z",
     "assignments":  {
                         "routine":  {
                                         "id":  "opencode/muse-spark-1.3-contributor-free",
                                         "surface":  "opencode-free"
                                     },
-                        "index":  {
-                                      "id":  "opencode/muse-spark-1.3-contributor-free",
-                                      "surface":  "opencode-free"
-                                  },
+                        "researcher":  {
+                                           "id":  "opencode/muse-spark-1.3-contributor-free",
+                                           "surface":  "opencode-free"
+                                       },
                         "worker":  {
                                        "id":  "opencode/muse-spark-1.3-contributor-free",
                                        "surface":  "opencode-free"
                                    },
-                        "deep":  {
-                                     "id":  "openai/gpt-6-astra",
-                                     "surface":  "openai-oauth"
-                                 },
+                        "architect":  {
+                                          "id":  "openai/gpt-6-astra",
+                                          "surface":  "openai-oauth"
+                                      },
                         "review":  {
                                        "id":  "github-copilot/claude-sonnet-5",
                                        "surface":  "github-copilot-oauth"
@@ -337,7 +337,13 @@
                                 "surface":  "opencode-go",
                                 "economics":  "subscription-quota",
                                 "observed":  {
-
+                                                 "total":  1,
+                                                 "successes":  1,
+                                                 "failures":  0,
+                                                 "success_rate":  1,
+                                                 "tests_passed":  1,
+                                                 "escalated":  0,
+                                                 "last_seen":  "2026-09-19T05:27:31.2508864Z"
                                              }
                             },
                             {
@@ -551,8 +557,8 @@
                         ],
     "recommendation":  {
                            "automatic_session_switch":  false,
-                           "automatic_chunk_delegation":  "Use free index/Explore/web retrieval first; Deep only when model-routing escalation criteria are met",
-                           "end_of_task":  "recommend only when the next phase is clear and another lane has a material advantage",
-                           "explicit_command":  "/recommend-model"
+                           "automatic_chunk_delegation":  "Use Researcher/Explore/web retrieval first; Architect only when the task warrants it",
+                           "end_of_task":  "recommend only when the next phase is clear and another model has a material advantage",
+                           "explicit_skill":  "model-routing"
                        }
 }

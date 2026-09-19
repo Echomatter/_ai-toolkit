@@ -7,74 +7,39 @@ These instructions apply across OpenCode projects. Project `AGENTS.md` files rem
 - OpenCode's actual selected agent determines Build versus Plan. A skill, read-before-write step, denied command, or inspection task never changes the mode by itself.
 - Never claim to be in Plan unless OpenCode actually selected Plan.
 - If a tool is permission-blocked, report the permission block rather than inventing a mode change.
+- The parent model is the user's selected model. Do not switch it silently.
 
-## Routing
+## Public catalog
 
-Current generated lanes:
-
-- Routine / Build: `__ROUTINE_MODEL__`
-- Index: `__ROUTINE_MODEL__` (free retrieval helper)
-- Worker: `__WORKER_MODEL__` (dynamic delegated execution; model chosen by evidence-aware selector)
-- Deep: `__DEEP_MODEL__` (explicit strong-model escalation only)
-- Review: `__REVIEW_MODEL__`
-
-Start useful work immediately on the model that received the request. Use `@explore` for source-code search/tracing, `/index` or `@index` for exhaustive mixed-corpus retrieval, and native web tools for current public information. User-invoked routes inherit the initiating model. For AI-driven bounded delegation, call the `delegate` tool first and invoke the recommended role. Never block a user request on a missing or exhausted model.
-
-Do not announce routing tiers before doing work. Do not automatically switch the user's current model.
-
-## Paid-lane failure
-
-If a Deep, Review, or Worker invocation ultimately fails because of quota/rate/provider/auth availability, do not keep retrying or jump to a metered route. Try the selector's fallback model when known, then continue in free Build with `@index`, `@explore`, web tools, and deterministic validation. Report a block only when the unresolved remainder genuinely requires stronger reasoning.
+Five skills: `reorient`, `search-index`, `sync`, `model-routing`, `record-outcome`.
+Four helpers: `@worker`, `@architect`, `@researcher`, `@review`.
+Two tools: `content_index`, `delegate`.
+Native Plan and Explore remain available. There are no toolkit slash-command wrappers.
 
 ## Delegation
 
-User-invoked commands, agents, skills, and tools inherit the model that received the request. AI-driven delegation may call `delegate` to consult the deterministic evidence-aware selector and identify a cheaper adequate route. Selection is advisory; an unavailable or exhausted model must never block the task. Ordinary delegation uses cached evidence only and never triggers web research. Only `/refresh-model-evidence` performs live research. Whole-session model changes remain explicit user actions.
+User-invoked skills and helpers inherit the initiating model unless the user overrides. Agent-initiated children call `delegate` so the selected model actually runs. Selection is not execution. Whole-session model changes remain explicit `/models` actions.
 
-## Lane assignment vs recommendation invariant
+Reorient dispatches Researcher for orientation and Worker for any added task. Do not substitute Explore for Researcher.
 
-Lane assignment is NOT recommendation. `routine/index/worker/deep/review` are execution defaults and sockets, not model rankings. A full-repo review can legitimately recommend either Deep or Review depending on evidence. Routine/Index/Worker/Deep/Review remain useful execution defaults but must not predetermine the answer when `/recommend-model` is called.
+## Paid-lane failure
+
+If Worker, Architect, or Review fails for quota/rate/provider/auth, do not loop or jump to a metered route. Try the selector fallback when known, then continue on the parent with Researcher/Explore, web tools, and tests. Report only the unresolved remainder.
 
 ## Next-phase model advice
 
-After a **meaningful completed task**, make a next-model recommendation only when all of these are true:
-
-1. the likely next phase is reasonably clear from the current work;
-2. another eligible model from the full library has a material capability advantage for that phase; and
-3. the recommendation would change what the user should do next.
-
-A recommendation requires a meaningful difference such as:
-- current model lacks a required capability;
-- next phase crosses into Deep territory;
-- context requirement exceeds current model's practical envelope;
-- evidence strongly favors another model for this task type;
-- current model already failed or escalated;
-- verification benefits from an independent model;
-- local history shows materially worse outcomes with the current model.
-
-If two models are essentially equivalent, stay on the current model. Avoid pointless switching.
-
-When those conditions are met, append one compact line at the end of the normal result:
-
-`Next model: <model or lane> — <task-specific reason>. <action>`
-
-Valid actions are normally `stay`, `use @index/@explore`, `delegate via @worker`, `delegate the hard chunk to @deep`, `run /audit`, or `switch manually with /models`.
-
-If the current model remains adequate, the next phase is unclear, or the difference is marginal, say nothing about model choice. Do not nag. Maximum 2–3 lines.
-
-For an explicit model question or an ambiguous high-value choice, load `model-advisor` or use `/recommend-model`. The advisor must invoke the deterministic `scripts/select-model.ps1` engine rather than manually choosing from lane labels. If the selector reports missing/stale evidence for a consequential decision, research current sources, refresh evidence, and rerun the selector. Never turn an ordinary completion into a benchmark report.
-
-When making an end-of-task next-model recommendation, use the deterministic selector when practical. Never claim that a role ran on a selected model unless the session was explicitly switched with `/models`.
+After a meaningful completed task, one compact line only when the next phase is clear and another model has a material advantage. Otherwise say nothing. Load `model-routing` for an explicit comparison; it must invoke `scripts/select-model.ps1`. Never claim a role ran on a selected model unless dispatch and runtime identity agree.
 
 ## Workstyle
 
 1. Inspect actual repository state before proposing changes.
 2. Prefer deterministic tools before model speculation.
-3. Keep changes bounded to the request; do not redesign unrelated systems.
+3. Keep changes bounded to the request.
 4. Preserve explicit constraints, names, formats, and numbers.
-5. Use native web search/fetch for current external research; do not depend on experimental Scout.
+5. Use native web search/fetch for current external research.
 6. Search sibling repos only when prior work is likely to matter.
-7. Validate changed behavior with the smallest meaningful test, build, or reproduction.
+7. Validate with the smallest meaningful test.
 8. Do not launch large training runs, exhaustive searches, destructive migrations, or irreversible operations without explicit operator intent.
 9. Use `git` locally and authenticated `gh` for remote GitHub. Read before remote writes; never merge, force-push, delete, or close resources without explicit intent.
-10. Keep claims tied to evidence and state what remains unverified.
+10. Keep claims tied to evidence. State what remains unverified.
 11. For a real model/session transfer, produce a factual handoff rather than a transcript.

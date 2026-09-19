@@ -18,6 +18,7 @@ $ErrorActionPreference = 'Stop'
 $ToolkitRoot = Split-Path -Parent $PSScriptRoot
 $ConfigDir = Join-Path $ToolkitRoot 'opencode'
 $AgentsDir = Join-Path $ConfigDir 'agents'
+$TemplatesDir = Join-Path $ConfigDir 'templates'
 $Template = Join-Path $ConfigDir 'opencode.template.jsonc'
 $Config = Join-Path $ConfigDir 'opencode.jsonc'
 $GlobalInstructionsTemplate = Join-Path $ConfigDir 'global-instructions.template.md'
@@ -64,19 +65,11 @@ function Invoke-OpenCodeCaptured([string[]]$Arguments) {
     }
     return [pscustomobject]@{ Output = $output; ExitCode = $exitCode }
 }
-function Render-Agent([string]$Name, [string]$OwnModel, [string]$RoutineModel, [string]$DeepModel, [string]$ReviewModel, [string]$WorkerModel) {
-    $templatePath = Join-Path $AgentsDir "$Name.template.md"
+function Render-Agent([string]$Name) {
+    $templatePath = Join-Path $TemplatesDir "$Name.template.md"
     $outputPath = Join-Path $AgentsDir "$Name.md"
     if (-not (Test-Path -LiteralPath $templatePath)) { throw "Missing agent template: $templatePath" }
     $text = Get-Content -LiteralPath $templatePath -Raw -Encoding UTF8
-    $text = $text.Replace('__ROUTINE_MODEL__',$RoutineModel).Replace('__DEEP_MODEL__',$DeepModel).Replace('__REVIEW_MODEL__',$ReviewModel).Replace('__WORKER_MODEL__',$WorkerModel)
-    if ($Name -eq 'build') { $text = $text.Replace('__MODEL__',$RoutineModel) }
-    elseif ($Name -eq 'deep') { $text = $text.Replace('__MODEL__',$DeepModel) }
-    elseif ($Name -eq 'review') { $text = $text.Replace('__MODEL__',$ReviewModel) }
-    elseif ($Name -eq 'index') { $text = $text.Replace('__MODEL__',$RoutineModel) }
-    elseif ($Name -eq 'worker') { $text = $text.Replace('__MODEL__',$WorkerModel) }
-    # Backward-compatible templates use their lane-specific placeholder as the model field.
-    $text = $text.Replace("model: __ROUTINE_MODEL__","model: $RoutineModel").Replace("model: __DEEP_MODEL__","model: $DeepModel").Replace("model: __REVIEW_MODEL__","model: $ReviewModel").Replace("model: __WORKER_MODEL__","model: $WorkerModel")
     Write-Utf8NoBom $outputPath $text
 }
 function Surface-For([string]$Model) {
@@ -217,20 +210,22 @@ if ($selectorUsable) {
 }
 
 if (-not (Test-Path -LiteralPath $AgentsDir)) { New-Item -ItemType Directory -Path $AgentsDir -Force | Out-Null }
-Render-Agent 'build' $routine $routine $deep $review $worker
-Render-Agent 'index' $routine $routine $deep $review $worker
-Render-Agent 'deep' $deep $routine $deep $review $worker
-Render-Agent 'review' $review $routine $deep $review $worker
-Render-Agent 'worker' $worker $routine $deep $review $worker
+Render-Agent 'build'
+Render-Agent 'researcher'
+Render-Agent 'architect'
+Render-Agent 'review'
+Render-Agent 'worker'
+foreach ($retiredAgent in @('index.md','deep.md','index.template.md','deep.template.md','build.template.md','worker.template.md','review.template.md')) {
+    $rp = Join-Path $AgentsDir $retiredAgent
+    if (Test-Path -LiteralPath $rp) { Remove-Item -LiteralPath $rp -Force }
+}
 
 $templateText = Get-Content -LiteralPath $Template -Raw -Encoding UTF8
-$configText = $templateText.Replace('__ROUTINE_MODEL__',$routine)
-Write-Utf8NoBom $Config $configText
+Write-Utf8NoBom $Config $templateText
 
 if (-not (Test-Path -LiteralPath $GlobalInstructionsTemplate)) { throw "Missing global instruction template: $GlobalInstructionsTemplate" }
-$globalText = Get-Content -LiteralPath $GlobalInstructionsTemplate -Raw -Encoding UTF8
-$globalText = $globalText.Replace('__ROUTINE_MODEL__',$routine).Replace('__DEEP_MODEL__',$deep).Replace('__REVIEW_MODEL__',$review).Replace('__WORKER_MODEL__',$worker)
-Write-Utf8NoBom $GlobalInstructions $globalText
+    $globalText = Get-Content -LiteralPath $GlobalInstructionsTemplate -Raw -Encoding UTF8
+    Write-Utf8NoBom $GlobalInstructions $globalText
 
 # ---- Build per-model roster objects ---------------------------------------
 # Availability lives here; capability evidence lives in model-evidence.json.
@@ -314,14 +309,16 @@ $state = [ordered]@{
         github_copilot_oauth = $copilot.Count
     }
     routine = $routine
-    deep = $deep
-    index = $routine
+    architect = $deep
+    researcher = $routine
     worker = $worker
     review = $review
+    deep = $deep
+    index = $routine
     free_fallback = $routine
     review_is_distinct_model = ($review -ne $deep)
-    review_is_independent = ($review -ne $deep) # legacy field: distinct ID, not necessarily different vendor
-    desktop_agents = @('build','index','worker','deep','review')
+    review_is_independent = ($review -ne $deep)
+    desktop_agents = @('build','researcher','worker','architect','review')
     policy = 'free OpenCode first -> OpenCode Go or bounded OAuth subscription escalation; no local engine and no metered API gateways'
     promotion = 'search/narrow with free tools first; delegate bounded hard chunks to Deep; if paid escalation is unavailable, continue on free Build/index/Explore; full-session switching remains explicit'
 }
@@ -333,9 +330,9 @@ $roster = [ordered]@{
     generated_at = $now
     assignments = [ordered]@{
         routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
-        index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+        researcher = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
         worker = [ordered]@{ id=$worker; surface=(Surface-For $worker) }
-        deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
+        architect = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
         review = [ordered]@{ id=$review; surface=(Surface-For $review) }
     }
     economics = [ordered]@{
@@ -347,9 +344,9 @@ $roster = [ordered]@{
     eligible_models = @($eligibleModels)
     recommendation = [ordered]@{
         automatic_session_switch = $false
-        automatic_chunk_delegation = 'Use free index/Explore/web retrieval first; Deep only when model-routing escalation criteria are met'
-        end_of_task = 'recommend only when the next phase is clear and another lane has a material advantage'
-        explicit_command = '/recommend-model'
+        automatic_chunk_delegation = 'Use Researcher/Explore/web retrieval first; Architect only when the task warrants it'
+        end_of_task = 'recommend only when the next phase is clear and another model has a material advantage'
+        explicit_skill = 'model-routing'
     }
 }
 Write-Utf8NoBom $RosterPath ($roster | ConvertTo-Json -Depth 8)
@@ -383,21 +380,21 @@ if (Test-Path -LiteralPath $syncScript) {
 }
 
 Say 'Routing refreshed:'
-Say "  Build/Routine: $routine"
-Say "  Index        : $routine (free retrieval helper)"
-Say "  Worker       : $worker (dynamic delegated execution)"
-Say "  Deep         : $deep (explicit escalation)"
-Say "  Review       : $review"
+Say "  Build parent  : user-selected (toolkit does not pin)"
+Say "  Researcher    : inherits parent unless delegate binds a child"
+Say "  Worker        : $worker (selector default; per-child bind via delegate)"
+Say "  Architect     : $deep (selector default; per-child bind via delegate)"
+Say "  Review        : $review"
 if ($hasOpenAIOAuth) { Say '  OpenAI OAuth  : detected' } else { Say '  OpenAI OAuth  : not detected' }
 if ($hasCopilotOAuth) { Say '  Copilot OAuth : detected' } else { Say '  Copilot OAuth : not detected' }
-if ($review -eq $deep) { Say '  WARN: no distinct review model was available.' }
-Say '  Promotion     : free retrieval first; bounded Deep escalation; paid failure returns to free Build/index/Explore'
-Say '  Advice        : /recommend-model; conditional one-line next-phase advice enabled'
+    if ($review -eq $deep) { Say '  WARN: no distinct review model was available.' }
+    Say '  Promotion     : retrieval first; bounded Architect/Worker via delegate; paid failure returns to parent Build'
+    Say '  Advice        : model-routing skill; parent model never switches automatically'
 
 # ---- model-evidence.json (capability evidence, separate from availability) ---
 # Capability evidence lives in routing/model-evidence.json and is populated by
-# real web research (see the model-advisor skill and the /refresh-model-evidence
-# workflow). refresh-routing never overwrites researched models/sources; it only
+# real web research (see the model-routing skill explicit refresh workflow).
+# refresh-routing never overwrites researched models/sources; it only
 # guarantees the file exists and refreshes current_assignments_snapshot so the
 # snapshot cannot go stale after lane changes. Timestamps are UTC ISO-8601.
 $evidencePath = Join-Path $ToolkitRoot 'routing\model-evidence.json'
@@ -413,7 +410,7 @@ if (-not $evidenceExists) {
         generated_at = $evidenceNow
         evidence_as_of = $null
         advisor_readiness = 'UNPOPULATED'
-        readiness_reason = 'No capability evidence yet. Run the /refresh-model-evidence workflow (web research) to populate.'
+        readiness_reason = 'No capability evidence yet. Run the model-routing skill explicit refresh (web research) to populate.'
         policy = [ordered]@{
             selection_mode = 'library_first'
             lane_assignment_is_capability_evidence = $false
@@ -426,9 +423,9 @@ if (-not $evidenceExists) {
         }
         current_assignments_snapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
-            index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+            researcher = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             worker = [ordered]@{ id=$worker; surface=(Surface-For $worker) }
-            deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
+            architect = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
         serious_candidate_set = @()
@@ -449,7 +446,7 @@ if (-not $evidenceExists) {
         }
     }
     Write-Utf8NoBom $evidencePath ($stub | ConvertTo-Json -Depth 4)
-    Say '  Evidence      : stub created (UNPOPULATED - run /refresh-model-evidence)'
+    Say '  Evidence      : stub created (UNPOPULATED - run the model-routing skill refresh)'
 } else {
     # Preserve researched evidence; sync lane snapshot and register newly available
     # model IDs as identity-only research targets without inventing capabilities.
@@ -496,13 +493,13 @@ if (-not $evidenceExists) {
 
         $newSnapshot = [ordered]@{
             routine = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
-            index = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
+            researcher = [ordered]@{ id=$routine; surface=(Surface-For $routine) }
             worker = [ordered]@{ id=$worker; surface=(Surface-For $worker) }
-            deep = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
+            architect = [ordered]@{ id=$deep; surface=(Surface-For $deep) }
             review = [ordered]@{ id=$review; surface=(Surface-For $review) }
         }
         $storedSnapshot = $evidenceObj.current_assignments_snapshot
-        if ((-not $storedSnapshot) -or ($storedSnapshot.routine.id -ne $routine) -or ($storedSnapshot.index.id -ne $routine) -or ($storedSnapshot.deep.id -ne $deep) -or ($storedSnapshot.review.id -ne $review) -or ((-not $storedSnapshot.worker) -or ($storedSnapshot.worker.id -ne $worker))) {
+        if ((-not $storedSnapshot) -or ($storedSnapshot.routine.id -ne $routine) -or ($storedSnapshot.review.id -ne $review) -or ((-not $storedSnapshot.worker) -or ($storedSnapshot.worker.id -ne $worker))) {
             $evidenceObj.current_assignments_snapshot = $newSnapshot
             $evidenceDirty = $true
         }

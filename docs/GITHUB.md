@@ -36,6 +36,6 @@ gh run list
 gh run view <id>
 ```
 
-The toolkit does not impose shell/Git approval policy. Remote reads and mutations follow your OpenCode permission settings; the `github-ops` skill still requires explicit intent for destructive operations such as merging, deleting, force-pushing, or rewriting published history.
+The toolkit does not impose shell/Git approval policy. Remote reads and mutations follow your OpenCode permission settings; the `sync` skill still requires explicit intent for destructive operations such as merging, deleting, force-pushing, or rewriting published history.
 
-The `github-ops` skill defines the operating rules.
+The `sync` skill defines the publishing contract.

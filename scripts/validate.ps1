@@ -22,7 +22,7 @@ foreach($ps1 in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'scripts') -F
   } else { OK "PowerShell parses: $($ps1.Name)" }
 }
 
-$expected=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief','enhanced-explore')
+$expected=@('reorient','search-index','sync','model-routing','record-outcome')
 $skillsDir=Join-Path $ToolkitRoot 'skills'
 $actual=@(Get-ChildItem -LiteralPath $skillsDir -Directory | ForEach-Object{$_.Name})
 foreach($s in $expected){$p=Join-Path $skillsDir "$s\SKILL.md";if(Test-Path -LiteralPath $p){OK "skill present: $s"}else{F "skill missing: $s"}}
@@ -42,7 +42,7 @@ $config=Join-Path $ToolkitRoot 'opencode\opencode.jsonc'
 foreach($p in @($template,$config)){if(Test-Path -LiteralPath $p){OK "present: $([IO.Path]::GetFileName($p))"}else{F "missing: $p"}}
 if(Test-Path -LiteralPath $template){
   $t=Get-Content -LiteralPath $template -Raw
-  foreach($token in @('__ROUTINE_MODEL__')){if($t.Contains($token)){OK "template token: $token"}else{F "template missing token: $token"}}
+  if($t.Contains('"model"')){F 'CLI template still pins a parent model'}else{OK 'CLI template does not pin a parent model'}
   if($t.Contains('__LOCAL_PROVIDER_BLOCK__')){F 'retired local provider token remains in template'}else{OK 'no local provider token in template'}
 }
 if(Test-Path -LiteralPath $config){
@@ -53,13 +53,19 @@ if(Test-Path -LiteralPath $config){
 }
 
 
-$agentTemplates=@('build','index','worker','deep','review')
+$agentTemplates=@('build','researcher','worker','architect','review')
 foreach($a in $agentTemplates){
-  $tp=Join-Path $ToolkitRoot "opencode\agents\$a.template.md"
+  $tp=Join-Path $ToolkitRoot "opencode\templates\$a.template.md"
   $gp=Join-Path $ToolkitRoot "opencode\agents\$a.md"
   if(Test-Path -LiteralPath $tp){OK "agent template present: $a"}else{F "agent template missing: $a"}
   if(Test-Path -LiteralPath $gp){OK "generated agent present: $a"}else{F "generated agent missing: $a"}
 }
+foreach($retired in @('index.md','deep.md','index.template.md','deep.template.md')){
+  $rp=Join-Path $ToolkitRoot "opencode\agents\$retired"
+  if(Test-Path -LiteralPath $rp){F "retired agent still discoverable: $retired"}else{OK "retired agent absent from discovery: $retired"}
+}
+$templateLeak=@(Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents') -File -Filter '*.template.md' -ErrorAction SilentlyContinue)
+if($templateLeak.Count -gt 0){F 'generation templates remain under opencode/agents'}else{OK 'generation templates kept out of agent discovery'}
 
 foreach($agentFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents') -File -Filter '*.md'){
   $at=Get-Content -LiteralPath $agentFile.FullName -Raw
@@ -72,7 +78,8 @@ $globalGenerated=Join-Path $ToolkitRoot 'opencode\global-instructions.md'
 foreach($p in @($globalTemplate,$globalGenerated)){if(Test-Path -LiteralPath $p){OK "present: $([IO.Path]::GetFileName($p))"}else{F "missing: $p"}}
 if(Test-Path -LiteralPath $globalTemplate){
   $g=Get-Content -LiteralPath $globalTemplate -Raw
-  foreach($token in @('__ROUTINE_MODEL__','__DEEP_MODEL__','__REVIEW_MODEL__','__WORKER_MODEL__')){if($g.Contains($token)){OK "global instruction token: $token"}else{F "global instruction template missing token: $token"}}
+  if($g.Contains('__ROUTINE_MODEL__') -or $g.Contains('__DEEP_MODEL__')){F 'global instruction template still pins lane models'}else{OK 'global instruction template is model-neutral'}
+  if($g.Contains('@architect') -and $g.Contains('@researcher')){OK 'global instructions name retained helpers'}else{F 'global instructions missing architect/researcher'}
 }
 
 $roster=Join-Path $ToolkitRoot 'routing\model-roster.json'
@@ -115,24 +122,10 @@ if($ev){
 $history=Join-Path $ToolkitRoot 'routing\task-history.json'
 try{Get-Content -LiteralPath $history -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}
 
-$commands=@('reorient','prior-art','audit','routing','github','recommend-model','refresh-model-evidence','record-outcome','index','delegate')
-foreach($c in $commands){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "opencode\commands\$c.md")){OK "command present: /$c"}else{F "command missing: /$c"}}
-
-foreach($cmdFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\commands') -File -Filter '*.md'){
-  $cmdText=Get-Content -LiteralPath $cmdFile.FullName -Raw
-  if($cmdText -match '(?m)^agent:\s*plan\s*$'){F "command silently forces Plan: $($cmdFile.Name)"}
-}
-
-$recommendCmd=Join-Path $ToolkitRoot 'opencode\commands\recommend-model.md'
-if(Test-Path -LiteralPath $recommendCmd){
-  $rt=Get-Content -LiteralPath $recommendCmd -Raw
-  if($rt.Contains('select-model.ps1')){OK "/recommend-model invokes deterministic selector"}else{F "/recommend-model does not invoke select-model.ps1"}
-}
-$delegateCmd=Join-Path $ToolkitRoot 'opencode\commands\delegate.md'
-if(Test-Path -LiteralPath $delegateCmd){
-  $dt=Get-Content -LiteralPath $delegateCmd -Raw
-  if($dt.Contains('delegate')){OK "/delegate routes through delegate tool"}else{F "/delegate does not mention the delegate tool"}
-}
+$cmdDir=Join-Path $ToolkitRoot 'opencode\commands'
+$cmdFiles=@()
+if(Test-Path -LiteralPath $cmdDir){$cmdFiles=@(Get-ChildItem -LiteralPath $cmdDir -File -Filter '*.md')}
+if($cmdFiles.Count -eq 0){OK 'no toolkit slash-command wrappers'}else{F ("toolkit command wrappers remain: " + (($cmdFiles|ForEach-Object{$_.Name}) -join ', '))}
 foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','test-delegate.ps1','test-content-index.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
 
 

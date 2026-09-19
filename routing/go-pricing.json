@@ -1,5 +1,6 @@
 {
   "_comment": "Public OpenCode Go pricing reference (committed; NOT runtime account data). Rates per 1M tokens from `opencode models --verbose opencode-go` cost blocks; monthly limits from https://opencode.ai/docs/go/. Tiered models use first-tier (<= threshold) base rates. Peak-window multipliers (up to 2x on some models) are not modeled; estimates are labeled allocation estimates.",
+  "provenance": { "source": "https://opencode.ai/docs/go/ and opencode models --verbose opencode-go cost blocks", "as_of": "2026-09-18", "note": "Static public reference; refresh via web research, never via live account telemetry. Pricing age is surfaced by select-model.ps1." },
   "window_shares": {
     "rolling": 0.2,
     "weekly": 0.5,
@@ -14,7 +15,7 @@
     "opencode-go/glm-5.2": { "monthly_limit": 60, "input": 1.4, "output": 4.4, "cache_read": 0.26, "cache_write": 0 },
     "opencode-go/glm-5.3": { "monthly_limit": 15, "input": 1.4, "output": 4.4, "cache_read": 0.26, "cache_write": 0 },
     "opencode-go/glm-5.3-flash": { "monthly_limit": 60, "input": 0.15, "output": 0.5, "cache_read": 0.03, "cache_write": 0 },
-    "opencode-go/gpt-5.6-luna": { "monthly_limit": null, "input": 0.2, "output": 1.2, "cache_read": 0.02, "cache_write": 0.25, "note": "monthly limit unverified; first-tier rates" },
+    "opencode-go/gpt-5.6-luna": { "monthly_limit": 60, "monthly_limit_estimated": true, "input": 0.2, "output": 1.2, "cache_read": 0.02, "cache_write": 0.25, "note": "monthly limit explicitly estimated at 60 (cheap-tier pattern with other low-rate Go models); marked estimated, never null-means-free; first-tier rates" },
     "opencode-go/grok-4.6": { "monthly_limit": 15, "input": 2.0, "output": 6.0, "cache_read": 0.5, "cache_write": 0, "note": "first-tier rates (<=200K tokens)" },
     "opencode-go/hy3": { "monthly_limit": 60, "input": 0.14, "output": 0.58, "cache_read": 0.035, "cache_write": 0 },
     "opencode-go/hy4-preview": { "monthly_limit": 30, "input": 0.834, "output": 2.501, "cache_read": 0.042, "cache_write": 0 },
