@@ -5,10 +5,12 @@ import { readFile, mkdir, writeFile, rename, open, unlink, realpath } from 'node
 import path from 'node:path';
 
 const roles = new Set(['worker', 'architect', 'researcher', 'review']);
+const topology = { build: ['worker', 'architect', 'researcher', 'review'], worker: ['researcher', 'review'], architect: ['researcher', 'review'], review: ['researcher'], researcher: [] };
 const readers = new Set(['read', 'list', 'glob', 'grep', 'webfetch', 'websearch', 'skill', 'todoread']);
 const hash = x => createHash('sha256').update(x).digest('hex');
 const rule = (permission, action = 'deny', pattern = '*') => ({ permission, pattern, action });
 const routeOf = info => info?.providerID && info?.modelID ? `${info.providerID}/${info.modelID}` : null;
+export const noWriteAssignment = text => /\b(explain[ -]only|read[ -]only|no[ -](?:file[ -])?(?:writes|edits)|do not (?:modify|edit|change|write)(?: any)? files|just inspect)\b/i.test(text || '');
 export function splitModel(id) {
   if (typeof id !== 'string' || !/^[\w.-]+\/[^\s]+$/.test(id)) throw new Error('Invalid provider-qualified model');
   const at = id.indexOf('/');
@@ -22,7 +24,7 @@ export function failureKind(error) {
   if (/abort|cancel/i.test(name)) return 'cancelled';
   if (/quota|usage.?limit|insufficient.?credit|credit.*exhaust|limit.*reached/i.test(text)) return 'quota';
   if (+data.statusCode === 401 || +data.statusCode === 403) return 'auth';
-  if (+data.statusCode === 404 || /model.?not.?found/i.test(name)) return 'model';
+  if (+data.statusCode === 404 || /model.?not.?found/i.test(name) || /model.*not supported|not supported.*model/i.test(text)) return 'model';
   if (+data.statusCode === 429 || /rate.?limit|ProviderRetry/i.test(name)) return 'throttle';
   if (+data.statusCode >= 500) return 'provider';
   if (/timeout/i.test(name)) return 'timeout';
@@ -64,6 +66,7 @@ export function observe(messages, selected, role) {
     if (!m.info.id || seen.has(m.info.id)) continue;
     seen.add(m.info.id);
     const t = m.info.tokens;
+    if (m.info.error && (!t || !(t.input || t.output || t.reasoning || t.cache?.read || t.cache?.write))) measured = false;
     if (!t || ![t.input, t.output, t.reasoning || 0, t.cache?.read || 0, t.cache?.write || 0].every(v => Number.isFinite(v) && v >= 0)) { measured = false; continue; }
     usage.input += t.input; usage.output += t.output;
     usage.reasoning += t.reasoning || 0; usage.cache_read += t.cache?.read || 0;
@@ -117,7 +120,10 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
       cursor = await call('session', 'get', sessionArgs(cursor.parentID, ctx.directory), ctx.abort);
     }
     if (depth >= (config?.subagent_depth ?? 1)) throw fault('DepthLimit', 'Configured subagent depth reached');
-    return { parent, parentModel: routeOf(message.info), config };
+    const rows = await call('session', 'messages', sessionArgs(ctx.sessionID, ctx.directory), ctx.abort);
+    const user = rows.filter(m => m.info?.role === 'user').at(-1);
+    const assignment = (user?.parts || []).filter(p => p.type === 'text').map(p => p.text).join('\n');
+    return { parent, parentModel: routeOf(message.info), config, assignment, parentRole: message.info.agent || ctx.agent };
   }
   async function stopped(id, directory) {
     // An abort acknowledgement alone is NOT proof of stop. Independently inspect
@@ -144,6 +150,8 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
       if (live.has(id)) return live.get(id);
       visited.add(id);
       const session = await call('session', 'get', sessionArgs(id, directory));
+      const saved = session?.metadata?.ai_toolkit;
+      if (saved?.selected && typeof saved.readOnly === 'boolean') return { ...saved, directory };
       id = session?.parentID;
     }
     return null;
@@ -156,13 +164,15 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
     if (!roles.has(args.role) || !args.task?.trim()) throw new Error('A supported role and bounded task are required');
     if (typeof ctx.ask !== 'function') throw fault('UnsupportedRuntime', 'Native task permission check unavailable');
     await ctx.ask({ permission: 'task', patterns: [args.role], always: ['*'], metadata: { role: args.role } });
-    const { parent, parentModel, config } = await parentContext(ctx);
+    const { parent, parentModel, config, assignment, parentRole } = await parentContext(ctx);
+    if (!topology[parentRole]?.includes(args.role)) throw fault('PermissionError', `Role topology does not allow ${parentRole} to delegate ${args.role}`);
     const agents = await call('app', 'agents', { query: query(ctx.directory) }, ctx.abort);
     const agent = agents?.find(a => a.name === args.role);
     if (!agent || !Array.isArray(agent.permission)) throw fault('UnsupportedRuntime', 'Effective role permissions unavailable');
     if (agent.model) throw fault('PinnedRole', 'Remove the helper model pin before dynamic delegation');
     const inherited = await lookup(ctx.sessionID, ctx.directory);
-    const readOnly = inherited?.readOnly || ['researcher', 'review'].includes(args.role) || args.needsWrites !== true;
+    const readOnly = inherited?.readOnly || ['researcher', 'review'].includes(parentRole) ||
+      ['researcher', 'review'].includes(args.role) || args.needsWrites !== true || noWriteAssignment(args.task) || noWriteAssignment(assignment);
     if (inherited?.readOnly && args.needsWrites) throw fault('PermissionError', 'Read-only parent cannot create a writer');
     const policy = await readJson(path.join(toolkitRoot, 'routing', 'policy.json'));
     const allowed = new Set(policy?.allowed_surfaces || []);
@@ -187,7 +197,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
       try { lock = await open(lockPath, 'wx', 0o600); await lock.writeFile(JSON.stringify({ task_id: id, parent: ctx.sessionID })); }
       catch (e) { if (e.code === 'EEXIST') throw fault('WriterBusy', 'A managed writer is active or its stop is unverified; inspect the writer lock before proceeding'); throw e; }
     }
-    const receipt = { task_id: id, parent_session: ctx.sessionID, parent_model: parentModel, role: args.role,
+    const receipt = { task_id: id, user_task_id: args.userTaskId || `${ctx.sessionID}/${ctx.messageID}`, parent_session: ctx.sessionID, parent_model: parentModel, role: args.role,
       task_hash: hash(args.task), task_types: args.taskTypes || [], directory: ctx.directory,
       created_at: stamp(), status: 'running', validation: 'pending', attempts: [] };
     let release = true;
@@ -202,17 +212,24 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
         if (!selected || !allowed.has(selection.surface) || !['adequate', 'strong'].includes(selection.adequacy)) {
           receipt.status = 'no_qualified_route'; break;
         }
+        if (n > 0 && selection.surface !== 'opencode-free') {
+          receipt.status = 'subscription_fallback_requires_parent'; break;
+        }
         if (selection.quota_state?.overage && policy?.allow_overage !== true) { receipt.status = 'overage_not_authorized'; break; }
         if (rejected.includes(selected)) { receipt.status = 'no_alternative'; break; }
         const model = splitModel(selected);
         const attempt = { selected_model: selected, dispatched_model: null, observed_model: null,
-          surface: selection.surface, started_at: stamp(), status: 'starting', abort_verified: null };
+          surface: selection.surface, selection_reasons: selection.reason_codes || [], adequacy: selection.adequacy,
+          started_at: stamp(), status: 'starting', abort_verified: null };
         receipt.attempts.push(attempt);
         const permissions = [
-          ...(parent.permission || []).filter(r => r.action === 'deny' || r.permission === 'external_directory'),
+          ...(parent.permission || []),
           ...((config.experimental?.primary_tools || []).map(p => rule(p))),
-          rule('todowrite'),
-          ...(readOnly ? [rule('edit'), rule('write'), rule('apply_patch'), rule('bash')] : []),
+          ...(agent.permission.some(r => r.permission === 'todowrite') ? [] : [rule('todowrite')]),
+          // Keep the native bash schema visible: OpenCode free routes reject
+          // requests without it. checkTool blocks its execution before any shell
+          // starts, including descendants. Explicit USER bash denies still apply.
+          ...(readOnly ? [rule('edit'), rule('write'), rule('apply_patch')] : []),
         ];
         let child;
         let acknowledged = false;
@@ -220,6 +237,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
         try {
           child = await call('session', 'create', { query: query(ctx.directory), body: {
             parentID: ctx.sessionID, title: `Toolkit ${args.role} (${id.slice(0, 8)})`, agent: args.role, permission: permissions,
+            metadata: { ai_toolkit: { selected, readOnly } },
           } }, ctx.abort);
           if (!child?.id || child.id === ctx.sessionID) throw fault('UnsupportedRuntime', 'Child session was not created');
           attempt.child_session = child.id;
@@ -245,6 +263,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
             const observation = observe(messages, selected, args.role);
             attempt.observed_model = observation.observed;
             attempt.usage = observation.usage;
+            attempt.usage_source = observation.usage ? 'session_messages' : 'unavailable';
             if (observation.error) throw Object.assign(new Error('Child failed'), observation.error);
             const statuses = await call('session', 'status', { query: query(ctx.directory) }, ctx.abort);
             if (!statuses || typeof statuses !== 'object' || Array.isArray(statuses)) throw fault('UnsupportedRuntime', 'Missing runtime session status');
@@ -273,7 +292,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
           await emit(receipt);
           // No automatic competing writer, even after stop: inspect partial edits first.
           // Read-only model-specific failures can take one qualified alternative.
-          if (!release || !readOnly || !attempt.abort_verified || !['model', 'throttle', 'provider'].includes(attempt.failure)) break;
+          if (!release || !readOnly || selection.surface !== 'opencode-free' || !attempt.abort_verified || !['model', 'throttle', 'provider'].includes(attempt.failure)) break;
           rejected.push(selected);
         } finally { if (child?.id && release) live.delete(child.id); }
       }
@@ -292,22 +311,36 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
       try { return await promise; } finally { inFlight.delete(key); }
     },
     // Guard before the model request, plus independent message observation after it.
-    checkModel(input) {
-      const entry = live.get(input.sessionID);
+    async checkModel(input) {
+      const entry = await lookup(input.sessionID, input.directory || directory);
       if (!entry) return;
       const id = `${input.model?.providerID}/${input.model?.id}`;
       if (id !== entry.selected) throw fault('BindingFailure', 'Model binding changed before inference');
     },
     async checkTool(input, output) {
-      if (!live.size) return;
-      const entry = await lookup(input.sessionID, input.directory || directory);
+      let entry = await lookup(input.sessionID, input.directory || directory);
+      if (!entry) {
+        // Direct user-invoked read-only roles and their native Explore children
+        // retain the same boundary, even without a managed delegation receipt.
+        let id = input.sessionID;
+        const seen = new Set();
+        while (id && !seen.has(id) && seen.size < 32) {
+          seen.add(id);
+          const rows = await call('session', 'messages', sessionArgs(id, input.directory || directory));
+          const assistant = rows.filter(m => m.info?.role === 'assistant').at(-1);
+          const user = rows.filter(m => m.info?.role === 'user').at(-1);
+          const assignment = (user?.parts || []).filter(p => p.type === 'text').map(p => p.text).join('\n');
+          if (['researcher', 'review'].includes(assistant?.info.agent) || noWriteAssignment(assignment)) { entry = { readOnly: true }; break; }
+          id = (await call('session', 'get', sessionArgs(id, input.directory || directory)))?.parentID;
+        }
+      }
       if (!entry) return;
       if (input.tool === 'task' && output.args?.background) throw fault('PermissionError', 'Untracked background children are not permitted in a managed attempt');
       if (input.tool === 'task' && output.args?.subagent_type !== 'explore') throw fault('PermissionError', 'Use delegate for dynamically selected helper execution, not a second native task');
       if (!entry.readOnly) return;
       if (readers.has(input.tool)) return;
       if (input.tool === 'task' && output.args?.subagent_type === 'explore' && !output.args?.command) return;
-      if (input.tool === 'delegate' && output.args?.needsWrites !== true && ['researcher', 'review'].includes(output.args?.role)) return;
+      if (input.tool === 'delegate' && output.args?.needsWrites !== true && roles.has(output.args?.role)) return;
       if (input.tool === 'content_index' && ['status', 'search', 'sources', 'unit', 'facts', 'meta'].includes(output.args?.operation)) return;
       // Do not claim edit:deny alone makes arbitrary shell/custom tools read-only.
       throw fault('PermissionError', 'Read-only delegated task cannot execute this tool. Return the required check to Build.');

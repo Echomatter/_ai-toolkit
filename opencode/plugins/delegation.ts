@@ -19,6 +19,7 @@ const DelegationPlugin: Plugin = async ({ client, directory }) => {
         args: {
           role: tool.schema.enum(['worker', 'architect', 'researcher', 'review']),
           task: tool.schema.string().min(1).describe('Complete bounded assignment including exclusions and relevant orientation handoff'),
+          userTaskId: tool.schema.string().optional().describe('Stable user task ID shared by related child attempts and review'),
           taskTypes: tool.schema.array(tool.schema.string()).optional(),
           needsWrites: tool.schema.boolean().optional().describe('True only for authorized source edits. Defaults to read-only.'),
           needsTerminal: tool.schema.boolean().optional(),
@@ -39,7 +40,7 @@ const DelegationPlugin: Plugin = async ({ client, directory }) => {
         },
       }),
     },
-    'chat.params': async input => { delegate.checkModel(input) },
+    'chat.params': async input => { await delegate.checkModel(input) },
     'tool.execute.before': async (input, output) => { await delegate.checkTool(input, output) },
   }
 }

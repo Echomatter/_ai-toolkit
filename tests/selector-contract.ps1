@@ -93,6 +93,49 @@ try {
     Json '.state\quota-state.json' $q
     $l=Run-Selection
     Check (@($l.ranking | Where-Object {$_.id -eq 'openai/other'}).Count -eq 1) 'one successful provider does not make unrelated stale data fresh'
+    $roster.eligible_models=@(@{id='opencode/free';surface='opencode-free'},@{id='openai/other';surface='openai-oauth'})
+    Json 'routing\model-roster.json' $roster
+    $free=Run-Selection @{TaskType='simple_edit'}
+    Check ($free.selected_model -eq 'opencode/free') 'adequate free wins ordinary work over subscription route'
+    $savedContext=$models['opencode/free'].context
+    $models['opencode/free'].context=@{}
+    Json 'routing\model-evidence.json' @{models=$models;alias_index=$aliases}
+    $unknownContext=Run-Selection @{NeedsLargeContextTokens='32000'}
+    Check ($unknownContext.selected_model -eq 'openai/other') 'unknown required context cannot qualify'
+    $models['opencode/free'].context=$savedContext
+    $freeCaps=@{};foreach($key in $caps.Keys){$freeCaps[$key]=$caps[$key]}
+    $freeCaps['terminal_agent_work']=@{rating='unknown';confidence='low'}
+    $models['opencode/free'].capabilities=$freeCaps
+    Json 'routing\model-evidence.json' @{models=$models;alias_index=$aliases}
+    $unknownTerminal=Run-Selection @{NeedsTerminal='true'}
+    Check ($unknownTerminal.selected_model -eq 'openai/other') 'other strong capabilities cannot hide unknown required terminal support'
+    $roster.eligible_models=@(@{id='openai/other';surface='openai-oauth'})
+    Json 'routing\model-roster.json' $roster
+    $compound=Run-Selection @{TaskType='code_review,debugging';NeedsWrites='true'}
+    Check ($compound.selected_model -eq 'openai/other' -and $null -eq $compound.fallback_model) 'singleton compound review and repair stays honest'
+    $noDiversity=Run-Selection @{NeedsModelDiversity='true';ExcludeModel='openai/other'}
+    Check ($null -eq $noDiversity.selected_model) 'unavailable independent model returns no route'
+    $stayRaw=& powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $RepoRoot 'scripts\select-model.ps1') -ToolkitRoot $Root -CurrentModel 'openai/other'
+    $stay=($stayRaw-join"`n")|ConvertFrom-Json
+    Check ($stay.stay_put-and$stay.selected_model-eq'openai/other'-and$stay.surface-eq'openai-oauth'-and$stay.access-eq'ChatGPT OAuth'-and$stay.phases[0].model-eq$stay.selected_model) 'stay-put phases access and surface describe the final model'
+    $models['github-copilot/example']=@{provider='copilot';capabilities=$caps;context=@{input_tokens=128000};benchmarks=@()}
+    $aliases['github-copilot/example']='github-copilot/example'
+    Json 'routing\model-evidence.json' @{models=$models;alias_index=$aliases}
+    $roster.eligible_models=@(@{id='github-copilot/example';surface='github-copilot-oauth'})
+    Json 'routing\model-roster.json' $roster
+    $q=State 20
+    $q.surfaces['github-copilot-oauth']=@{telemetry=@{status='ok';as_of=(Get-Date).ToUniversalTime().ToString('o')};buckets=@{premium_interactions=@{percent_remaining=0;overage_permitted=$true}}}
+    Json '.state\quota-state.json' $q
+    $copilot=Run-Selection
+    Check ($null-eq$copilot.selected_model) 'Copilot exhaustion blocks even when provider offers unapproved overage'
+    $goodCaps=@{};foreach($key in $caps.Keys){$goodCaps[$key]=@{rating='good';confidence='high';evidence=@('fixture')}}
+    $models['opencode/free'].capabilities=$goodCaps
+    Json 'routing\model-evidence.json' @{models=$models;alias_index=$aliases}
+    $roster.eligible_models=@(@{id='opencode/free';surface='opencode-free'},@{id='openai/other';surface='openai-oauth'})
+    Json 'routing\model-roster.json' $roster
+    $ordinary=Run-Selection @{TaskType='simple_edit'}
+    $consequential=Run-Selection @{TaskType='architecture'}
+    Check ($ordinary.selected_model-eq'opencode/free'-and$consequential.selected_model-eq'openai/other'-and($consequential.reason_codes-join' ')-match'capability advantage') 'stronger subscription wins only when a consequential task warrants the measured advantage'
     $roster.eligible_models=@()
     Json 'routing\model-roster.json' $roster
     $m=Run-Selection

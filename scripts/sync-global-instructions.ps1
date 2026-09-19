@@ -17,24 +17,32 @@ $Begin = '<!-- BEGIN AI-TOOLKIT MANAGED BLOCK -->'
 $End = '<!-- END AI-TOOLKIT MANAGED BLOCK -->'
 function Write-Utf8NoBom([string]$Path,[string]$Text) {
     $enc = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($Path,$Text,$enc)
+    $tmp=$Path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+    [System.IO.File]::WriteAllText($tmp,$Text,$enc)
+    if(Test-Path -LiteralPath $Path){
+        $backupDir=Join-Path $HomeRoot '.local\share\ai-toolkit\backups\instructions'
+        New-Item -ItemType Directory -Path $backupDir -Force|Out-Null
+        $backup=Join-Path $backupDir ([guid]::NewGuid().ToString('N')+'.md')
+        [System.IO.File]::Replace($tmp,$Path,$backup)
+    }else{[System.IO.File]::Move($tmp,$Path)}
 }
 if (-not (Test-Path -LiteralPath $TargetDir)) { New-Item -ItemType Directory -Path $TargetDir -Force | Out-Null }
 $existing = ''
 if (Test-Path -LiteralPath $Target) { $existing = Get-Content -LiteralPath $Target -Raw -Encoding UTF8 }
-$pattern = '(?s)\r?\n?' + [regex]::Escape($Begin) + '.*?' + [regex]::Escape($End) + '\r?\n?'
-$base = [regex]::Replace($existing,$pattern,"`r`n").Trim()
+$pattern = '(?s)' + [regex]::Escape($Begin) + '.*?' + [regex]::Escape($End)
+$base = [regex]::Replace($existing,$pattern,'')
 if ($Remove) {
-    if (-not $base) {
+    if (-not $base.Trim()) {
         if (Test-Path -LiteralPath $Target) { Remove-Item -LiteralPath $Target -Force -Confirm:$false }
-    } else { Write-Utf8NoBom $Target ($base + "`r`n") }
+    } elseif($base-ne$existing) { Write-Utf8NoBom $Target $base }
     Write-Output 'OpenCode global toolkit instructions removed.'
     return
 }
 if (-not (Test-Path -LiteralPath $Source)) { throw "Generated global instructions missing: $Source" }
 $managed = (Get-Content -LiteralPath $Source -Raw -Encoding UTF8).Trim()
 $block = $Begin + "`r`n" + $managed + "`r`n" + $End
-if ($base) { $out = $base + "`r`n`r`n" + $block + "`r`n" }
+if([regex]::IsMatch($existing,$pattern)) { $out=[regex]::Replace($existing,$pattern,[Text.RegularExpressions.MatchEvaluator]{param($m) $block}) }
+elseif ($existing) { $out = $existing + "`r`n`r`n" + $block + "`r`n" }
 else { $out = $block + "`r`n" }
-Write-Utf8NoBom $Target $out
+if($out-ne$existing){Write-Utf8NoBom $Target $out}
 Write-Output "OpenCode global toolkit instructions synchronized: $Target"

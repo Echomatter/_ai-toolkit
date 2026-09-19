@@ -29,4 +29,6 @@ No separately metered gateways or unapproved overage. A known exhausted pool is 
 
 Ordinary routing uses dated cached evidence. Explicit evidence refresh may use Researcher for targeted current research. Index maintenance can coordinate freshness checks once, but must not create an index/routing/research loop. Provider telemetry failure must not break project search.
 
+For an explicitly requested evidence refresh, follow [the internal procedure](evidence-refresh.md), including source provenance, confidence, alias checks and validation before accepting the cache.
+
 After validation, use Record Outcome with the returned task ID so actual session usage is linked once. Provider/binding/infrastructure failures are not poor coding performance by the recommended model.

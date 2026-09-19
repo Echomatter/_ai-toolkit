@@ -352,24 +352,13 @@ $roster = [ordered]@{
 Write-Utf8NoBom $RosterPath ($roster | ConvertTo-Json -Depth 8)
 
 # ---- Lightweight local task-history mechanism -------------------------
-# Structured observation, not ML. refresh-routing never fabricates outcomes;
-# it only preserves the file and refreshes its timestamp. Real writes happen
-# in scripts/record-task-outcome.ps1, which also syncs roster observed stats.
+# Inventory refresh never rewrites outcome history or its observation timestamp.
+# Only record-task-outcome.ps1 owns validated observations and nested receipts.
 $historyPath = Join-Path $ToolkitRoot 'routing\task-history.json'
 if (-not (Test-Path -LiteralPath $historyPath)) {
     $init = [ordered]@{generated=$true; generated_at=(Get-Date).ToUniversalTime().ToString('o'); entries=@()}
     Write-Utf8NoBom $historyPath ($init | ConvertTo-Json -Depth 3)
 }
-$historyData = $null
-if (Test-Path -LiteralPath $historyPath) {
-    try { $historyData = Get-Content -LiteralPath $historyPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $historyData = $null }
-}
-if (-not $historyData) { $historyData = [ordered]@{generated=$true; generated_at=(Get-Date).ToUniversalTime().ToString('o'); entries=@()} }
-# Ensure generated_at is always current UTC; never rewrite entries here.
-$historyData.generated_at = (Get-Date).ToUniversalTime().ToString('o')
-if (-not $historyData.generated) { $historyData | Add-Member -NotePropertyName generated -NotePropertyValue $true -Force }
-if ($null -eq $historyData.entries) { $historyData | Add-Member -NotePropertyName entries -NotePropertyValue @() -Force }
-Write-Utf8NoBom $historyPath ($historyData | ConvertTo-Json -Depth 4)
 
 # Keep the OpenCode Desktop global managed instruction block current without replacing
 # any user-authored content outside the toolkit markers.
@@ -402,7 +391,7 @@ $evidenceNow = (Get-Date).ToUniversalTime().ToString('o')
 $evidenceExists = $false
 $evidenceObj = $null
 if (Test-Path -LiteralPath $evidencePath) {
-    try { $evidenceObj = Get-Content -LiteralPath $evidencePath -Raw -Encoding UTF8 | ConvertFrom-Json; $evidenceExists = $true } catch { $evidenceExists = $false; $evidenceObj = $null }
+    try { $evidenceObj = Get-Content -LiteralPath $evidencePath -Raw -Encoding UTF8 | ConvertFrom-Json; $evidenceExists = $true } catch { throw 'Model evidence is malformed; preserved unchanged. Repair the cache before refreshing inventory.' }
 }
 if (-not $evidenceExists) {
     $stub = [ordered]@{

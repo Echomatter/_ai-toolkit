@@ -498,21 +498,37 @@ foreach ($rm in @($roster.eligible_models)) {
     if ($bNeedsDiversity -and $excludeProvider -ne '' -and $provider -eq $excludeProvider) {
         $diversityAdj = -0.5
     }
+    # Required context must be known; a missing value is not unlimited context.
+    if ($NeedsLargeContextTokens -gt 0 -and (-not $entry.context -or -not $entry.context.input_tokens)) {
+        $filtered += [pscustomobject]@{ id=$rid; reason='Required context capability is unknown' }; continue
+    }
     # Hard context filter: known insufficient context eliminates.
     if ($NeedsLargeContextTokens -gt 0 -and $entry.context -and $entry.context.input_tokens) {
         try {
             $ctxTokens = [int]$entry.context.input_tokens
-            if ($ctxTokens -gt 0 -and $ctxTokens -lt $NeedsLargeContextTokens) {
+            if ($ctxTokens -lt $NeedsLargeContextTokens) {
                 $filtered += [pscustomobject]@{ id=$rid; reason=("context $ctxTokens < required $NeedsLargeContextTokens") }
                 continue
             }
-        } catch {}
+        } catch { $filtered += [pscustomobject]@{ id=$rid; reason='Required context capability is invalid' }; continue }
     }
     if ($bNeedsWrites -or $bNeedsTerminal -or $bNeedsWeb) {
         $toolCap = Get-Capability $entry 'tool_use'
         if (-not $toolCap -or $toolCap.rating -notin @('adequate','good','strong')) {
             $filtered += [pscustomobject]@{ id=$rid; reason='Required tool-use evidence is missing or insufficient' }; continue
         }
+    }
+    # A strong average cannot compensate for a missing required capability.
+    $required = @($weights.Keys | Where-Object { [double]$weights[$_] -ge 2.0 })
+    if ($bNeedsTerminal) { $required += 'terminal_agent_work' }
+    if ($bNeedsDeep) { $required += 'deep_reasoning' }
+    $missing = @($required | Sort-Object -Unique | Where-Object {
+        $cap = Get-Capability $entry $_
+        -not $cap -or $cap.rating -notin @('adequate','good','strong') -or
+        ($isConsequential -and ($cap.confidence -notin @('medium','high') -or -not $cap.evidence))
+    })
+    if ($missing.Count) {
+        $filtered += [pscustomobject]@{ id=$rid; reason=('Required capability not proven: ' + ($missing -join ', ')) }; continue
     }
     # Weighted capability average.
     $sum = 0.0
@@ -588,6 +604,9 @@ foreach ($rm in @($roster.eligible_models)) {
     $histAvgAttempts = $null
     if ($historyEntries.Count -gt 0) {
         $rel = @($historyEntries | Where-Object { $_.model -eq $rid -and $_.synthetic -ne $true -and $_.failure_kind -notin @('quota','provider','binding','auth','timeout') })
+        # Related retries/children are one user-task observation per role/model,
+        # not multiple fabricated first-pass successes. Old rows retain TaskId.
+        $rel = @($rel | Group-Object { if ($_.user_task_id) { "$($_.user_task_id)/$($_.role)" } else { $_.task_id } } | ForEach-Object { $_.Group | Sort-Object timestamp -Descending | Select-Object -First 1 })
         # Prefer task-overlapping history when enough samples exist.
         $overlap = @($rel | Where-Object {
             $hit = $false
@@ -798,6 +817,15 @@ if ($scored.Count -eq 0) {
 $ranked = @($scored | Sort-Object -Property @{Expression='economic_class';Descending=$false}, @{Expression='expense';Descending=$false}, @{Expression='total';Descending=$true}, @{Expression='priority';Descending=$false}, @{Expression='id';Descending=$false})
 
 $top = $ranked[0]
+$economicReason = if ($top.surface -eq 'opencode-free') { 'free-first: an adequate free route wins ordinary bounded work' } else { 'escalation: no adequately proven free route survives task requirements and availability checks' }
+# Difficult work may justify a documented capability advantage after qualification.
+$free = @($ranked | Where-Object { $_.surface -eq 'opencode-free' })
+$stronger = @($ranked | Where-Object { $_.surface -ne 'opencode-free' -and $_.cap_avg -ge ($top.cap_avg + 0.75) } | Sort-Object cap_avg -Descending)
+if ($isConsequential -and $free.Count -and $top.surface -eq 'opencode-free' -and $stronger.Count -and $prefCost -ne 'free') {
+    $top = $stronger[0]
+    $economicReason = 'escalation: consequential task; proven task capability advantage of at least 0.75 over the qualified free route'
+    $ranked = @($top) + @($ranked | Where-Object { $_.id -ne $top.id })
+}
 # One bounded child selection. Compound requests are coordinated by customized
 # Build, not by silently changing the required role or inventing a reviewer.
 $fallback = $null
@@ -848,6 +876,7 @@ if ($stayPut) {
 
 # Explain the final selected candidate, not an earlier winner or static lane.
 $why = @()
+$why += $economicReason
 $why += ("task: " + ($tasks -join ' + ') + " | writes=$bNeedsWrites terminal=$bNeedsTerminal large_ctx=$NeedsLargeContextTokens deep=$bNeedsDeep diversity=$bNeedsDiversity consequence=$bHighConseq")
 if ($top.why_caps -ne '') { $why += ("capabilities: " + $top.why_caps) }
 if ($top.bench_notes -ne '') { $why += ("benchmarks (same-version only, harness-noted): " + $top.bench_notes) }

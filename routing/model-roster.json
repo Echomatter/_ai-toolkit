@@ -1,6 +1,6 @@
 {
     "generated":  true,
-    "generated_at":  "2026-09-19T05:27:34.9879252Z",
+    "generated_at":  "2026-09-19T16:28:01.9249790Z",
     "assignments":  {
                         "routine":  {
                                         "id":  "opencode/muse-spark-1.3-contributor-free",
@@ -32,6 +32,14 @@
     "eligible_models":  [
                             {
                                 "id":  "opencode/big-pickle",
+                                "surface":  "opencode-free",
+                                "economics":  "currently-free",
+                                "observed":  {
+
+                                             }
+                            },
+                            {
+                                "id":  "opencode/jev-1.13-free",
                                 "surface":  "opencode-free",
                                 "economics":  "currently-free",
                                 "observed":  {
@@ -337,13 +345,7 @@
                                 "surface":  "opencode-go",
                                 "economics":  "subscription-quota",
                                 "observed":  {
-                                                 "total":  1,
-                                                 "successes":  1,
-                                                 "failures":  0,
-                                                 "success_rate":  1,
-                                                 "tests_passed":  1,
-                                                 "escalated":  0,
-                                                 "last_seen":  "2026-09-19T05:27:31.2508864Z"
+
                                              }
                             },
                             {

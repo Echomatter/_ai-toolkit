@@ -2,7 +2,7 @@ name: Runtime verification
 
 on:
   push:
-    branches: [main, "chatgpt/**"]
+    branches: [main, "chatgpt/**", "codex/**"]
   pull_request:
 
 permissions:
@@ -30,6 +30,12 @@ jobs:
       - name: Isolated outcome contracts
         shell: powershell
         run: .\tests\outcome-contract.ps1
+      - name: Quota regression entrypoint
+        shell: powershell
+        run: .\scripts\test-quota-routing.ps1
+      - name: Refresh preserves history and evidence
+        shell: powershell
+        run: .\tests\refresh-contract.ps1
       - name: Archive tested revision
         if: always()
         shell: pwsh

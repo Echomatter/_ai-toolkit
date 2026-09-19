@@ -9,7 +9,7 @@ async function fixture(t, options = {}) {
   const root = await mkdtemp(path.join(os.tmpdir(), 'toolkit-test-'));
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(path.join(root, 'routing'));
-  await writeFile(path.join(root, 'routing', 'policy.json'), JSON.stringify({ allowed_surfaces: ['opencode-go'], allow_overage: false }));
+  await writeFile(path.join(root, 'routing', 'policy.json'), JSON.stringify({ allowed_surfaces: ['opencode-go', 'opencode-free'], allow_overage: false }));
   const requests = [], sessions = new Map([['parent', { id: 'parent', permission: [{ permission: 'secret-tool', pattern: '*', action: 'deny' }] }]]);
   const messages = new Map(), states = {}, records = [];
   let next = 0, time = 0;
@@ -19,7 +19,7 @@ async function fixture(t, options = {}) {
     app: { agents: async () => data(['worker', 'architect', 'researcher', 'review'].map(name => ({ name, permission: [] }))) },
     session: {
       get: async ({ path: { id } }) => data(sessions.get(id)),
-      message: async () => data({ info: { role: 'assistant', providerID: 'opencode', modelID: 'free-parent' } }),
+      message: async () => data({ info: { role: 'assistant', ...splitModel(options.parentModel || 'opencode/free-parent'), agent: options.parentRole || 'build' } }),
       create: async ({ body, query }) => {
         requests.push({ kind: 'create', body, query });
         const child = { ...body, id: `child${++next}` };
@@ -31,7 +31,7 @@ async function fixture(t, options = {}) {
         requests.push({ kind: 'prompt', id, body, query });
         if (options.submitTimeout) return new Promise(() => {});
         const model = options.wrongModel ? { providerID: 'opencode', modelID: 'free-parent' } : body.model;
-        if (!options.hang) messages.set(id, [assistant(id, model)]);
+        if (!options.hang) messages.set(id, [assistant(id, model, options.failFirst && id === 'child1' ? {error:{name:'APIError',data:{statusCode:503,message:'provider unavailable'}}} : {})]);
         else states[id] = { type: 'busy' };
         return { data: undefined };
       },
@@ -45,7 +45,10 @@ async function fixture(t, options = {}) {
     abort: controller.signal, ask: async req => { requests.push({ kind: 'permission', req }); if (options.deny) throw new Error('denied'); }, metadata: () => {} };
   let choice = 0;
   const service = createDelegator({ client, toolkitRoot: root, directory: root,
-    select: async a => ({ selected_model: options.models?.[choice++] || 'opencode-go/model-b', surface: 'opencode-go', adequacy: options.adequacy || 'adequate', quota_state: { overage: options.overage } }),
+    select: async a => {
+      const index=choice++;
+      return { selected_model: options.noRoute ? null : options.models?.[index] || 'opencode-go/model-b', surface: options.surfaces?.[index] || options.surface || 'opencode-go', adequacy: options.adequacy || 'adequate', quota_state: { overage: options.overage } };
+    },
     record: async r => records.push(structuredClone(r)), now: () => time,
     sleep: async ms => { time += ms; }, limits: { pollMs: 1, taskMs: 6, firstResponseMs: 2, stopMs: 4, requestMs: 20 },
   });
@@ -126,7 +129,8 @@ test('ambiguous prompt submission cannot release writer for an unsafe replacemen
 test('read-only role forces write restrictions even when caller asks for writes', async t => {
   const f = await fixture(t); await f.service.execute({ ...args, role: 'researcher' }, f.ctx);
   const p = f.sessions.get('child1').permission;
-  assert.ok(p.some(r => r.permission === 'bash' && r.action === 'deny'));
+  assert.ok(!p.some(r => r.permission === 'bash' && r.action === 'deny'));
+  await assert.rejects(f.service.checkTool({ sessionID: 'child1', tool: 'bash' }, { args: { command: 'echo unsafe' } }), /Read-only/);
   assert.ok(p.some(r => r.permission === 'edit' && r.action === 'deny'));
 });
 test('unapproved overage and weak selection never execute', async t => {
@@ -173,4 +177,87 @@ test('auxiliary process timeout returns instead of hanging the parent', async ()
 test('missing child identity is not an echoed-selector success', () => {
   const m = assistant('a', { providerID: 'go', modelID: 'b' }); delete m.info.providerID;
   assert.throws(() => observe([m], 'go/b'), /lacks runtime/);
+});
+test('provider error placeholder zeros are not measured consumption', () => {
+  const m=assistant('a',{providerID:'go',modelID:'b'},{error:{name:'APIError'},tokens:{input:0,output:0,cache:{read:0,write:0}}});
+  assert.equal(observe([m],'go/b').usage,null);
+});
+
+test('paid parent to free child retains provider-qualified identity', async t => {
+  const f = await fixture(t, { parentModel: 'openai/paid-parent', models: ['opencode/free-child'], surface: 'opencode-free' });
+  const r = await f.service.execute({ ...args, needsWrites: false }, f.ctx);
+  assert.equal(r.parent_model, 'openai/paid-parent');
+  assert.equal(r.attempts[0].observed_model, 'opencode/free-child');
+  assert.equal(r.status, 'completed');
+});
+
+test('free provider failure permits one stopped read-only free fallback', async t => {
+  const f=await fixture(t,{failFirst:true,models:['opencode/a','opencode/b'],surface:'opencode-free'});
+  const r=await f.service.execute({...args,needsWrites:false},f.ctx);
+  assert.equal(r.status,'completed');assert.equal(r.attempts.length,2);
+  assert.equal(r.attempts[0].failure,'provider');assert.equal(r.attempts[0].abort_verified,true);
+  assert.equal(r.attempts[1].observed_model,'opencode/b');
+});
+
+test('free failure never silently falls through to a subscription route', async t => {
+  const f=await fixture(t,{failFirst:true,models:['opencode/a','opencode-go/b'],surfaces:['opencode-free','opencode-go']});
+  const r=await f.service.execute({...args,needsWrites:false},f.ctx);
+  assert.equal(r.status,'subscription_fallback_requires_parent');assert.equal(r.attempts.length,1);
+  assert.equal(f.requests.filter(r=>r.kind==='prompt').length,1);
+});
+
+test('subscription provider failure returns to parent without a retry', async t => {
+  const f=await fixture(t,{failFirst:true});
+  const r=await f.service.execute({...args,needsWrites:false},f.ctx);
+  assert.equal(r.status,'failed');assert.equal(r.attempts.length,1);
+  assert.equal(f.requests.filter(r=>r.kind==='prompt').length,1);
+});
+test('independent review executes the selected different model as a read-only reviewer', async t => {
+  const f=await fixture(t,{models:['opencode-go/independent-reviewer']});
+  const r=await f.service.execute({...args,role:'review',needsWrites:false,needsModelDiversity:true,excludeModel:'opencode/free-parent'},f.ctx);
+  assert.equal(r.role,'review');assert.equal(r.attempts[0].observed_model,'opencode-go/independent-reviewer');
+  assert.notEqual(r.parent_model,r.attempts[0].observed_model);
+  await assert.rejects(f.service.checkTool({sessionID:'child1',tool:'edit'},{args:{}}),/Read-only/);
+});
+test('null route cannot create a child or become an empty model id', async t => {
+  const f = await fixture(t, { noRoute: true });
+  const r = await f.service.execute(args, f.ctx);
+  assert.equal(r.status, 'no_qualified_route'); assert.equal(r.attempts.length, 0);
+  assert.equal(f.requests.filter(r => r.kind === 'create').length, 0);
+});
+test('worker cannot create another worker even if a permissive host approves task', async t => {
+  const f = await fixture(t, { parentRole: 'worker' });
+  await assert.rejects(f.service.execute(args, f.ctx), /topology/);
+});
+test('explicit no-write user assignment overrides a mistaken writer request', async t => {
+  const f = await fixture(t);
+  f.messages.set('parent', [{info:{role:'user'},parts:[{type:'text',text:'Explain only. Do not modify files.'}]}]);
+  await f.service.execute(args, f.ctx);
+  assert.equal(f.sessions.get('child1').metadata.ai_toolkit.readOnly, true);
+  await assert.rejects(f.service.checkTool({ sessionID: 'child1', tool: 'content_index' }, { args: {operation:'rebuild'} }), /Read-only/);
+  await f.service.checkTool({ sessionID: 'child1', tool: 'content_index' }, { args: {operation:'search'} });
+});
+test('parent ask and deny permissions remain authoritative in child', async t => {
+  const f = await fixture(t);
+  f.sessions.get('parent').permission.push({permission:'bash',pattern:'*',action:'ask'});
+  f.sessions.get('parent').permission.push({permission:'bash',pattern:'git status*',action:'allow'});
+  await f.service.execute(args, f.ctx);
+  assert.ok(f.sessions.get('child1').permission.some(r=>r.permission==='bash' && r.action==='ask'));
+  assert.ok(f.sessions.get('child1').permission.some(r=>r.permission==='bash' && r.pattern==='git status*' && r.action==='allow'));
+});
+test('read-only guard and binding survive controller restart through session metadata', async t => {
+  const f = await fixture(t);
+  await f.service.execute({...args,needsWrites:false},f.ctx);
+  const restarted=createDelegator({client:f.client,toolkitRoot:f.root,directory:f.root});
+  await assert.rejects(restarted.checkTool({sessionID:'child1',tool:'bash'},{args:{command:'echo no'}}),/Read-only/);
+  await assert.rejects(restarted.checkModel({sessionID:'child1',model:{providerID:'wrong',id:'model'}}),/binding/);
+});
+test('nested researcher permitted at configured depth, then blocked at the limit', async t => {
+  const f = await fixture(t, {parentRole:'worker',depth:2});
+  f.sessions.set('grandparent',{id:'grandparent'}); f.sessions.get('parent').parentID='grandparent';
+  const r=await f.service.execute({...args,role:'researcher',needsWrites:false},f.ctx);
+  assert.equal(r.status,'completed');
+  const limited=await fixture(t,{parentRole:'worker',depth:1});
+  limited.sessions.set('grandparent',{id:'grandparent'}); limited.sessions.get('parent').parentID='grandparent';
+  await assert.rejects(limited.service.execute({...args,role:'researcher',needsWrites:false},limited.ctx),/depth/);
 });

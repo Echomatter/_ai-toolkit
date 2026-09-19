@@ -21,6 +21,14 @@ foreach($ps1 in $psFiles){
 }
 
 $expected=@('reorient','search-index','sync','model-routing','record-outcome')
+$catalog=Get-Content (Join-Path $ToolkitRoot 'opencode\catalog.json') -Raw|ConvertFrom-Json
+if ((@($catalog.skills|Sort-Object) -join ',') -ne (@($expected|Sort-Object) -join ',')) { F 'install skill catalog differs from public contract' } else { OK 'explicit five-skill installation catalog' }
+foreach($group in @('agents','tools','plugins')) {
+  $names=@($catalog.$group)
+  $extension=if($group-eq'agents'){'*.md'}else{'*.ts'}
+  $files=@(Get-ChildItem (Join-Path $ToolkitRoot "opencode\$group") -Filter $extension -File | ForEach-Object {$_.BaseName})
+  if((@($names|Sort-Object)-join',')-ne(@($files|Sort-Object)-join',')){F "catalog/source mapping mismatch: $group"}else{OK "catalog/source mapping: $group"}
+}
 $skillsDir=Join-Path $ToolkitRoot 'skills'
 $actual=@(Get-ChildItem -LiteralPath $skillsDir -Directory | ForEach-Object{$_.Name})
 foreach($s in $expected){$p=Join-Path $skillsDir "$s\SKILL.md";if(Test-Path -LiteralPath $p){OK "skill present: $s"}else{F "skill missing: $s"}}

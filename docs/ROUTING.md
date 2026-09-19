@@ -16,7 +16,7 @@ Owns Reorient orientation and broader investigation: content index, native code 
 
 ## Worker — bounded implementation
 
-Use `@worker` for bounded implementation/reasoning: debugging, features, refactors, tests, architecture, terminal-heavy investigation. Call the `delegate` tool first; it runs the deterministic selector over cached roster/evidence/history and must bind the selected model at execution. This replaces treating "difficult task" as synonymous with one particular model.
+Use `delegate` with role `worker` for automatic bounded implementation: debugging, features, refactors, tests and terminal investigation. It selects and executes the child; do not invoke `@worker` afterward. A direct user `@worker` invocation inherits the selected model.
 
 ## Architect — hard tradeoffs
 
@@ -24,7 +24,7 @@ Used for difficult plans, tradeoff evaluations, and complex technical questions.
 
 ## Review — independent read-only verification
 
-Used for explicit audits and consequential changes. Prefer a different provider/model family from the implementation: pass `needs_model_diversity = true` with `exclude_model` set to the implementation model. If no adequate diverse model is available, degrade gracefully and report that independence is limited. A same-model review is not cross-model verification.
+Used for explicit audits and consequential changes. Prefer a different provider/model family from the implementation: pass `needsModelDiversity: true` with `excludeModel` set to the implementation model. If no adequate diverse model is available, return no route and report that independence is unavailable. A same-model review is not cross-model verification.
 
 ## Session promotion
 
@@ -67,4 +67,4 @@ See the `model-routing` skill for evidence and recommendation rules.
 
 ## Paid-lane failure
 
-If a bounded Worker/Architect/Review call exhausts quota or fails at the provider after OpenCode retry handling, try the selector's fallback model when known, then return to the parent Build and continue with Researcher/Explore/web/tests. Do not repeatedly call the unavailable lane or silently select another paid/metered provider.
+If a subscription child fails for quota, rate, provider or authentication, return control to Build with the unresolved remainder. Do not retry paid calls or fall through to another paid provider. A free read-only child may use at most one qualified free alternative for a transient/model failure. A subscription fallback requires returning to Build for a separate decision. Failed writers are never automatically replaced.

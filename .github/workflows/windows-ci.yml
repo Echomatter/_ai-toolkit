@@ -2,7 +2,7 @@ name: Windows toolkit CI
 
 on:
   push:
-    branches: [ main, "chatgpt/**" ]
+    branches: [ main, "chatgpt/**", "codex/**" ]
   pull_request:
 
 jobs:

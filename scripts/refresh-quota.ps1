@@ -24,7 +24,7 @@ function Write-Utf8NoBom([string]$Path, [string]$Text) {
     $tmp = $Path + '.' + [guid]::NewGuid().ToString('N') + '.tmp'
     try {
         [System.IO.File]::WriteAllText($tmp, $Text, $enc)
-        if (Test-Path -LiteralPath $Path) { [System.IO.File]::Replace($tmp, $Path, $null) }
+        if (Test-Path -LiteralPath $Path) { [System.IO.File]::Replace($tmp, $Path, [NullString]::Value) }
         else { [System.IO.File]::Move($tmp, $Path) }
     } finally { if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force } }
 }

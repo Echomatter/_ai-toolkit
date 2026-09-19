@@ -1,0 +1,6 @@
+{
+  "skills": ["reorient", "search-index", "sync", "model-routing", "record-outcome"],
+  "agents": ["build", "worker", "architect", "researcher", "review"],
+  "tools": ["content_index"],
+  "plugins": ["delegation"]
+}

@@ -89,10 +89,12 @@ export default tool({
     limit: tool.schema.number().int().min(1).max(200).optional().describe("Maximum returned rows"),
   },
   async execute(args, context: Ctx) {
+    if (args.operation === 'rebuild') {
+      await (context as any).ask({ permission: 'edit', patterns: ['content-index database'], always: [], metadata: { operation: 'rebuild' } })
+    }
     const root = path.resolve(context.worktree || context.directory)
     const locator = path.join(
-      process.env.USERPROFILE || process.env.HOME || "",
-      ".config",
+      process.env.XDG_CONFIG_HOME || path.join(process.env.USERPROFILE || process.env.HOME || "", ".config"),
       "opencode",
       "ai-toolkit-root.txt",
     )

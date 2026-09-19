@@ -1684,7 +1684,7 @@ def build_index(root: Path, db: Path, *, fact_mode: str, special_specs: Sequence
 def connect(db: Path) -> sqlite3.Connection:
     if not db.exists():
         raise RuntimeError(f"index not found: {db}. Run the rebuild command first")
-    con = sqlite3.connect(db)
+    con = sqlite3.connect(db.resolve().as_uri() + '?mode=ro', uri=True)
     con.row_factory = sqlite3.Row
     return con
 

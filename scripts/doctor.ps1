@@ -6,8 +6,7 @@ $fail=0; $warn=0
 function OK([string]$m){ Write-Output "OK:   $m" }
 function WARN([string]$m){ $script:warn++; Write-Output "WARN: $m" }
 function FAIL([string]$m){ $script:fail++; Write-Output "FAIL: $m" }
-$env:OPENCODE_CONFIG = Join-Path $ToolkitRoot 'opencode\opencode.jsonc'
-$env:OPENCODE_CONFIG_DIR = Join-Path $ToolkitRoot 'opencode'
+# Diagnose the installed configuration used by Desktop and normal CLI launches.
 
 $oc=Get-Command opencode -ErrorAction SilentlyContinue
 function Invoke-OpenCodeCaptured([string[]]$Arguments) {
@@ -48,7 +47,7 @@ if($cmdLeft.Count -eq 0){OK 'no toolkit slash-command wrappers installed'}else{W
 
 $indexTool=Join-Path $env:USERPROFILE '.config\opencode\tools\content_index.ts'
 if(Test-Path -LiteralPath $indexTool){OK 'Desktop custom tool installed: content_index'}else{FAIL 'Desktop custom tool missing: content_index'}
-$delegateTool=Join-Path $env:USERPROFILE '.config\opencode\tools\delegate.ts'
+$delegateTool=Join-Path $env:USERPROFILE '.config\opencode\plugins\delegation.ts'
 if(Test-Path -LiteralPath $delegateTool){OK 'Desktop custom tool installed: delegate'}else{FAIL 'Desktop custom tool missing: delegate'}
 $py=Get-Command python -ErrorAction SilentlyContinue
 if(-not $py){$py=Get-Command py -ErrorAction SilentlyContinue}

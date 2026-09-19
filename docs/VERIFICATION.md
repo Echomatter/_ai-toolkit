@@ -1,48 +1,141 @@
-# Verification and remaining integration gates
+# Verification — 2026-09-19
 
-This repair replaces advice-only delegation with a bounded native-session adapter.
-It does not claim that every provider or installed OpenCode release was tested live.
-The complete v3 product brief is a continuing contract, not a blanket completion claim.
+## Source and installed environment
 
-## Isolated automated checks
+Started from local main `8b496a25accb67ea31160d6b18971f38c0d8c36f`.
+Fetched GitHub and incorporated the newer PR #4 branch through `d0a8690`, preserving
+its native SDK adapter and isolated contracts. Completion work is on
+`codex/finish-desktop-cli` in `F:\_ai-toolkit`; no merge or remote publication was performed.
+OpenCode CLI is 1.18.31; installed Desktop is 1.18.31.0.
 
-- `node --test tests/delegate-runtime.test.mjs`: controller tested with a fake SDK and independently returned messages, including a deliberately wrong-model adapter.
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/selector-contract.ps1`: isolated quota, economics, capability, context, identity, and no-candidate cases.
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/deployment-contract.ps1`: install twice, reconcile drift with backup, uninstall and reinstall in a temporary home.
-- `powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/outcome-contract.ps1`: actual-receipt attribution, outcome upserts, preserved review findings and corrupt-history protection.
-- Existing structural and content-index smoke checks remain in Windows CI.
+The real profile was upgraded with recoverable backups. CLI discovery returned
+exactly the five toolkit skills plus OpenCode's built-in customize-opencode skill.
+Desktop's helper menu visibly showed architect, researcher, review and worker,
+alongside native Explore/General; Build and Plan remained in the primary menu.
+The runtime tool registry had exactly content_index and delegate as toolkit tools.
+The final profile was installed twice with an identical manifest; Desktop was fully
+restarted and its saved successful integration result remained visible.
 
-Default tests do not read production credentials, alter real history, call a paid model, merge real branches, or edit the user's installed profile. Fixture successes do not become model capability evidence.
+| Public surface | Final names |
+|---|---|
+| Skills | reorient, search-index, sync, model-routing, record-outcome |
+| Helpers | worker, architect, researcher, review |
+| Primary | customized Build; native Plan preserved |
+| Tools | content_index, delegate |
 
-## Required installed-runtime gate
+Completion changes cover deployment/catalog, selector, native delegation/plugin,
+outcome recording, inventory/quota refresh, read-only content indexing, launcher,
+validation/doctor, retained skill procedures, behavioral tests, CI and documentation.
+The final local commit and complete changed-file list are available in `git show --stat`.
 
-After isolated checks pass, test the candidate deployment in an isolated profile or disposable worktree. The normal deployment command is:
+## What was repaired
+
+- Explicit catalog prevents retired source overlays from becoming installed skills.
+- Ownership journals, verified links, backups and pre-copy journaling support clean,
+  old, repeated, interrupted and lost-manifest installations. Same-named user files
+  survive. Global user instructions outside the managed block remain verbatim.
+- Fixed PowerShell 5.1 JSON-array handling and null backup-path atomic replacement.
+- Real child execution uses native SDK sessions, role permissions, explicit models,
+  bounded waits, abort checks and worktree writer locks. No parent model switch.
+- No-write assignments and read-only roles block shell, edits, unknown mutating tools
+  and index rebuilds; restrictions persist through native descendants and restart.
+- Required unknown capabilities/context cannot qualify through a strong average.
+  Qualified free routes win ordinary work; consequential escalation explains its
+  capability advantage. Null, singleton, diversity and stay-put metadata are tested.
+- Outcome upserts preserve corrections, review links and execution attempts. Runtime
+  session identities and per-child counters remain distinct from account estimates.
+- Inventory refresh no longer rewrites timestamps or truncates nested outcome history;
+  corrupt model evidence is preserved. Evidence refresh has a retained internal procedure.
+- CLI launcher uses the installed integration, avoiding duplicate source/global hooks.
+- A free provider failure may retry one qualified free reader; it cannot silently
+  fall through to subscription inference. Paid failures return directly to Build.
+
+## Live provider and Desktop evidence
+
+These are actual session/message records, independently checked against the durable
+receipts under `.state/delegation`, not model self-reports or offline SDK fixtures.
+
+| Entry point | Parent before and after | Child role | Selected = dispatched = observed | Result |
+|---|---|---|---|---|
+| CLI | opencode/big-pickle | worker | opencode/muse-spark-1.3-contributor-free | Read catalog and returned all five skills |
+| Desktop UI | opencode/muse-spark-1.3-contributor-free | worker | openai/gpt-5.6-sol | Read catalog and returned all five skills |
+| CLI Reorient | opencode/muse-spark-1.3-contributor-free | researcher, then worker | opencode/mimo-v2.5-free for both | Orientation completed before the exact authorized one-word edit |
+
+First proof receipt: `f043dffd36ffbdd630faadf742eab5c9a2ba85539bef7076d0edf59822b16429`.
+Desktop proof receipt: `3f52c3edf626b0f25cd61ae46a55a273d51a518c5e48c945c49903f1ad4ae6ca`.
+The first child reported 7,611 input, 330 output and 7,266 cache-read tokens; the
+Desktop child reported 6,104 input, 73 output and 5,632 cache-read tokens.
+Both reported provider cost zero; this does not imply zero subscription-quota use.
+
+The real parent assistant-message histories retained their original model IDs.
+A deliberately wrong expected model was rejected against both live child histories.
+Reconstructed guards using actual stored child metadata rejected shell and index
+rebuild calls and allowed read. These checks made no provider requests or shell calls.
+
+The free provider rejects requests when a bash deny removes the native shell schema.
+A controlled pair of native requests reproduced that behavior. The adapter keeps
+that schema visible and rejects shell execution in the pre-tool hook. Explicit user
+bash denies remain authoritative; such a provider may reject those user configurations.
+Full process restart is necessary after plugin changes because module imports are cached.
+
+## Tests actually run
+
+All offline commands use Windows PowerShell 5.1. CI runs the deterministic suites
+without credentials; live commands are opt-in and excluded from CI.
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "F:\_ai-toolkit\scripts\install.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-all.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/validate.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-advisor.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-delegate.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-quota-routing.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-content-index.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/deployment-contract.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/outcome-contract.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/refresh-contract.ps1
+node --test tests/delegate-runtime.test.mjs
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File tests/live-delegation.ps1 -Live
+node tests/verify-runtime-evidence.mjs http://127.0.0.1:41967 .state/delegation/f043dffd36ffbdd630faadf742eab5c9a2ba85539bef7076d0edf59822b16429.json
+node tests/verify-runtime-evidence.mjs http://127.0.0.1:41967 .state/delegation/3f52c3edf626b0f25cd61ae46a55a273d51a518c5e48c945c49903f1ad4ae6ca.json
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/install.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/refresh-quota.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/doctor.ps1
+scripts\opencode.cmd debug skill
 ```
 
-Fully quit and restart OpenCode; the old process has not loaded new source merely because files changed. Use the real `delegate` tool on a bounded read-only inspection, selecting a qualified child different from the parent. Inspect the actual session/message records and `.state/delegation` receipt: selected, dispatched and observed route, parent unchanged, role, permissions, tool continuation, returned result. Repeat free-parent/Go-child when both routes are usable. Same-model-only execution does not prove cross-model binding.
+Results: offline suites pass; the final delegation run passes all 33 behavioral
+tests; structural validation has zero failures/warnings;
+live cross-model contract and both runtime-evidence checks pass. Doctor has zero
+failures and one expected warning: evidence coverage is PARTIAL. Install fixtures
+cover clean, upgrade, repeat, interruption, partial/lost manifest, unrelated legacy
+and canonical conflicts, stale source overlays, instruction preservation and backups.
 
-The adapter expects the v1 SDK client's `session.create/get/message/messages/promptAsync/status/abort`, `app.agents` and `config.get`. Server parent linkage and per-session permissions are checked before sending inference. A runtime that strips them is rejected rather than used unrestricted. The pre-inference model hook and separately observed message metadata are different checks. This proves provider-reported route identity, not undisclosed underlying model weights.
+Delegation fixtures cover paid-parent/free-child, free-parent/stronger-child,
+independent review, no route, wrong model, permission refusal, cancellation,
+ambiguous dispatch, writer locking, tool continuation and restart. Nested depth 2
+is tested offline; the real user's unset depth remains OpenCode's default 1.
+No global shell approval rule, permission override or depth increase was installed.
+The inspected user configuration retains `permission: "allow"` and an unset depth.
+Helpers inherit native permissions and parent session rules; Researcher/Review and
+explicit no-write assignments additionally receive edit denies plus pre-tool guards.
+Selector fixtures pass free-first, unknown capability/context, zero candidates,
+singleton compound work, stay-put metadata, diversity and blocked subscription pools.
+Outcome fixtures pass correction upserts, fallback attempt linkage, review-defect
+retention and explicit implementation/review links without duplicate observations.
 
-Cancellation uses native abort, two idle observations and no outstanding tool parts. This cannot prove that arbitrary detached user shell processes stopped. Consequently failed writers are never automatically replaced: inspect partial changes and detached work first. Unverified stop retains a writer lock under `.state/delegation`; do not clear it until the relevant execution is inspected and stopped.
+## Coverage boundaries
 
-## Scope and honest limitations
+Go was weekly-limited and Copilot's live small-model request reported exhausted
+monthly quota. They were not retried. The connected ChatGPT account explicitly
+rejected gpt-5.3-codex-spark as unsupported; that model-specific failure is cached
+locally. These are provider/account limitations, not implementation success claims.
+Paid-parent/free-child and successful independent Review are covered by fixtures;
+we did not spend more subscription quota to make every branch live. Desktop did
+successfully exercise free-parent/subscription-child execution.
 
-- Economics remains in the existing selector. No Economics agent, second scheduler, or additional public skill is introduced.
-- Reorient's Researcher-to-Worker handoff and Sync are skill-driven workflows; the complete live end-to-end scenarios still require the installed runtime. Controller fixtures alone do not certify them.
-- The injected SDK plugin has not been exercised with the user's authenticated Desktop/CLI and real model routes by these offline tests. Independent live Go-model review is also pending.
-- Managed read-only children cannot execute arbitrary shell, mutations, or unknown custom tools. Build performs authorized validation/index maintenance and supplies the evidence. No-file-changes requests also prohibit index rebuilds.
-- Execution completion is not task correctness. Receipt validation stays pending until actual checks are recorded with Record Outcome. Coarse all-session CLI measurements remain estimates; structured child counters are preferred.
-- Normalized Go/Copilot comparisons use existing public-pricing priors and reported entitlements. ChatGPT API-rate proxies are not calibrated subscription quota. Detailed active-model/tool/wait timing, pricing tiers/cache-write costs, and measured cross-provider savings are not yet fully calibrated.
-- Failure scope is conservative. Unknown-reset auth/model/pool failures may require an explicit verified repair before their specific block is removed. Do not erase all account state/history to recover one route.
-- A stale telemetry-only exhaustion observation still needs durable recovery-state reconciliation across provider windows; fresh execution failures are recorded separately. Current inventory refresh ordering and automatic evidence/price maintenance also need further work.
-- Existing discovery diagnostics, refresh scripts and documentation outside the repaired execution path may still contain legacy assumptions. Validate the actual deployed catalog, not those older summaries alone.
-- Preserve the v3 requirements for nested shared budgets, in-flight quota reservations, controlled model trials, full resume reconciliation, explicit coordinated maintenance, baseline comparisons, and richer learning. They are not silently implemented by this controller.
-
-## Deployment safety
-
-Only manifest-owned targets inside recognized deployment roots are retired/replaced. Changed copies and removed links receive backups outside discovery. Actual link targets and content are verified. Unowned conflicts fail rather than being deleted by name. Templates remain outside agent discovery. A malformed manifest/history is preserved, not replaced with an empty success state.
-
-Source-level consistency is not a substitute for the installed-runtime gate. Report source, fixture, CI, live provider and user-installation results separately.
+Evidence remains partial for some newly discovered models; unknown capability
+never earns adequacy. API-price proxies and aggregate account counters are estimates,
+not exact subscription consumption. Shell/tool stop observations cannot prove that
+an arbitrary detached OS process has stopped; failed writers are never automatically
+replaced. Reorient's bounded live test passed; it is not an exhaustive model benchmark.
+Local raw logs, runtime receipts and account telemetry stay in ignored `.state`.

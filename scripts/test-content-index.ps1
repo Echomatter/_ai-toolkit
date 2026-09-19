@@ -62,6 +62,7 @@ Status: active
   if($build.indexed_sources -lt 2){throw "Expected >=2 indexed sources, got $($build.indexed_sources)"}
   if($build.validation.integrity -ne 'ok'){throw 'SQLite integrity validation did not pass.'}
   if(-not $build.validation.units_equal_fts_rows){throw 'FTS/unit parity validation did not pass.'}
+  $originalDbHash=(Get-FileHash -LiteralPath $db).Hash
 
   $search=Invoke-Indexer @('search','Alpha Reactor','--phrase','--limit','10') | ConvertFrom-Json
   if(@($search).Count -lt 1){throw 'Phrase search returned no results.'}
@@ -73,6 +74,7 @@ Status: active
   Add-Content -LiteralPath (Join-Path $root 'notes.md') -Value ([Environment]::NewLine + 'Changed after build.')
   $status=Invoke-Indexer @('status','--root',$root) | ConvertFrom-Json
   if(-not $status.stale){throw 'Status did not detect changed source content.'}
+  if((Get-FileHash -LiteralPath $db).Hash -ne $originalDbHash){throw 'Read-only retrieval modified the database.'}
 
   Write-Output 'PASS: content index rebuild/search/structured retrieval/staleness smoke test'
 } finally {

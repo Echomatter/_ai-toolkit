@@ -30,6 +30,13 @@ try {
  & $script @params|Out-Null
  $h=Get-Content $history -Raw|ConvertFrom-Json
  Check ($h.entries[0].review_found_defects -eq $true) 'later recording cannot erase the review defect'
+ $params.Success=$false;$params.TestsPassed=$false
+ & $script @params|Out-Null
+ $h=Get-Content $history -Raw|ConvertFrom-Json
+ Check (@($h.entries).Count-eq 1-and-not$h.entries[0].success-and@($h.entries[0].revisions).Count-eq 1) 'correction replaces one observation and retains previous validation'
+ & $script -ToolkitRoot $root -TaskId $id -MarkReviewDefect -ReviewTaskId 'review-observation'|Out-Null
+ $h=Get-Content $history -Raw|ConvertFrom-Json
+ Check ($h.entries[0].review_task_id-eq'review-observation') 'review observation explicitly links to implementation'
  $params.Model='opencode-go/wrong';$rejected=$false
  try { & $script @params|Out-Null } catch { $rejected=$true }
  Check $rejected 'wrong-model outcome rejected'

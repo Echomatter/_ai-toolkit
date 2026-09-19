@@ -14,7 +14,7 @@ Build is customized, not stock. Native Plan and Explore remain. There are no too
 
 User-invoked work keeps the selected parent model. Roles do not own models. For automatic child work, `delegate` calls the existing selector, creates a native child session, sends the provider-qualified model with the prompt, and checks returned session/message identity. It already runs the child: do not invoke another Worker after its result.
 
-**Verification status:** the repository contains isolated execution/selection/deployment/outcome tests. Live cross-model execution through your installed, authenticated OpenCode remains a release gate. Read [verification and limits](docs/VERIFICATION.md) before treating fixture passes as live proof.
+**Verification status:** tested on OpenCode Desktop and CLI 1.18.31 with live cross-model child execution, unchanged parent models, a Researcher-to-Worker edit workflow, and isolated Windows PowerShell 5.1 regressions. See [verification and limits](docs/VERIFICATION.md) for evidence and provider coverage.
 
 ## Install the candidate
 
@@ -40,4 +40,4 @@ Sync is an explicit publishing workflow: checkpoint current work, inspect and in
 
 ## Tests
 
-See [verification](docs/VERIFICATION.md) for isolated commands, the required live exercise and remaining limitations. The runtime workflow runs on Windows with no paid-model dependency; results are not evidence of actual provider model quality.
+Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-all.ps1` for the offline suites. See [verification](docs/VERIFICATION.md) for separate live exercises and limitations. CI needs no OAuth credentials or paid calls; its fixtures are not model-quality benchmarks.

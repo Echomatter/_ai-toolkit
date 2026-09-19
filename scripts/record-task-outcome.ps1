@@ -7,7 +7,8 @@ param(
     [string]$Role = '', [string]$DelegatedModel = '', [string]$ParentModel = '',
     [switch]$MeasureStart, [switch]$MeasureFinalize,
     $InputTokens = $null, $OutputTokens = $null, $CacheReadTokens = $null, $CostDollars = $null,
-    [string]$ConsumptionQuality = '', [string]$ConsumptionReason = ''
+    [string]$ConsumptionQuality = '', [string]$ConsumptionReason = '',
+    [string]$UserTaskId = '', [string]$ReviewTaskId = ''
 )
 $ErrorActionPreference = 'Stop'
 function To-Bool($v) {
@@ -27,7 +28,7 @@ function Write-Utf8NoBom([string]$Path,[string]$Text) {
     $tmp=$Path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
     try {
         [IO.File]::WriteAllText($tmp,$Text,(New-Object Text.UTF8Encoding($false)))
-        if(Test-Path -LiteralPath $Path){[IO.File]::Replace($tmp,$Path,$null)}else{[IO.File]::Move($tmp,$Path)}
+        if(Test-Path -LiteralPath $Path){[IO.File]::Replace($tmp,$Path,[NullString]::Value)}else{[IO.File]::Move($tmp,$Path)}
     } finally {if(Test-Path -LiteralPath $tmp){Remove-Item -LiteralPath $tmp -Force}}
 }
 function Parse-TokenNumber([string]$s) {
@@ -108,6 +109,7 @@ try {
             if($e.task_id -eq $TaskId){
                 $e|Add-Member -NotePropertyName review_found_defects -NotePropertyValue $true -Force
                 $e|Add-Member -NotePropertyName reviewed_at -NotePropertyValue $now -Force
+                if ($ReviewTaskId) { $e|Add-Member -NotePropertyName review_task_id -NotePropertyValue $ReviewTaskId -Force }
                 $found=$true;break
             }
         }
@@ -144,6 +146,8 @@ try {
         $entry=[ordered]@{task_id=$TaskId;timestamp=$now;repo=$Repo;task_type=$TaskTypeNorm;model=$Model;access=$Access;
             success=$Success;tests_passed=$TestsPassed;attempts=$Attempts;escalated=$Escalated;
             review_found_defects=$ReviewFoundDefects;elapsed_band=$ElapsedBand;role=$Role;delegated_model=$DelegatedModel;parent_model=$ParentModel}
+        $entry.user_task_id = if ($UserTaskId) { $UserTaskId } else { $TaskId }
+        $entry.observation_kind = if ($Role -eq 'review') { 'review' } else { 'implementation' }
         if($null-ne$cIn-or$null-ne$cOut-or$null-ne$cCost-or$cQuality-eq'unmeasurable'){
             $entry.consumption=[ordered]@{input_tokens=$cIn;output_tokens=$cOut;cache_read_tokens=$cCache;cost_dollars=$cCost;quality=$cQuality;reason=$cReason}
         }
@@ -157,6 +161,11 @@ try {
             $entry.model=$attempt.observed_model;$entry.access=$attempt.surface;$entry.role=$receipt.role
             $entry.parent_model=$receipt.parent_model;$entry.attempts=@($receipt.attempts).Count
             $entry.escalated=(@($receipt.attempts).Count-gt 1);$entry.execution_source='runtime_receipt';$entry.elapsed_ms=$attempt.elapsed_ms
+            $entry.user_task_id=if($receipt.user_task_id){$receipt.user_task_id}else{$receipt.parent_session}
+            $entry.parent_session=$receipt.parent_session;$entry.child_session=$attempt.child_session
+            $entry.selected_model=$attempt.selected_model;$entry.dispatched_model=$attempt.dispatched_model;$entry.observed_model=$attempt.observed_model
+            $entry.execution_attempts=@($receipt.attempts)
+            $entry.observation_kind=if($receipt.role-eq'review'){'review'}else{'implementation'}
             if($attempt.usage){
                 $entry.consumption=[ordered]@{
                     input_tokens=$attempt.usage.input;output_tokens=$attempt.usage.output;cache_read_tokens=$attempt.usage.cache_read;cache_write_tokens=$attempt.usage.cache_write;
@@ -166,6 +175,14 @@ try {
         }
         $priorEntry=@($existing|Where-Object{$_.task_id-eq$TaskId}|Select-Object -Last 1)
         if($priorEntry.Count-and$priorEntry[0].review_found_defects){$entry.review_found_defects=$true}
+        if($priorEntry.Count-and$priorEntry[0].review_task_id){$entry.review_task_id=$priorEntry[0].review_task_id}
+        if($priorEntry.Count){
+            $prior=$priorEntry[0]
+            $entry.revisions=@($prior.revisions|Where-Object{$null-ne$_})
+            if($prior.success-ne$entry.success-or$prior.tests_passed-ne$entry.tests_passed-or$prior.attempts-ne$entry.attempts){
+                $entry.revisions+=@{corrected_at=$now;previous_success=$prior.success;previous_tests_passed=$prior.tests_passed;previous_attempts=$prior.attempts}
+            }
+        }
         $existing=@($existing|Where-Object{$_.task_id-ne$TaskId})
         $existing+=$entry
     }
