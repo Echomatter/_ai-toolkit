@@ -1,45 +1,47 @@
-# OpenCode Build Routing Toolkit
+<p align="center"><img src="assets/tokenomics-banner.svg" alt="Tokenomics AI Tool Kit" width="900"></p>
 
-A thin workflow layer for OpenCode Desktop and CLI: five skills, our customized Build parent plus four helpers, the deterministic content index, and evidence-aware child execution. OpenCode owns the underlying models, authentication, native tools, permissions and sessions.
+# Tokenomics AI Tool Kit · V1
 
-## Public catalog
+Keep a capable model in charge. Give bounded work to suitable cheaper models, verify
+what actually ran, and learn from validated results.
 
-| Kind | Names |
-|---|---|
-| Skills | `reorient`, `search-index`, `sync`, `model-routing`, `record-outcome` |
-| Helpers | `@worker`, `@architect`, `@researcher`, `@review` |
-| Custom tools | `content_index`, `delegate` |
+**V1 targets OpenCode Desktop 1.18.31.** The same backend supports OpenCode CLI.
+OpenCode owns models, authentication, permissions, native tools and child sessions.
 
-Build is customized, not stock. Native Plan and Explore remain. There are no toolkit slash-command wrappers. Skills may still appear in OpenCode's native slash menu, but only one definition exists per skill.
+| Folder | Responsibility | Status |
+|---|---|---|
+| [Tokenomics-OpenCode-Desktop](Tokenomics-OpenCode-Desktop/) | Backend plugin: routing, delegation, outcome recording and structured activity | V1 |
+| [Tokenomics-OpenCode-Terminal](Tokenomics-OpenCode-Terminal/) | Future terminal UI: sidebar, dialogs and detailed screens | Design boundary; CLI already uses the backend |
+| [Tokenomics-Codex-Desktop](Tokenomics-Codex-Desktop/) | Codex implementation | Stub; TBD |
 
-User-invoked work keeps the selected parent model. Roles do not own models. For automatic child work, `delegate` calls the existing selector, creates a native child session, sends the provider-qualified model with the prompt, and checks returned session/message identity. It already runs the child: do not invoke another Worker after its result.
+## Start
 
-Desktop shows each real delegated child as a clickable native agent card, labeled `delegate` and its selected model. Click the card to inspect the child's tools, progress and result. This display adapter reuses the same call/session; it never starts a second agent. Model-facing history retains the original `delegate` call. See [the visibility and economics audit](docs/ECONOMICS-AUDIT.md) for compatibility and measured usage.
-
-**Verification status:** tested on OpenCode Desktop and CLI 1.18.31 with live cross-model child execution, unchanged parent models, a Researcher-to-Worker edit workflow, and isolated Windows PowerShell 5.1 regressions. See [verification and limits](docs/VERIFICATION.md) for evidence and provider coverage.
-
-## Install the candidate
+Clone this repository and run from its root:
 
 ```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "F:\_ai-toolkit\scripts\install.ps1"
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Tokenomics-OpenCode-Desktop\scripts\install.ps1
 ```
 
-Use the checked-out candidate revision. Fully quit and restart OpenCode afterward. The installer deploys the existing `delegate` tool through a plugin and removes its manifest-owned old advisory definition. It backs up changed owned resources, verifies copies/link targets, preserves unrelated skills and global instructions, and fails on unowned conflicts rather than deleting them.
+Fully restart OpenCode after installing. Open the repository root for cross-folder
+work, or the Desktop folder for backend development. Use [the orientation prompt](OPENCODE-ORIENTATION.md)
+to update an existing conversation after the folder move.
 
-For missing prerequisite software, `scripts/bootstrap.cmd` remains available. For an existing installation, use the normal installer above. Do not wipe account credentials, chat history or the OpenCode database.
+The installer preserves unrelated global instructions, credentials and conversations.
+It migrates the old owned root locator and deployment links. Local receipts, usage,
+quota observations and capture files stay in the Desktop folder's ignored .state.
 
-## Working model
+## What V1 does
 
-Reorient assigns orientation to Researcher and an additional task to Worker, preserving its full constraints and using the handoff before dependent edits. Other small tasks can stay in customized Build; useful roles are not compulsory stations in every request.
+- Keeps the selected parent model; binds each automatic child to its selected route.
+- Shows the real child's model and current tool activity in a native clickable chat card.
+- Enforces free-only delegation and uses OpenCode's native paid-child permission prompt.
+- Records actual session usage, failures and separately validated outcomes.
+- Refreshes evidence in bounded, source-backed batches without changing model weights.
 
-Researcher chooses index, native code search, relevant sibling repositories and web sources according to the question. The content index searches documents/data, not ordinary `.ts`, `.ps1` or `.py` source. Missing index hits never prevent code search.
+The public catalog remains five skills, customized Build plus four helpers, and two
+tools. No replacement router UI, model selector or context manager is installed.
 
-Model Routing owns guidance; the existing selector owns deterministic capability and economic comparisons. No Economics agent or second ranking system is needed. Quota observations and recorded execution failures remain distinct from model capability evidence.
-
-Review is read-only. Managed read-only children cannot use arbitrary shell or mutating custom tools. Return authorized validation/index maintenance to Build. Record Outcome attaches actual receipt usage after meaningful validation rather than assuming an agent's final answer is correct.
-
-Sync is an explicit publishing workflow: checkpoint current work, inspect and integrate compatible incoming improvements, validate the final revision, then publish to `main` through permitted protections. Research alone never authorizes Sync.
-
-## Tests
-
-Run `powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/test-all.ps1` for the offline suites. See [verification](docs/VERIFICATION.md) for separate live exercises and limitations. CI needs no OAuth credentials or paid calls; its fixtures are not model-quality benchmarks.
+See [Desktop documentation](Tokenomics-OpenCode-Desktop/README.md),
+[V1 verification](Tokenomics-OpenCode-Desktop/docs/V1-VERIFICATION.md) and
+[packaging boundaries](Tokenomics-OpenCode-Terminal/README.md).
+No npm publication or terminal UI migration is included in V1.

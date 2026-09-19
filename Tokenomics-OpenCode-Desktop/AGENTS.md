@@ -16,7 +16,3 @@ This repository is a thin workflow layer around OpenCode. Do not rebuild capabil
 - Preserve user-authored global OpenCode instructions outside the toolkit-managed block in `~/.config/opencode/AGENTS.md`.
 - Automatic routes may use OpenCode free, OpenCode Go, OpenAI OAuth, and GitHub Copilot OAuth. No separately metered API gateways.
 - Validate PowerShell 5.1 syntax and all skill/agent/tool mappings before packaging.
-
-## Tokenomics V1 layout
-
-All active OpenCode backend code and maintenance commands live in Tokenomics-OpenCode-Desktop. Apply its AGENTS.md to backend work. Tokenomics-OpenCode-Terminal reserves the future native terminal UI; Tokenomics-Codex-Desktop is a stub. Do not duplicate OpenCode host capabilities or publish an npm package as part of V1. Keep private runtime state inside the backend's ignored .state.

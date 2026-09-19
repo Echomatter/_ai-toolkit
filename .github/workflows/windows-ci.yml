@@ -1,4 +1,4 @@
-name: Windows toolkit CI
+name: Tokenomics Windows CI
 
 on:
   push:
@@ -8,8 +8,21 @@ on:
 jobs:
   validate:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: Tokenomics-OpenCode-Desktop
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Evidence capture contracts
+        shell: powershell
+        run: |
+          python tools/evidence.py validate
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          python tests/evidence_test.py
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Structural validation
         shell: powershell
         run: .\scripts\validate.ps1

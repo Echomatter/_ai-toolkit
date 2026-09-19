@@ -1,6 +1,8 @@
-.state/*
-!.state/.gitkeep
+**/.state/**
+!**/.state/.gitkeep
 *.log
-.content-index/
+**/.content-index/
 __pycache__/
 *.pyc
+*.lock
+node_modules/

@@ -1,4 +1,4 @@
-name: Runtime verification
+name: Tokenomics runtime verification
 
 on:
   push:
@@ -11,6 +11,9 @@ permissions:
 jobs:
   runtime:
     runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: Tokenomics-OpenCode-Desktop
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -39,10 +42,10 @@ jobs:
       - name: Archive tested revision
         if: always()
         shell: pwsh
-        run: git archive --format=zip --output=toolkit-source.zip HEAD
+        run: git archive --format=zip --output=tokenomics-v1-source.zip HEAD
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: toolkit-source-${{ github.sha }}
-          path: toolkit-source.zip
+          name: tokenomics-v1-source-${{ github.sha }}
+          path: Tokenomics-OpenCode-Desktop/tokenomics-v1-source.zip
           retention-days: 7
