@@ -20,15 +20,15 @@ $delegateCmd = Join-Path $ToolkitRoot 'opencode\commands\delegate.md'
 try { $st = Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json } catch { Fail 'state is malformed JSON'; $st = $null }
 if ($st) { Pass 'routing state is well-formed JSON' }
 
-# D1: worker agent files exist and the generated model matches state.worker.
+# D1: worker agent files exist and do not hard-pin a provider model.
 try {
     if (-not (Test-Path -LiteralPath $workerTemplate)) { Fail 'D1 worker template missing' }
     elseif (-not (Test-Path -LiteralPath $workerGenerated)) { Fail 'D1 generated worker agent missing' }
     else {
         Pass 'D1 worker template and generated agent present'
         $wg = Get-Content -LiteralPath $workerGenerated -Raw -Encoding UTF8
-        if ($st -and $wg.Contains("model: $($st.worker)")) { Pass 'D1 generated worker uses state worker model' }
-        else { Fail 'D1 generated worker model does not match state.worker' }
+        if ($wg -notmatch '(?m)^model:\s*') { Pass 'D1 generated worker inherits the invoking model' }
+        else { Fail 'D1 generated worker still hard-pins a model' }
     }
 } catch { Fail ("D1 worker files error: " + $_.Exception.Message) }
 
@@ -70,8 +70,8 @@ try {
         foreach ($w in $webMarks) { if ($dt.Contains($w)) { $foundWeb += $w } }
         if ($foundWeb.Count -eq 0) { Pass 'D5 delegate tool performs no live web research' }
         else { Fail ("D5 delegate tool references web: " + ($foundWeb -join ', ')) }
-        if ($dt.Contains('ADAPTER POINT')) { Pass 'D5 runtime-injection adapter point present' }
-        else { Fail 'D5 adapter point marker missing' }
+        if ($dt -notmatch '(?i)statically pinned|ADAPTER POINT') { Pass 'D5 delegate tool has no static model-lock contract' }
+        else { Fail 'D5 delegate tool still advertises a static model lock' }
         if ($dt.Contains('select-model.ps1')) { Pass 'D5 delegate tool invokes deterministic selector' }
         else { Fail 'D5 delegate tool does not invoke select-model.ps1' }
     }

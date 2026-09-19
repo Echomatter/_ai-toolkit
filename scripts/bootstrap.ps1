@@ -84,7 +84,8 @@ function Remove-LegacyToolkitArtifacts {
         'bounded-experiment','change-audit','cost-aware-routing','evidence-ledger',
         'external-research','github-ops','handoff-brief','local-first-escalation',
         'local-repo-research','model-advisor','model-escalation','model-routing',
-        'public-repo-research','repo-reorient','content-index-research','task-contract','workspace-map'
+        'public-repo-research','repo-reorient','content-index-research','task-contract','workspace-map',
+        'enhanced-explore'
     )
 
     foreach ($name in $knownToolkitSkills) {

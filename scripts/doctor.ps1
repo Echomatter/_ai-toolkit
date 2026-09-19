@@ -32,7 +32,7 @@ if($gh){
   if($LASTEXITCODE -eq 0){ OK 'GitHub CLI authenticated.' } else { WARN 'GitHub CLI is installed but not authenticated; run gh auth login.' }
 }else{ WARN 'GitHub CLI not found; remote GitHub work will be unavailable.' }
 
-$skills=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief')
+$skills=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief','enhanced-explore')
 foreach($s in $skills){ $p=Join-Path $env:USERPROFILE ".agents\skills\$s\SKILL.md"; if(Test-Path -LiteralPath $p){OK "skill installed: $s"}else{FAIL "skill missing: $s"} }
 
 
@@ -139,11 +139,13 @@ Write-Output ''
 Write-Output '--- Advisor diagnostics ---'
 $eligibleCount = 0
 $opencodeFreeCount = 0
+$opencodeGoCount = 0
 $openaiOauthCount = 0
 $copilotOauthCount = 0
 if($roster){ $eligibleCount = @($roster.eligible_models).Count }
 if($st){
     $opencodeFreeCount = $st.eligible.opencode_free
+    $opencodeGoCount = $st.eligible.opencode_go
     $openaiOauthCount = $st.eligible.openai_oauth
     $copilotOauthCount = $st.eligible.github_copilot_oauth
 }
@@ -201,6 +203,7 @@ Write-Output ""
 Write-Output "OpenAI OAuth: $(if($st.oauth.openai){'detected'}else{'absent'})"
 Write-Output "Copilot OAuth: $(if($st.oauth.github_copilot){'detected'}else{'absent'})"
 Write-Output "OpenCode free models: $opencodeFreeCount"
+Write-Output "OpenCode Go models: $opencodeGoCount"
 Write-Output ""
 # Roster age is availability age only - never evidence freshness.
 $rosterFreshness = 'current'

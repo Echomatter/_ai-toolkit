@@ -1,24 +1,44 @@
 import { tool } from "@opencode-ai/plugin"
 import path from "path"
 import fs from "fs"
+import { spawn } from "node:child_process"
 
 type Ctx = { directory: string; worktree?: string }
 
+function runCommand(cmd: string[], cwd: string): Promise<{ stdout: string; stderr: string; code: number }> {
+  return new Promise((resolve, reject) => {
+    const [file, ...args] = cmd
+    const child = spawn(file, args, { cwd, stdio: ["ignore", "pipe", "pipe"] })
+    let stdout = ""
+    let stderr = ""
+    if (child.stdout) child.stdout.on("data", (d) => { stdout += d.toString() })
+    if (child.stderr) child.stderr.on("data", (d) => { stderr += d.toString() })
+    child.on("error", (err) => reject(err))
+    child.on("close", (code) => resolve({ stdout, stderr, code: code ?? 1 }))
+  })
+}
+
 async function run(args: string[], cwd: string) {
-  const candidates: string[][] = [
-    ["python", ...args],
-    ["py", "-3", ...args],
-    ["python3", ...args],
+  const candidates: string[][] = [["python", ...args]]
+  const userProfile = process.env.USERPROFILE || ""
+  const localAppData = process.env.LOCALAPPDATA || path.join(userProfile, "AppData", "Local")
+  const programFiles = process.env.ProgramFiles || "C:\\Program Files"
+  const pythonRoots = [
+    path.join(localAppData, "Programs", "Python", "Python313", "python.exe"),
+    path.join(localAppData, "Programs", "Python", "Python312", "python.exe"),
+    path.join(programFiles, "Python313", "python.exe"),
+    path.join(programFiles, "Python312", "python.exe"),
   ]
+  for (const executable of pythonRoots) {
+    if (fs.existsSync(executable)) candidates.push([executable, ...args])
+  }
+  const pyLauncher = path.join(process.env.WINDIR || "C:\\Windows", "py.exe")
+  if (fs.existsSync(pyLauncher)) candidates.push([pyLauncher, "-3", ...args])
+  candidates.push(["py", "-3", ...args], ["python3", ...args])
   let last = ""
   for (const cmd of candidates) {
     try {
-      const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" })
-      const [stdout, stderr, code] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-        proc.exited,
-      ])
+      const { stdout, stderr, code } = await runCommand(cmd, cwd)
       if (code === 0) return stdout.trim()
       last = stderr.trim() || stdout.trim() || `exit ${code}`
     } catch (err) {
@@ -30,14 +50,12 @@ async function run(args: string[], cwd: string) {
 
 async function gitIndexPath(root: string) {
   try {
-    const proc = Bun.spawn(["git", "rev-parse", "--git-path", "opencode-content-index.sqlite"], {
-      cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
-    })
-    const stdout = (await new Response(proc.stdout).text()).trim()
-    const code = await proc.exited
-    if (code === 0 && stdout) return path.resolve(root, stdout)
+    const { stdout, code } = await runCommand(
+      ["git", "rev-parse", "--git-path", "opencode-content-index.sqlite"],
+      root,
+    )
+    const trimmed = stdout.trim()
+    if (code === 0 && trimmed) return path.resolve(root, trimmed)
   } catch {}
   return path.join(root, ".content-index", "Project_Content_Index.sqlite")
 }

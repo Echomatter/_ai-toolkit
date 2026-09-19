@@ -1,16 +1,25 @@
 import { tool } from "@opencode-ai/plugin"
 import path from "path"
 import fs from "fs"
+import { spawn } from "node:child_process"
 
 type Ctx = { directory: string; worktree?: string }
 
-// Phase 0 gate: OpenCode agents use statically pinned models. A custom tool
-// cannot spawn a child session with an arbitrary per-invocation model. This
-// tool therefore implements the selector/delegation interface cleanly: it runs
-// the deterministic evidence-aware selector and returns the selected model
-// plus honest execution guidance. True runtime model injection (if OpenCode
-// ever supports it) plugs in at the ADAPTER POINT below without changing
-// the selection contract.
+function runCommand(cmd: string[], cwd: string): Promise<{ stdout: string; stderr: string; code: number }> {
+  return new Promise((resolve, reject) => {
+    const [file, ...args] = cmd
+    const child = spawn(file, args, { cwd, stdio: ["ignore", "pipe", "pipe"] })
+    let stdout = ""
+    let stderr = ""
+    if (child.stdout) child.stdout.on("data", (d) => { stdout += d.toString() })
+    if (child.stderr) child.stderr.on("data", (d) => { stderr += d.toString() })
+    child.on("error", (err) => reject(err))
+    child.on("close", (code) => resolve({ stdout, stderr, code: code ?? 1 }))
+  })
+}
+
+// The selector is an AI-delegation advisor only. User-invoked routes inherit
+// the initiating model and must not be blocked by selector availability.
 
 async function runSelector(psArgs: string[], cwd: string) {
   const candidates: string[][] = [
@@ -20,12 +29,7 @@ async function runSelector(psArgs: string[], cwd: string) {
   let last = ""
   for (const cmd of candidates) {
     try {
-      const proc = Bun.spawn(cmd, { cwd, stdout: "pipe", stderr: "pipe" })
-      const [stdout, stderr, code] = await Promise.all([
-        new Response(proc.stdout).text(),
-        new Response(proc.stderr).text(),
-        proc.exited,
-      ])
+      const { stdout, stderr, code } = await runCommand(cmd, cwd)
       if (code === 0 && stdout.trim()) return stdout.trim()
       last = stderr.trim() || stdout.trim() || `exit ${code}`
     } catch (err) {
@@ -35,23 +39,9 @@ async function runSelector(psArgs: string[], cwd: string) {
   throw new Error(`Model selector failed: ${last}`)
 }
 
-function readPinnedModel(toolkitRoot: string, role: string): string | null {
-  try {
-    const statePath = path.join(toolkitRoot, "routing", "state.json")
-    if (!fs.existsSync(statePath)) return null
-    const state = JSON.parse(fs.readFileSync(statePath, "utf8"))
-    if (role === "worker" && state.worker) return String(state.worker)
-    if (role === "review" && state.review) return String(state.review)
-    if (role === "index" && state.index) return String(state.index)
-    return null
-  } catch {
-    return null
-  }
-}
-
 export default tool({
   description:
-    "Dynamic delegation advisor. Characterizes a bounded task, calls the deterministic evidence-aware model selector over cached roster/evidence/history, and returns the selected model plus execution guidance. Uses cached evidence only; never performs live web research. OpenCode child agents use statically pinned models, so the result also reports whether the selected model matches the pinned agent (adapter point for future runtime model injection).",
+    "AI-delegation advisor. Characterizes a bounded task, calls the deterministic evidence-aware model selector over cached roster/evidence/history, and returns a cheaper adequate route plus execution guidance. User-invoked routes inherit the initiating model and are never blocked by this advisor. Uses cached evidence only; never performs live web research.",
   args: {
     role: tool.schema
       .enum(["worker", "review", "index"])
@@ -75,6 +65,24 @@ export default tool({
     needsModelDiversity: tool.schema.boolean().optional().describe("Need a different model from the reference (review independence)"),
     excludeModel: tool.schema.string().optional().describe("Exclude this model ID (diversity reference)"),
     currentModel: tool.schema.string().optional().describe("Calling session model ID (stay-put reference)"),
+    expectedInputTokens: tool.schema
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Estimated input tokens for quota-aware economics; omit when unknown"),
+    expectedOutputTokens: tool.schema
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Estimated output tokens for quota-aware economics; omit when unknown"),
+    expectedCacheReadTokens: tool.schema
+      .number()
+      .int()
+      .min(0)
+      .optional()
+      .describe("Estimated cache-read tokens for quota-aware economics; omit when unknown"),
     preferredCostClass: tool.schema
       .enum(["free", "any"])
       .optional()
@@ -112,8 +120,17 @@ export default tool({
     if (args.needsModelDiversity) psArgs.push("-NeedsModelDiversity", "$true")
     if (args.excludeModel) psArgs.push("-ExcludeModel", args.excludeModel)
     if (args.currentModel) psArgs.push("-CurrentModel", args.currentModel)
+    if (typeof args.expectedInputTokens === "number" && args.expectedInputTokens > 0) {
+      psArgs.push("-ExpectedInputTokens", String(Math.floor(args.expectedInputTokens)))
+    }
+    if (typeof args.expectedOutputTokens === "number" && args.expectedOutputTokens > 0) {
+      psArgs.push("-ExpectedOutputTokens", String(Math.floor(args.expectedOutputTokens)))
+    }
+    if (typeof args.expectedCacheReadTokens === "number" && args.expectedCacheReadTokens > 0) {
+      psArgs.push("-ExpectedCacheReadTokens", String(Math.floor(args.expectedCacheReadTokens)))
+    }
     psArgs.push("-Role", role)
-    // Index is always free-biased; other roles honor an explicit free preference.
+    // AI-driven index delegation is free-biased; user-invoked /index does not use this path.
     if (role === "index" || args.preferredCostClass === "free") {
       psArgs.push("-PreferredCostClass", "free")
     }
@@ -128,9 +145,7 @@ export default tool({
       ? `Evidence is ${freshness}; selection used the cache per policy. Run /refresh-model-evidence to refresh, but do not block delegation on it.`
       : null
 
-    const pinned = readPinnedModel(toolkitRoot, role)
     const selected: string = String(sel.selected_model || sel.recommended || "")
-    const modelMatchesPin = !!(pinned && selected && pinned === selected)
 
     const surface: string = String(sel.execution_surface || "")
     let recommendedAgent = role
@@ -140,15 +155,11 @@ export default tool({
       recommendedAgent = "combination"
       canDelegate = true
     } else if (surface === "/models switch") {
-      // Honest adapter behavior: the selected model is not pinned to the role
-      // agent, so a session switch is the only way to run exactly that model.
-      // Delegation to the pinned role agent remains possible as a fallback.
+      // Exact selected-model execution requires an explicit session switch.
       needsSwitch = true
-      canDelegate = modelMatchesPin
-      if (!pinned) canDelegate = false
     } else if (surface === "@deep chunk" && role === "worker") {
-      // Selector evidence favors the Deep-pinned model for this worker task.
-      // Keep the worker role but report the evidence-preferred agent honestly.
+      // Report the evidence-preferred role honestly; its model still comes
+      // from the invoking session unless explicitly switched.
       recommendedAgent = "deep"
       canDelegate = true
     } else if (surface === "@review" && role !== "review") {
@@ -156,10 +167,6 @@ export default tool({
       canDelegate = true
     }
 
-    // ADAPTER POINT for true runtime model injection (Phase 0 gate):
-    // if OpenCode ever supports per-invocation child-session models, replace
-    // the static `recommendedAgent` handoff with a spawn call here using
-    // `selected`, keeping this selection contract unchanged.
     const delegation = {
       role,
       task: args.task,
@@ -174,8 +181,11 @@ export default tool({
       evidence_readiness: sel.evidence_readiness || "UNPOPULATED",
       needs_research: !!sel.needs_research,
       stale_evidence_warning: staleWarning,
-      pinned_agent_model: pinned,
-      model_matches_pin: modelMatchesPin,
+      pinned_agent_model: null,
+      model_matches_pin: false,
+      quota: sel.quota_state || null,
+      consumption_estimate: sel.consumption_estimate || null,
+      abort_verified: false,
       execution_guidance: {
         recommended_agent: recommendedAgent,
         can_delegate_to_agent: canDelegate,
@@ -185,8 +195,10 @@ export default tool({
         action: sel.action || null,
         phases: sel.phases || [],
       },
+      fallback_policy:
+        "On child failure: preserve partial changes for inspection, do not start a competing writer (child abort is unavailable in the installed OpenCode CLI — verified: session supports list/delete only), return control to the parent with the specific unresolved remainder. Record confirmed quota/rate-limit failures via refresh-quota.ps1 -BlockSurface so subsequent routing avoids the exhausted pool.",
       runtime_note:
-        "OpenCode child agents run their statically pinned models. Delegate to the recommended agent; use /models for a session switch only when needs_models_switch is true. Ordinary delegation never triggers web research.",
+        "User-invoked routes inherit the initiating model. AI-driven delegation may use the selector recommendation, but exact selected-model execution requires an explicit /models switch. Ordinary delegation never triggers web research.",
     }
     return JSON.stringify(delegation, null, 2)
   },

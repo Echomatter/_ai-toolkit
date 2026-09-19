@@ -1,6 +1,5 @@
 ---
 description: Record a meaningful completed task outcome for local model-routing history
-agent: build
 ---
 
 # /record-outcome

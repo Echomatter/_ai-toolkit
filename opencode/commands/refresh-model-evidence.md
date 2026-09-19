@@ -1,7 +1,5 @@
 ---
 description: Refresh the model capability evidence database through real current web research
-agent: build
-subagent: true
 ---
 
 # /refresh-model-evidence
@@ -28,7 +26,7 @@ Repopulate `routing/model-evidence.json` with current, sourced capability eviden
 
 3. For each serious candidate, in priority order, run this search loop with the session's `websearch`/`webfetch` tools. Every claim must come from actual retrieval in this run; never from model memory or inference.
 
-   a. Identity first: `websearch "<model> <provider alias> release"` and `webfetch` the provider or catalog page for the exact roster ID. Confirm the version and the hosted surface you are evidencing (OpenCode free, OpenAI OAuth, GitHub Copilot). Prefer evidence measured on the same surface when one exists; never substitute a different SKU/variant silently.
+   a. Identity first: `websearch "<model> <provider alias> release"` and `webfetch` the provider or catalog page for the exact roster ID. Confirm the version and hosted surface (OpenCode free, OpenCode Go, OpenAI OAuth, GitHub Copilot). Provider-qualified overlaps are separate evidence identities; never substitute a different SKU, provider, or variant silently.
    b. Provider evidence: `websearch "<model> <docs|release|benchmarks>"`, then `webfetch` the official documentation/release page for context window, tool support, coding focus, and reasoning controls.
    c. Independent evidence: `websearch "<model> <Terminal-Bench|SWE-bench|DeepSWE|Coding Agent Index|SWE-Atlas> <Artificial Analysis|BenchmarkList|Vals>"`, then `webfetch` at least one independent benchmark article or comparison. Prefer agent-harness runs (CAI v1.5 / TB4) over model-level scores, and version-pinned numbers over aggregate rankings.
    d. Record, do not summarize away: after each fetch, capture the source URL, a `retrieved_at` date, and only the claims that page actually supports (benchmark/harness/version/config). Merge or discard near-duplicate sources before they enter `sources`.

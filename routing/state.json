@@ -1,13 +1,14 @@
 {
     "generated":  true,
-    "generated_at":  "2026-09-18T18:06:37.3275413Z",
-    "available_count":  39,
+    "generated_at":  "2026-09-18T20:10:10.6919610Z",
+    "available_count":  66,
     "oauth":  {
                   "openai":  true,
                   "github_copilot":  true
               },
     "eligible":  {
                      "opencode_free":  7,
+                     "opencode_go":  27,
                      "openai_oauth":  15,
                      "github_copilot_oauth":  15
                  },

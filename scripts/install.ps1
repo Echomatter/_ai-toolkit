@@ -15,7 +15,7 @@ $ErrorActionPreference = 'Stop'
 $ToolkitRoot  = Split-Path -Parent $PSScriptRoot
 $StateDir     = Join-Path $ToolkitRoot '.state'
 $ManifestPath = Join-Path $StateDir 'install-manifest.json'
-$SkillsSrc    = Join-Path $ToolkitRoot '.agents\skills'
+$SkillsSrc    = Join-Path $ToolkitRoot 'skills'
 $SkillsDst    = Join-Path $env:USERPROFILE '.agents\skills'
 $OpenCodeRoot = Join-Path $env:USERPROFILE '.config\opencode'
 $AgentSrc     = Join-Path $ToolkitRoot 'opencode\agents'
@@ -51,11 +51,18 @@ function Remove-PathItem([string]$Path, [switch]$RecurseRegular) {
 
 function Load-Manifest {
     $list = New-Object System.Collections.ArrayList
+    $seenTargets = @{}
     if (Test-Path -LiteralPath $ManifestPath) {
         try {
             $raw = Get-Content -LiteralPath $ManifestPath -Raw
             if ($raw -and $raw.Trim()) {
-                foreach ($e in @($raw | ConvertFrom-Json)) { [void]$list.Add($e) }
+                $entries = $raw | ConvertFrom-Json
+                foreach ($e in @($entries)) {
+                    $target = if ($e.target) { [string]$e.target } else { '' }
+                    if ($target -and $seenTargets.ContainsKey($target)) { continue }
+                    if ($target) { $seenTargets[$target] = $true }
+                    [void]$list.Add($e)
+                }
             }
         } catch {
             Write-Warning "Could not read old install manifest; recognized legacy items will still be handled safely."

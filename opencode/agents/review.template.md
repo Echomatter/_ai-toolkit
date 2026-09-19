@@ -1,7 +1,6 @@
 ---
 description: Independent read-only verifier for consequential changes and explicit audits. Shell/tool approvals inherit the user's OpenCode permission settings.
 mode: subagent
-model: __REVIEW_MODEL__
 steps: 18
 permission:
   edit: deny

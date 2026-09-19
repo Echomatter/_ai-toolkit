@@ -1,6 +1,6 @@
 ---
 name: model-advisor
-description: Evaluate the entire eligible model library for the next phase; recommend one model and at most one fallback; grounded in task fit, current access, and fresh evidence without switching models automatically.
+description: Use when choosing a model for the next phase or evaluating /recommend-model output; compare the entire eligible library, including OpenCode Go, and recommend one model plus at most one fallback without switching models automatically.
 ---
 
 # Model Advisor
@@ -18,6 +18,7 @@ Lane membership (Routine/Deep/Review) may be a weak operational prior. It must n
 Automatic or recommended routes may use only:
 
 - current OpenCode free models;
+- OpenCode Go subscription models;
 - models available through OpenAI OAuth / the user's ChatGPT subscription;
 - models available through GitHub Copilot OAuth / the user's Copilot subscription;
 
@@ -26,9 +27,14 @@ Do not recommend metered API-key providers, OpenRouter, Vercel AI Gateway, or ot
 Treat economics accurately:
 
 - OpenCode free models: currently free, but availability can change.
+- OpenCode Go models: subscription/quota access; preserve the `opencode-go/` provider identity when comparing overlapping model families.
 - OpenAI OAuth and GitHub Copilot OAuth: subscription/quota access, not a per-token API price.
 
 Never claim remaining subscription quota unless a tool actually reports it.
+
+Provider identity is part of the access decision. Keep an `opencode-go/` ID
+provider-qualified even when its model family overlaps an OpenAI or Copilot
+ID; overlapping names do not make those routes interchangeable.
 
 ## Decide what the next phase needs
 
@@ -98,7 +104,7 @@ Resolve the toolkit root from `$HOME\.config\opencode\ai-toolkit-root.txt` when 
 
 If the selector reports `needs_research = true`, collect current web evidence, update `routing/model-evidence.json`, and rerun the selector before finalizing the recommendation.
 
-Execution-surface integrity is mandatory: use `@deep` or `@review` only when the recommended model is actually pinned to that subagent. Otherwise recommend an explicit `/models` switch.
+Execution-surface integrity is mandatory: user-invoked routes inherit the initiating model. AI-driven delegation may recommend `@deep`, `@review`, `@worker`, or `@index` as a cheaper adequate role, but never claim that the recommended model ran unless the session was explicitly switched with `/models`.
 
 ## Inventory the eligible library
 
@@ -109,6 +115,7 @@ Execution-surface integrity is mandatory: use `@deep` or `@review` only when the
    - Copilot model exists but OAuth absent → excluded.
    - Copilot OAuth present → eligible.
    - OpenCode free model → eligible while currently listed.
+   - OpenCode Go model → eligible while currently listed; treat subscription/quota economics separately from OpenCode free and OAuth surfaces.
    - API-key-only provider → excluded from automatic routing.
 3. Load the generated roster from `routing/model-roster.json`.
 4. Load capability evidence from `routing/model-evidence.json`.
@@ -247,6 +254,15 @@ Prefer free/deterministic retrieval before paid reasoning. A provider/quota fail
 - If the remainder of the phase broadly requires stronger reasoning or context, recommend manually switching the current session with `/models`.
 - For independent verification, recommend `@review` or `/audit`; do not switch the implementation session merely to perform review.
 - Never switch the user's model or agent automatically.
+
+### Current-context handoff
+
+When this skill is used from an existing Build session, treat the current
+model as context for stay-put and diversity calculations only. A selector
+recommendation is not an execution claim: agent routes inherit the invoking
+session model, and exact execution on another ID requires an explicit
+`/models` switch. Do not add a model pin to an agent, command, or delegation
+request to force the recommendation.
 
 ## Local empirical task history
 

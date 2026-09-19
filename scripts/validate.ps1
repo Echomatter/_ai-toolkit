@@ -6,7 +6,7 @@ function OK([string]$m){Write-Output "OK:   $m"}
 function F([string]$m){[void]$fail.Add($m);Write-Output "FAIL: $m"}
 function W([string]$m){[void]$warn.Add($m);Write-Output "WARN: $m"}
 
-$required=@('README.md','AGENTS.md','.agents','global','opencode','routing','scripts','tools','docs')
+$required=@('README.md','AGENTS.md','skills','global','opencode','routing','scripts','tools','docs')
 foreach($x in $required){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot $x)){OK "$x present"}else{F "$x missing"}}
 
 # Parse every PowerShell script with the current Windows PowerShell parser before any
@@ -22,8 +22,8 @@ foreach($ps1 in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'scripts') -F
   } else { OK "PowerShell parses: $($ps1.Name)" }
 }
 
-$expected=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief')
-$skillsDir=Join-Path $ToolkitRoot '.agents\skills'
+$expected=@('repo-reorient','local-repo-research','github-ops','change-audit','evidence-ledger','bounded-experiment','model-routing','model-advisor','content-index-research','handoff-brief','enhanced-explore')
+$skillsDir=Join-Path $ToolkitRoot 'skills'
 $actual=@(Get-ChildItem -LiteralPath $skillsDir -Directory | ForEach-Object{$_.Name})
 foreach($s in $expected){$p=Join-Path $skillsDir "$s\SKILL.md";if(Test-Path -LiteralPath $p){OK "skill present: $s"}else{F "skill missing: $s"}}
 foreach($s in $actual){if($expected -notcontains $s){W "unexpected extra skill: $s"}}

@@ -12,7 +12,7 @@ Read-only active-repository search and tracing. Build delegates here when a chil
 
 ## Index — free mixed-corpus retrieval
 
-Use `@index` for exhaustive discovery across project docs, structured data, PDFs, spreadsheets, and archives. It is pinned to the free Build model so paid agents can offload retrieval before spending subscription-model context. The `delegate` tool with `role=index` always applies a free bias.
+Use `/index` or `@index` for exhaustive discovery across project docs, structured data, PDFs, spreadsheets, and archives. User-invoked retrieval inherits the initiating model and does not wait for a free-model assignment. AI-driven delegation through `role=index` may apply a free bias.
 
 Use native Explore for source-code symbols/call paths; Index is for the broader project knowledge/data corpus.
 
@@ -65,7 +65,7 @@ Build uses native `websearch` and `webfetch`. The experimental Scout agent is in
 
 ## Economic boundary
 
-Automatic routing and model advice may use only current OpenCode free models, OpenAI OAuth models, and GitHub Copilot OAuth models. API-key/gateway models are excluded unless the user explicitly changes the policy.
+Automatic routing and model advice may use current OpenCode free models, OpenCode Go subscription models, OpenAI OAuth models, and GitHub Copilot OAuth models. Provider-qualified overlaps remain distinct, so cost/access evidence is not silently transferred between surfaces. API-key/gateway models are excluded unless the user explicitly changes the policy.
 
 See `MODEL-ADVISOR.md` for evidence and recommendation rules.
 

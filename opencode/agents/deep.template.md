@@ -1,7 +1,6 @@
 ---
 description: Explicit strong-model escalation lane. Use when the user deliberately wants the strongest available model regardless of free-first automatic routing. For normal delegated implementation, prefer the delegate tool with @worker instead.
 mode: subagent
-model: __DEEP_MODEL__
 steps: 32
 permission:
   task:

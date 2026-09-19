@@ -12,13 +12,13 @@ Goal: finish the work with the cheapest adequate path without turning routing in
 ## Lanes
 
 - **Build**: native primary agent on the routine/free model. Normal implementation, bounded debugging, tests, and ordinary research.
-- **Explore**: native read-only source-code/repository search and tracing.
-- **Index**: free read-only mixed-corpus retrieval over docs, structured data, PDFs, spreadsheets, archives, and other indexed project sources.
+- **Explore**: native read-only code search/tracing; prefer the `enhanced-explore` skill (index-guided Explore) for where/how code questions.
+- **Index**: read-only mixed-corpus retrieval over docs, structured data, PDFs, spreadsheets, archives, and other indexed non-code sources.
 - **Worker**: generic implementation/reasoning subagent for bounded delegated tasks. The selector chooses which model performs the role; call the `delegate` tool first and invoke the recommended agent.
 - **Deep**: explicit strong-model escalation lane. Reserved for deliberate escalation, not every difficult task.
 - **Review**: independent read-only verification when warranted, seeking model/provider diversity from the implementation.
 
-For public/upstream information use native web tools. For source-code symbols/call paths use Explore. For mixed project content and "find all" work use Index.
+For public/upstream information use native web tools. For source-code symbols/call paths use `enhanced-explore`. For mixed project content and "find all" work use Index.
 
 ## Free-first retrieval
 
@@ -85,6 +85,7 @@ If Review is unavailable, perform a best-effort free verification pass using Bui
 
 Automatic routing may use only:
 - current OpenCode free hosted models;
+- OpenCode Go subscription/quota models, preserving the `opencode-go/` provider identity;
 - ChatGPT subscription models connected through OpenAI OAuth;
 - GitHub Copilot subscription models connected through Copilot OAuth.
 

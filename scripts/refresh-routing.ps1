@@ -3,7 +3,9 @@
   Regenerates OpenCode Build/Index/Deep/Review model assignments from models the user can actually access.
 
 .DESCRIPTION
-  Uses only current OpenCode free SKUs, ChatGPT OAuth, and GitHub Copilot OAuth.
+  Uses current OpenCode free SKUs, OpenCode Go subscription models, ChatGPT OAuth,
+  and GitHub Copilot OAuth. Provider-qualified IDs remain distinct when model
+  families overlap.
   Separately metered API-key/gateway providers are ignored.
   Also regenerates the model roster and the toolkit-managed global OpenCode instructions
   used for conditional next-phase model recommendations.
@@ -78,6 +80,7 @@ function Render-Agent([string]$Name, [string]$OwnModel, [string]$RoutineModel, [
     Write-Utf8NoBom $outputPath $text
 }
 function Surface-For([string]$Model) {
+    if ($Model -match '^opencode-go/') { return 'opencode-go' }
     if ($Model -match '^opencode/') { return 'opencode-free' }
     if ($Model -match '^openai/') { return 'openai-oauth' }
     if ($Model -match '^github-copilot/') { return 'github-copilot-oauth' }
@@ -96,6 +99,7 @@ $available = @($modelCall.Output | ForEach-Object { $_.ToString().Trim() } | Whe
 if ($available.Count -eq 0) { throw 'OpenCode reported no available models. Connect a provider first.' }
 
 $free = @($available | Where-Object { Is-FreeOpenCode $_ })
+$opencodeGo = @($available | Where-Object { $_ -match '^opencode-go/' })
 
 $authText = ''
 try {
@@ -119,7 +123,7 @@ if ($hasCopilotOAuth) {
 # them whenever model-evidence.json + task-history.json yield a better candidate.
 $routineStatic = Pick-Exact $available $policy.routine_priority
 if (-not $routineStatic) { $routineStatic = Pick-First $free }
-$subscriptionModels = @($openai + $copilot)
+$subscriptionModels = @($opencodeGo + $openai + $copilot)
 if (-not $routineStatic) { $routineStatic = Pick-First $subscriptionModels }
 if (-not $routineStatic) { throw 'No eligible non-metered routine model was found.' }
 
@@ -283,6 +287,11 @@ foreach ($m in @($openai | Sort-Object -Unique)) {
     $o.observed = Get-HistoryObserved $m $historyEntriesEarly
     [void]$eligibleModels.Add($o)
 }
+foreach ($m in @($opencodeGo | Sort-Object -Unique)) {
+    $o = New-ModelObject $m 'opencode-go' 'subscription-quota'
+    $o.observed = Get-HistoryObserved $m $historyEntriesEarly
+    [void]$eligibleModels.Add($o)
+}
 foreach ($m in @($copilot | Sort-Object -Unique)) {
     $o = New-ModelObject $m 'github-copilot-oauth' 'subscription-quota'
     $o.observed = Get-HistoryObserved $m $historyEntriesEarly
@@ -300,6 +309,7 @@ $state = [ordered]@{
     }
     eligible = [ordered]@{
         opencode_free = $free.Count
+        opencode_go = $opencodeGo.Count
         openai_oauth = $openai.Count
         github_copilot_oauth = $copilot.Count
     }
@@ -312,7 +322,7 @@ $state = [ordered]@{
     review_is_distinct_model = ($review -ne $deep)
     review_is_independent = ($review -ne $deep) # legacy field: distinct ID, not necessarily different vendor
     desktop_agents = @('build','index','worker','deep','review')
-    policy = 'free OpenCode first -> bounded OAuth subscription escalation; no local engine and no metered API gateways'
+    policy = 'free OpenCode first -> OpenCode Go or bounded OAuth subscription escalation; no local engine and no metered API gateways'
     promotion = 'search/narrow with free tools first; delegate bounded hard chunks to Deep; if paid escalation is unavailable, continue on free Build/index/Explore; full-session switching remains explicit'
 }
 Write-Utf8NoBom $StatePath ($state | ConvertTo-Json -Depth 7)
@@ -330,6 +340,7 @@ $roster = [ordered]@{
     }
     economics = [ordered]@{
         opencode_free = 'currently free hosted model; availability may change'
+        opencode_go = 'OpenCode Go subscription/quota access; provider-qualified IDs remain distinct from overlapping provider IDs'
         openai_oauth = 'ChatGPT subscription/quota access; not API token billing'
         github_copilot_oauth = 'GitHub Copilot subscription/quota access; not API token billing'
     }
@@ -504,4 +515,16 @@ if (-not $evidenceExists) {
     } catch {
         Say '  Evidence      : preserved existing model-evidence.json'
     }
+}
+
+# Best-effort quota telemetry refresh. Never fails the routing refresh:
+# missing telemetry leaves routing on cached/unknown quota state.
+try {
+    $quotaScript = Join-Path $PSScriptRoot 'refresh-quota.ps1'
+    if (Test-Path -LiteralPath $quotaScript) {
+        & $quotaScript -ToolkitRoot $ToolkitRoot
+        Say '  Quota         : telemetry refresh attempted (see .state/quota-state.json)'
+    }
+} catch {
+    Say '  Quota         : telemetry refresh skipped; routing uses cached/unknown quota state'
 }

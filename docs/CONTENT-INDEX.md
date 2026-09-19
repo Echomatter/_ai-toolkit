@@ -33,7 +33,7 @@ Rebuilds are atomic and validated before replacing the stable database.
 
 ## Retrieval policy
 
-Use `@index` freely for exhaustive corpus research. It is pinned to the current free Build model so a paid Deep/Review model can offload retrieval without consuming another paid-model call.
+Use `/index` or `@index` freely for exhaustive corpus research. User-invoked retrieval inherits the initiating model and never waits for a configured free model. AI-driven delegation may use the selector to choose a cheaper adequate route.
 
 For code symbols and call paths, use native `@explore`. For current public information, use native web tools. For mixed project content, use `@index` / `content_index`.
 

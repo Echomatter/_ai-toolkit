@@ -18,7 +18,7 @@ Current generated lanes:
 - Deep: `openai/gpt-6-astra` (explicit strong-model escalation only)
 - Review: `github-copilot/claude-sonnet-5`
 
-Start useful work immediately on the current free Build model. Use `@explore` for source-code search/tracing, `@index` for exhaustive mixed-corpus retrieval, and native web tools for current public information. For bounded delegated implementation, call the `delegate` tool first and invoke the recommended agent (`@worker` normally). Delegate only a narrowed hard chunk to `@deep` after the escalation criteria in `model-routing` are met, or when the user explicitly requests the strongest model. Use `@review` or `/audit` for independent verification.
+Start useful work immediately on the model that received the request. Use `@explore` for source-code search/tracing, `/index` or `@index` for exhaustive mixed-corpus retrieval, and native web tools for current public information. User-invoked routes inherit the initiating model. For AI-driven bounded delegation, call the `delegate` tool first and invoke the recommended role. Never block a user request on a missing or exhausted model.
 
 Do not announce routing tiers before doing work. Do not automatically switch the user's current model.
 
@@ -28,7 +28,7 @@ If a Deep, Review, or Worker invocation ultimately fails because of quota/rate/p
 
 ## Delegation
 
-Roles are stable; models are dynamically selected. The `delegate` tool calls the deterministic evidence-aware selector over cached roster/evidence/history and returns the selected model plus execution guidance. Ordinary delegation uses cached evidence only and never triggers web research. If the result carries a stale-evidence warning on a consequential task, report the limitation but proceed; only `/refresh-model-evidence` performs live research. If `needs_models_switch` is true, the selected model is not pinned to any child agent: advise a manual `/models` switch rather than pretending delegation ran that model. Whole-session model changes always remain explicit user actions.
+User-invoked commands, agents, skills, and tools inherit the model that received the request. AI-driven delegation may call `delegate` to consult the deterministic evidence-aware selector and identify a cheaper adequate route. Selection is advisory; an unavailable or exhausted model must never block the task. Ordinary delegation uses cached evidence only and never triggers web research. Only `/refresh-model-evidence` performs live research. Whole-session model changes remain explicit user actions.
 
 ## Lane assignment vs recommendation invariant
 
@@ -63,7 +63,7 @@ If the current model remains adequate, the next phase is unclear, or the differe
 
 For an explicit model question or an ambiguous high-value choice, load `model-advisor` or use `/recommend-model`. The advisor must invoke the deterministic `scripts/select-model.ps1` engine rather than manually choosing from lane labels. If the selector reports missing/stale evidence for a consequential decision, research current sources, refresh evidence, and rerun the selector. Never turn an ordinary completion into a benchmark report.
 
-When making an end-of-task next-model recommendation, use the deterministic selector when practical. Never recommend `@deep` or `@review` for a model that is not actually pinned to that subagent; recommend a manual `/models` switch instead.
+When making an end-of-task next-model recommendation, use the deterministic selector when practical. Never claim that a role ran on a selected model unless the session was explicitly switched with `/models`.
 
 ## Workstyle
 

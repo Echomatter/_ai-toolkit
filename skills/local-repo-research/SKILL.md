@@ -9,7 +9,7 @@ Goal: make the local workspace searchable prior art without turning research int
 
 ## Procedure
 
-1. Decide whether the question is **current-repo tracing** or **cross-repo prior-art search**. For routine current-repo orientation, prefer `repo-reorient`; use this skill when real investigation is needed.
+1. Decide whether the question is **current-repo tracing** or **cross-repo prior-art search**. For routine current-repo orientation, prefer `repo-reorient`; for current-repo code tracing, use `enhanced-explore`; use this skill when real cross-repo investigation is needed.
 2. For cross-repo work, enumerate likely sibling Git repos shallowly from the workspace root. Do not crawl the entire drive or generated/vendor/cache trees.
 3. Prefer deterministic search first: LSP/find-references for a known symbol; otherwise `rg`, filename/glob search, manifests, and targeted `git log/blame`.
 4. Search by concept as well as exact names when looking for something solved elsewhere (format signatures, UI behavior, parser patterns, DSP terms, file extensions, test names).

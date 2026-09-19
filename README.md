@@ -12,11 +12,11 @@ OpenCode's Scout agent is experimental in the stable line and is **not required*
 
 ### Desktop agents
 
-- **Build** — OpenCode's native primary ID, pinned to the current free/routine model. Shell/tool approval behavior inherits your OpenCode permission settings.
-- **Index** — free read-only helper for exhaustive mixed-corpus discovery through the deterministic project content index.
-- **Worker** — generic implementation/reasoning subagent for bounded delegated tasks. Its model is chosen by the evidence-aware selector; use the `delegate` tool to confirm the best model/agent per task.
-- **Deep** — explicit strong-model escalation subagent. Reserved for deliberate escalation (user request, failed adequate-model attempts, or genuinely beyond-free reasoning).
-- **Review** — independent read-only subagent, preferably on a different provider/model.
+- **Build** — OpenCode's native primary ID. User-invoked commands inherit the model that received the request. Shell/tool approval behavior inherits your OpenCode permission settings.
+- **Index** — read-only helper for docs/data discovery through the deterministic project content index; code tracing belongs to `enhanced-explore`.
+- **Worker** — generic implementation/reasoning subagent for bounded delegated tasks. AI-driven delegation may consult the evidence-aware selector; user-invoked work is never blocked by that selection.
+- **Deep** — explicit strong-model escalation role. AI-driven routing may recommend it, but a missing or exhausted model never blocks a user request.
+- **Review** — read-only verification role. User-invoked reviews run on the initiating model.
 
 OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 
@@ -32,6 +32,7 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 - `model-advisor`
 - `content-index-research`
 - `handoff-brief`
+- `enhanced-explore`
 
 ### Commands
 
@@ -43,7 +44,7 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 - `/recommend-model` — characterize the task, invoke the deterministic evidence-aware selector, and recommend the best current model without switching it.
 - `/refresh-model-evidence` — refresh sourced model capability evidence through current web research.
 - `/record-outcome` — record a meaningful task result so local success, retries, escalation, and later review defects can influence future routing.
-- `/index` — run the free corpus-retrieval helper for exhaustive project-content discovery.
+- `/index` — run the corpus-retrieval helper for docs/data discovery; for code tracing use `enhanced-explore`.
 - `/delegate` — characterize a bounded child task and recommend the best model/agent combination without switching the session model.
 
 ## Routing and promotion
@@ -61,7 +62,7 @@ OpenCode Desktop loads these from `%USERPROFILE%\.config\opencode\agents\`.
 
 `routing/model-roster.json` is regenerated from the models and non-metered access surfaces OpenCode can actually see. Capability claims live separately in `routing/model-evidence.json`; empirical outcomes live in `routing/task-history.json`. Roles are stable agent definitions; the model behind a delegated role is selected dynamically by `scripts/select-model.ps1`, which remains the single source of capability truth. Free-first means cheapest adequate: free models are preferred when evidence says they are adequate, and subscription models are selected when task requirements justify them.
 
-Eligible automatic/recommended surfaces are OpenCode free models, OpenAI OAuth/ChatGPT subscription models, and GitHub Copilot OAuth models. Separately metered API gateways are excluded.
+Eligible automatic/recommended surfaces are OpenCode free models, OpenCode Go subscription models, OpenAI OAuth/ChatGPT subscription models, and GitHub Copilot OAuth models. Provider-qualified IDs remain distinct when the same base model appears on multiple surfaces. Separately metered API gateways are excluded.
 
 ## Install / refresh
 

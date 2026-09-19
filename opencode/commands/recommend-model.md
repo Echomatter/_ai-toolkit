@@ -1,7 +1,5 @@
 ---
 description: Recommend the best currently available model for the next phase without switching models automatically
-agent: build
-subagent: true
 ---
 
 # /recommend-model
@@ -64,8 +62,8 @@ Use the toolkit's deterministic evidence-aware selector as the source of truth. 
    If web research cannot be performed, report that the recommendation is provisional. Do not pretend missing evidence is current.
 
 6. Execution-surface integrity is mandatory:
-   - `@deep` is valid only when the recommended model is the model currently pinned to Deep.
-   - `@review` is valid only when the recommended review model is currently pinned to Review.
+   - user-invoked `@deep` and `@review` inherit the current session model;
+   - exact execution on the recommended model requires an explicit `/models` switch.
    - otherwise recommend a manual `/models` switch.
    - `needs_writes = true` can never be satisfied solely through read-only Review.
 
@@ -79,7 +77,7 @@ Return:
 Recommended: <model>
 
 Access:
-<free / ChatGPT OAuth / Copilot OAuth>
+<free / OpenCode Go subscription / ChatGPT OAuth / Copilot OAuth>
 
 Why:
 - task-specific evidence-backed reason

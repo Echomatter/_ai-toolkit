@@ -16,5 +16,5 @@ This repository is a thin workflow layer around OpenCode. Do not rebuild capabil
 - If a paid Deep/Review lane fails for quota/rate/provider/auth availability, do not loop or jump to metered APIs; continue on free Build/retrieval tools and report only the unresolved remainder.
 - Model recommendations should be sparse, task-specific, and evidence-informed. `/recommend-model` is the explicit advisor path.
 - Preserve user-authored global OpenCode instructions outside the toolkit-managed block in `~/.config/opencode/AGENTS.md`.
-- Automatic routes may use only OpenCode free, OpenAI OAuth, and GitHub Copilot OAuth surfaces. No separately metered API gateways.
+- Automatic routes may use OpenCode free, OpenCode Go subscription, OpenAI OAuth, and GitHub Copilot OAuth surfaces. No separately metered API gateways. Provider-qualified overlaps remain distinct identities.
 - Validate PowerShell 5.1 syntax and all skill/command/agent mappings before packaging.

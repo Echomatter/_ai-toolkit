@@ -18,7 +18,7 @@ Prefer the index when the user asks for:
 - facts/statistics that are expensive to recover with repeated raw reads;
 - a large project corpus where ordinary grep is likely to miss alternate formats.
 
-For source code symbols/call graphs, prefer native Explore/LSP/grep. Use the content index for the surrounding knowledge/data corpus.
+For source-code symbols/call paths, use `enhanced-explore` (index-guided Explore) instead of raw Explore/LSP/grep alone. Use this skill for the surrounding docs/data corpus.
 
 ## Normal workflow
 

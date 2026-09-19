@@ -1,6 +1,7 @@
 {
   "allowed_surfaces": [
     "opencode-free",
+    "opencode-go",
     "openai-oauth",
     "github-copilot-oauth"
   ],
@@ -53,7 +54,8 @@
     "opencode/mimo-v2.5-free"
   ],
   "notes": [
-    "OpenCode free-model availability changes; refresh-routing only chooses IDs that opencode models currently reports.",
+    "OpenCode free-model availability changes; refresh-routing chooses only IDs currently reported by opencode models.",
+    "OpenCode Go models are subscription/quota access and remain provider-qualified even when their base model overlaps OpenAI or Copilot IDs.",
     "Automatic subscription routing requires OpenAI OAuth and/or GitHub Copilot OAuth to appear in opencode auth list; API-key or environment-only credentials are ignored.",
     "GitHub Copilot gpt-5.6-* is temporarily excluded from automatic routing because current OpenCode/Copilot builds have reported integration failures for that family.",
     "OpenCode Scout is experimental in the stable line and is not required; Build uses native web tools for external research.",

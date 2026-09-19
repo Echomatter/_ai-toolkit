@@ -27,6 +27,7 @@ $all = @($modelCall.Output | Where-Object { $_.ToString().Trim() -match '^[A-Za-
 $all | Where-Object {
     $_ -match '^openai/' -or
     $_ -match '^github-copilot/' -or
+    $_ -match '^opencode-go/' -or
     $_ -eq 'opencode/big-pickle' -or
     $_ -match '^opencode/.+(-free|contributor-free)$'
 }

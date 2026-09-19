@@ -27,7 +27,7 @@ OpenCode Desktop
 
 OpenCode owns the execution harness, provider/model plumbing, `/models`, tools, permissions, context management, and child sessions. The toolkit does not duplicate those systems.
 
-Roles and models are separate concerns. A role defines purpose, prompt, permissions, tool access, and delegation topology; the model behind a delegated role is selected dynamically from the currently eligible roster by the deterministic evidence-aware selector (`scripts/select-model.ps1`), which combines `routing/model-roster.json`, `routing/model-evidence.json`, and `routing/task-history.json`. Because OpenCode pins one model per agent definition, per-task selection is expressed through the `delegate` tool's recommended agent plus a pinned-model match report, with a narrow adapter point reserved for true runtime model injection later. The deterministic selector remains the source of truth; the LLM never manually ranks models from memory.
+Roles and models are separate concerns. A role defines purpose, prompt, permissions, tool access, and delegation topology. User-invoked commands and agents inherit the model that received the request; they do not depend on a configured model ID. AI-driven delegation may consult the deterministic evidence-aware selector (`scripts/select-model.ps1`) to identify the cheapest adequate route, but selection is advisory and must never make an unavailable model a prerequisite. The LLM never manually ranks models from memory.
 
 The Desktop app loads the toolkit's Build/Index/Worker/Deep/Review definitions through `~/.config/opencode/agents/`. Custom slash commands are installed in `~/.config/opencode/commands/`.
 

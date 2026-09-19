@@ -62,7 +62,7 @@ $dexRepair = $null
 try {
     $dexReviewOnly = Invoke-Selection @('code_review','independent_verification','long_context_reading') $false $false 500000 $false $true $false
     if ($dexReviewOnly.execution_surface -eq '@review') {
-        if ($dexReviewOnly.recommended -eq $st.review) { Pass 'E3 @review surface matches the pinned Review model' }
+        if ($dexReviewOnly.recommended -eq $st.review) { Pass 'E3 @review surface matches the configured Review role' }
         else { Fail 'E3 @review would execute a different model than the recommendation' }
     } elseif ($dexReviewOnly.execution_surface -eq '/models switch' -or $dexReviewOnly.execution_surface -eq 'build') {
         Pass ("E3 review-only uses honest surface for selected model (" + $dexReviewOnly.execution_surface + ")")
@@ -238,7 +238,7 @@ try {
 # E11: index/free-fallback lane stays on the routine hosted-free model.
 try {
     if($st.index -eq $st.routine -and $st.free_fallback -eq $st.routine -and $st.routine -match '^opencode/'){
-        Pass 'E11 Index and free fallback are pinned to hosted-free Routine'
+        Pass 'E11 Index and free fallback remain hosted-free routing preferences'
     } else {
         Fail ("E11 index/free fallback mismatch: routine=" + $st.routine + " index=" + $st.index + " fallback=" + $st.free_fallback)
     }

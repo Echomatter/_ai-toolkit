@@ -1,6 +1,5 @@
 ---
 description: Recommend the best model/agent for a bounded child task without switching the session model
-agent: build
 ---
 
 # /delegate
@@ -23,7 +22,7 @@ Use the toolkit's `delegate` custom tool to characterize a bounded task and reco
 
 5. Follow the execution guidance honestly:
    - `can_delegate_to_agent: true` — invoke the recommended agent (`@worker`, `@deep`, `@review`, `@index`) with the bounded task.
-   - `needs_models_switch: true` — the selected model is not pinned to any child agent. Advise a manual `/models` switch; do not pretend delegation ran that model.
+   - `needs_models_switch: true` — the selected model differs from the current session. Advise a manual `/models` switch; do not pretend delegation ran that model.
    - `recommended_agent: combination` — preserve the phase split (diagnosis/review first, then implementation/repair). `needs_writes = true` can never be satisfied solely through read-only Review.
    - If a stale-evidence warning is present on a consequential task, report the limitation but proceed; only `/refresh-model-evidence` performs live research.
 
@@ -39,8 +38,7 @@ Access: <free / ChatGPT OAuth / Copilot OAuth>
 Adequacy: <strong / adequate / weak / unknown>
 
 Recommended agent: <@worker / @deep / @review / @index / combination>
-Pinned agent model: <model or "no pin found">
-Model matches pin: <yes / no>
+Agent model lock: <none>
 
 Fallback: <at most one meaningful alternative>
 
