@@ -44,6 +44,14 @@ try {
  $params.Model='opencode-go/wrong';$rejected=$false
  try { & $script @params|Out-Null } catch { $rejected=$true }
  Check $rejected 'wrong-model outcome rejected'
+ $prior=(Get-FileHash $history).Hash
+ $params.TaskId='b'*64;$params.Model='opencode/free';$params.Success=$true;$params.Role='review'
+ foreach($status in @('no_qualified_route','paid_permission_declined')) {
+   Save (Join-Path $root ('.state\delegation\'+$params.TaskId+'.json')) @{task_id=$params.TaskId;role='review';status=$status;attempts=@()}
+   $rejected=$false
+   try { & $script @params|Out-Null } catch { $rejected=$true }
+   Check ($rejected-and(Get-FileHash $history).Hash-eq$prior) "unexecuted $status review cannot be recorded as success"
+ }
  Set-Content -LiteralPath $history -Value '{broken';$corrupt=(Get-FileHash $history).Hash;$rejected=$false
  try { & $script @params|Out-Null } catch { $rejected=$true }
  Check ($rejected -and (Get-FileHash $history).Hash -eq $corrupt) 'malformed history preserved unchanged'

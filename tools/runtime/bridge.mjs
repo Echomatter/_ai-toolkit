@@ -32,11 +32,11 @@ export function selectorArguments(args, script) {
   const result = ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', script, '-Role', args.role,
     '-TaskType', (args.taskTypes?.length ? args.taskTypes : [args.role === 'researcher' ? 'research' : args.role === 'architect' ? 'architecture' : args.role === 'review' ? 'code_review' : 'bounded_feature']).join(',')];
   for (const [arg, key] of Object.entries({ needsWrites: 'NeedsWrites', needsTerminal: 'NeedsTerminal', needsWeb: 'NeedsWeb',
-    needsDeepReasoning: 'NeedsDeepReasoning', highConsequenceIfWrong: 'HighConsequence', needsModelDiversity: 'NeedsModelDiversity' })) {
+    needsDeepReasoning: 'NeedsDeepReasoning', highConsequenceIfWrong: 'HighConsequence', needsModelDiversity: 'NeedsModelDiversity', freeOnly: 'FreeOnly' })) {
     if (args[arg]) result.push(`-${key}`, 'true');
   }
   for (const [arg, key] of Object.entries({ minimumContext: 'NeedsLargeContextTokens', currentModel: 'CurrentModel', excludeModel: 'ExcludeModel',
-    expectedInputTokens: 'ExpectedInputTokens', expectedOutputTokens: 'ExpectedOutputTokens', expectedCacheReadTokens: 'ExpectedCacheReadTokens', preferredCostClass: 'PreferredCostClass' })) {
+    expectedInputTokens: 'ExpectedInputTokens', expectedOutputTokens: 'ExpectedOutputTokens', expectedCacheReadTokens: 'ExpectedCacheReadTokens', preferredCostClass: 'PreferredCostClass', reviewMode: 'ReviewMode' })) {
     if (args[arg] !== undefined && args[arg] !== '') result.push(`-${key}`, String(args[arg]));
   }
   if (args.rejected?.length) result.push('-ExcludedModels', args.rejected.join(','));

@@ -42,10 +42,11 @@ async function fixture(t, options = {}) {
   };
   const controller = new AbortController();
   const ctx = { sessionID: 'parent', messageID: 'message', agent: 'build', directory: root, worktree: root,
-    abort: controller.signal, ask: async req => { requests.push({ kind: 'permission', req }); if (options.deny) throw new Error('denied'); }, metadata: () => {} };
+    abort: controller.signal, ask: async req => { requests.push({ kind: 'permission', req }); if (options.deny || (options.denyPaid && req.permission === 'paid_delegate')) throw new Error('denied'); }, metadata: () => {} };
   let choice = 0;
   const service = createDelegator({ client, toolkitRoot: root, directory: root,
     select: async a => {
+      requests.push({ kind: 'select', args: a });
       const index=choice++;
       return { selected_model: options.noRoute ? null : options.models?.[index] || 'opencode-go/model-b', surface: options.surfaces?.[index] || options.surface || 'opencode-go', adequacy: options.adequacy || 'adequate', quota_state: { overage: options.overage } };
     },
@@ -61,6 +62,52 @@ function assistant(id, model, extra = {}) {
     parts: [{ type: 'text', text: 'A verified fixture result, not a live provider result.' }] };
 }
 const args = { role: 'worker', task: 'Perform a bounded task; preserve user changes.', needsWrites: true };
+
+test('freeOnly is forwarded, enforced at dispatch and inherited by descendants', async t => {
+  const f = await fixture(t);
+  const denied = await f.service.execute({ ...args, freeOnly: true }, f.ctx);
+  assert.equal(denied.status, 'free_only_violation');
+  assert.equal(f.requests.find(r => r.kind === 'select').args.freeOnly, true);
+  assert.equal(f.requests.filter(r => r.kind === 'create').length, 0);
+  const g = await fixture(t, { surface: 'opencode-free', models: ['opencode/free'] });
+  await g.service.execute({ ...args, freeOnly: true }, g.ctx);
+  assert.equal(g.sessions.get('child1').metadata.ai_toolkit.freeOnly, true);
+  g.sessions.get('parent').metadata = { ai_toolkit: { selected: 'opencode/free-parent', readOnly: false, freeOnly: true } };
+  await g.service.execute({ ...args, freeOnly: false, task: 'Cannot weaken inherited free constraint' }, { ...g.ctx, messageID: 'new' });
+  assert.equal(g.requests.filter(r => r.kind === 'select').at(-1).args.freeOnly, true);
+  assert.equal(g.requests.filter(r => r.kind === 'permission' && r.req.permission === 'paid_delegate').length, 0);
+});
+
+test('subscription permission precedes creation and rejection never dispatches or retries', async t => {
+  const f = await fixture(t, { denyPaid: true });
+  const result = await f.service.execute(args, f.ctx);
+  assert.equal(result.status, 'paid_permission_declined');
+  assert.equal(result.subscription_request.selected_model, 'opencode-go/model-b');
+  assert.equal(result.subscription_request.status, 'not_granted');
+  assert.equal(result.attempts.length, 0);
+  assert.match(result.result, /NO CHILD RAN/);
+  assert.equal(f.requests.filter(r => r.kind === 'create').length, 0);
+  const g = await fixture(t);
+  await g.service.execute(args, g.ctx);
+  assert.ok(g.requests.findIndex(r => r.req?.permission === 'paid_delegate') < g.requests.findIndex(r => r.kind === 'create'));
+  assert.deepEqual(g.requests.find(r => r.req?.permission === 'paid_delegate').req.patterns, ['opencode-go/model-b']);
+});
+
+test('review defaults to model diversity and no-route cannot imply completed review', async t => {
+  const f = await fixture(t, { noRoute: true });
+  const result = await f.service.execute({ ...args, role: 'review', freeOnly: true }, f.ctx);
+  assert.equal(f.requests.find(r => r.kind === 'select').args.needsModelDiversity, true);
+  assert.equal(result.validation, 'pending');
+  assert.match(result.result, /Do not record success/);
+  assert.equal(result.routing_diagnostics.free_only, true);
+});
+
+test('CLI bridge forwards hard free constraint and specialist review mode', async () => {
+  const { selectorArguments } = await import('../tools/runtime/bridge.mjs');
+  const flags = selectorArguments({ role: 'review', freeOnly: true, reviewMode: 'specialist' }, 'select-model.ps1');
+  assert.equal(flags[flags.indexOf('-FreeOnly') + 1], 'true');
+  assert.equal(flags[flags.indexOf('-ReviewMode') + 1], 'specialist');
+});
 
 test('model parser keeps provider identity and nested model id', () => {
   assert.deepEqual(splitModel('go/vendor/model'), { providerID: 'go', modelID: 'vendor/model' });

@@ -4,7 +4,7 @@ $ErrorActionPreference='Stop'
 if(-not $Live){throw 'Use -Live to authorize a real model request with existing OpenCode authentication.'}
 $root=Split-Path -Parent $PSScriptRoot
 $log=Join-Path $root ('.state\live-'+[guid]::NewGuid().ToString('N')+'.jsonl')
-$prompt='Read-only toolkit integration test. Invoke delegate exactly once with role worker, taskTypes [repo_navigation], needsWrites false, preferredCostClass free, needsModelDiversity true. Task: Read opencode/catalog.json using read and return the exact five skill names. No shell, writes or nested agents. Return the delegate receipt. Do not retry or perform the task yourself.'
+$prompt='Read-only toolkit integration test. Invoke delegate exactly once with role worker, taskTypes [repo_navigation], needsWrites false, freeOnly true, preferredCostClass free, needsModelDiversity true. Task: Read opencode/catalog.json using read and return the exact five skill names. No shell, writes or nested agents. Return the delegate receipt. Do not retry or perform the task yourself.'
 & opencode run --dir $root --agent build --model $ParentModel --format json --title 'Toolkit live cross-model contract' $prompt | Set-Content -LiteralPath $log -Encoding UTF8
 if($LASTEXITCODE-ne 0){throw "OpenCode run failed. Local log: $log"}
 $events=@(Get-Content $log|Where-Object{$_.Trim().StartsWith('{')}|ForEach-Object{$_|ConvertFrom-Json})

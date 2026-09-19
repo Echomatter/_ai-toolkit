@@ -20,6 +20,8 @@ param(
     [string]$LaneHint = '',
     [string]$Role = '',
     [string]$PreferredCostClass = '',
+    $FreeOnly = $false,
+    [ValidateSet('bounded','specialist')][string]$ReviewMode = 'bounded',
     [int]$ExpectedInputTokens = 0,
     [int]$ExpectedOutputTokens = 0,
     [int]$ExpectedCacheReadTokens = 0,
@@ -42,6 +44,10 @@ $bNeedsWeb = To-Bool $NeedsWeb
 $bNeedsDeep = To-Bool $NeedsDeepReasoning
 $bNeedsDiversity = To-Bool $NeedsModelDiversity
 $bHighConseq = To-Bool $HighConsequence
+if ($null -ne $FreeOnly -and "$FreeOnly".Trim().ToLower() -notin @('','0','1','false','true','no','yes','$false','$true','-false','-true')) {
+    throw 'FreeOnly must be true or false; an invalid spending constraint cannot be ignored.'
+}
+$bFreeOnly = To-Bool $FreeOnly
 $roleNorm = ("$Role").Trim().ToLower()
 $prefCost = ("$PreferredCostClass").Trim().ToLower()
 
@@ -50,7 +56,7 @@ $tasks = @()
 foreach ($t in @($TaskType)) {
     if ($null -eq $t) { continue }
     foreach ($part in ("$t".Split(','))) {
-        $p = $part.Trim().ToLower()
+        $p = $part.Trim().ToLower() -replace '[\s-]+','_'
         if ($p -ne '') { $tasks += $p }
     }
 }
@@ -265,6 +271,19 @@ if ($bNeedsDeep -or $bNeedsTerminal -or ($NeedsLargeContextTokens -gt 0) -or $bH
 }
 $isConsequential = ($bNeedsDeep -or $bHighConseq -or ($NeedsLargeContextTokens -ge 200000) -or ($tasks -contains 'architecture') -or ($tasks -contains 'large_refactor') -or (($tasks -contains 'debugging') -and ($tasks -contains 'terminal_heavy')))
 
+# A bounded second opinion requires coding evidence, not an unpopulated review
+# benchmark field. Keep specialist and consequential review requirements strict.
+# This is a task qualification policy, never invented code_review evidence.
+$reviewBasis = $null
+if ($roleNorm -eq 'review') {
+    $reviewBasis = 'specialist_review_evidence'
+    if ($ReviewMode -eq 'bounded' -and -not $isConsequential) {
+        $weights.Remove('code_review')
+        Add-W 'coding' 3.0
+        $reviewBasis = 'bounded_coding_evidence'
+    }
+}
+
 $goIdentity = $null
 try { $goIdentity = Get-Content -LiteralPath (Join-Path $ToolkitRoot 'routing\go-identity-map.json') -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
 function Get-Canonical-Key($Evidence, [string]$RosterId) {
@@ -434,6 +453,9 @@ $excluded = @($ExcludedModels.Split(',') | Where-Object { $_ })
 foreach ($rm in @($roster.eligible_models)) {
     $rid = [string]$rm.id
     $surface = [string]$rm.surface
+    if ($bFreeOnly -and $surface -ne 'opencode-free') {
+        $filtered += [pscustomobject]@{ id=$rid; reason='free_only: subscription surfaces excluded' }; continue
+    }
     if (@($policy.allowed_surfaces) -notcontains $surface -or $excluded -contains $rid) {
         $filtered += [pscustomobject]@{ id=$rid; reason='route excluded by policy or failed attempt' }; continue
     }
@@ -805,6 +827,8 @@ if ($scored.Count -eq 0) {
             note = 'Provider price proxy and normalized capacity are distinct; neither is a literal cash saving.'
         }
         selected_model = $null
+        free_only = $bFreeOnly
+        review_basis = $reviewBasis
         surface = $null
         role = $roleNorm
         adequacy = 'unknown'
@@ -877,6 +901,8 @@ if ($stayPut) {
 # Explain the final selected candidate, not an earlier winner or static lane.
 $why = @()
 $why += $economicReason
+if ($bFreeOnly) { $why += 'free_only: only opencode-free routes may execute; no subscription fallback' }
+if ($reviewBasis -eq 'bounded_coding_evidence') { $why += 'bounded second opinion qualified by coding evidence; specialist review capability is not established' }
 $why += ("task: " + ($tasks -join ' + ') + " | writes=$bNeedsWrites terminal=$bNeedsTerminal large_ctx=$NeedsLargeContextTokens deep=$bNeedsDeep diversity=$bNeedsDiversity consequence=$bHighConseq")
 if ($top.why_caps -ne '') { $why += ("capabilities: " + $top.why_caps) }
 if ($top.bench_notes -ne '') { $why += ("benchmarks (same-version only, harness-noted): " + $top.bench_notes) }
@@ -904,6 +930,8 @@ try {
 } catch { $adequacy = 'unknown' }
 
 $result = [ordered]@{
+    free_only = $bFreeOnly
+    review_basis = $reviewBasis
     recommended = $finalRecommended
     top_scored = $top.id
     access = (Surface-Access $top.surface)

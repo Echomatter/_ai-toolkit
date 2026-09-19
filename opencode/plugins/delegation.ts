@@ -35,6 +35,8 @@ const DelegationPlugin: Plugin = async ({ client, directory }) => {
           expectedOutputTokens: tool.schema.number().int().min(0).optional(),
           expectedCacheReadTokens: tool.schema.number().int().min(0).optional(),
           preferredCostClass: tool.schema.enum(['free', 'any']).optional(),
+          freeOnly: tool.schema.boolean().optional().describe('Hard limit: only OpenCode free routes, including retries and descendants. Set true whenever the user requests free models. preferredCostClass is only a preference.'),
+          reviewMode: tool.schema.enum(['bounded', 'specialist']).optional().describe('Bounded second opinion uses coding evidence; specialist or consequential review requires specialist evidence. Default bounded.'),
           variant: tool.schema.string().optional().describe('A supported reasoning variant for this child only, when explicitly required'),
         },
         async execute(args, context) {

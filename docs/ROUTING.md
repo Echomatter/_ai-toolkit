@@ -26,6 +26,26 @@ Used for difficult plans, tradeoff evaluations, and complex technical questions.
 
 Used for explicit audits and consequential changes. Prefer a different provider/model family from the implementation: pass `needsModelDiversity: true` with `excludeModel` set to the implementation model. If no adequate diverse model is available, return no route and report that independence is unavailable. A same-model review is not cross-model verification.
 
+Review now defaults to model diversity. Ordinary bounded second opinions qualify
+against coding evidence and disclose `review_basis: bounded_coding_evidence`.
+This does not invent a specialist-review rating. `reviewMode: specialist`, deep
+reasoning, and consequential tasks retain the strict specialist capability gate.
+The selector normalizes labels such as `code review` to `code_review`.
+
+`delegate.freeOnly: true` (CLI `-FreeOnly true`) restricts selection, retries and
+managed descendants to the `opencode-free` surface. Go and Copilot subscriptions
+can have economic class zero; that class is not a free-only eligibility rule.
+An unavailable free reviewer produces structured diagnostics and **NO CHILD RAN**,
+not an independent review. Do not record success or relabel parent self-review.
+
+Before a subscription child starts, `delegate` requests OpenCode's native
+`paid_delegate` permission with the selected model, surface and routing reasons.
+Managed agents default this narrow permission to `ask`. OpenCode owns explicit
+user overrides and saved approvals; an intentional Always Allow can suppress later
+prompts for that model. A refusal creates no child and causes no automatic retry.
+Free-only requests never escalate to a subscription permission request. This does
+not prompt for the user's already-selected paid parent model.
+
 ## Session promotion
 
 The toolkit never changes the current session model automatically.

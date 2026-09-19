@@ -171,6 +171,8 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
     if (!agent || !Array.isArray(agent.permission)) throw fault('UnsupportedRuntime', 'Effective role permissions unavailable');
     if (agent.model) throw fault('PinnedRole', 'Remove the helper model pin before dynamic delegation');
     const inherited = await lookup(ctx.sessionID, ctx.directory);
+    const freeOnly = inherited?.freeOnly === true || args.freeOnly === true;
+    const needsModelDiversity = args.needsModelDiversity ?? args.role === 'review';
     const readOnly = inherited?.readOnly || ['researcher', 'review'].includes(parentRole) ||
       ['researcher', 'review'].includes(args.role) || args.needsWrites !== true || noWriteAssignment(args.task) || noWriteAssignment(assignment);
     if (inherited?.readOnly && args.needsWrites) throw fault('PermissionError', 'Read-only parent cannot create a writer');
@@ -198,7 +200,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
       catch (e) { if (e.code === 'EEXIST') throw fault('WriterBusy', 'A managed writer is active or its stop is unverified; inspect the writer lock before proceeding'); throw e; }
     }
     const receipt = { task_id: id, user_task_id: args.userTaskId || `${ctx.sessionID}/${ctx.messageID}`, parent_session: ctx.sessionID, parent_model: parentModel, role: args.role,
-      task_hash: hash(args.task), task_types: args.taskTypes || [], directory: ctx.directory,
+      task_hash: hash(args.task), task_types: args.taskTypes || [], directory: ctx.directory, free_only: freeOnly,
       created_at: stamp(), status: 'running', validation: 'pending', attempts: [] };
     let release = true;
     try {
@@ -207,19 +209,42 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
       for (let n = 0; n < 2; n++) {
         if (ctx.abort?.aborted) throw fault('AbortError', 'Parent cancelled');
         await beforeSelect({ signal: ctx.abort });
-        const selection = await select({ ...args, needsWrites: !readOnly, currentModel: parentModel, rejected }, ctx);
+        const selection = await select({ ...args, freeOnly, needsModelDiversity, needsWrites: !readOnly, currentModel: parentModel, rejected }, ctx);
         const selected = selection?.selected_model;
         if (!selected || !allowed.has(selection.surface) || !['adequate', 'strong'].includes(selection.adequacy)) {
-          receipt.status = 'no_qualified_route'; break;
+          receipt.status = 'no_qualified_route';
+          receipt.routing_diagnostics = { free_only: freeOnly, review_basis: selection?.review_basis,
+            reasons: selection?.reason_codes || [], filtered_out: selection?.filtered_out || [] };
+          break;
         }
+        if (freeOnly && selection.surface !== 'opencode-free') { receipt.status = 'free_only_violation'; break; }
         if (n > 0 && selection.surface !== 'opencode-free') {
           receipt.status = 'subscription_fallback_requires_parent'; break;
         }
         if (selection.quota_state?.overage && policy?.allow_overage !== true) { receipt.status = 'overage_not_authorized'; break; }
         if (rejected.includes(selected)) { receipt.status = 'no_alternative'; break; }
+        if (selection.surface !== 'opencode-free') {
+          receipt.status = 'awaiting_paid_permission';
+          receipt.subscription_request = { selected_model: selected, surface: selection.surface,
+            requested_at: stamp(), status: 'pending' };
+          await atomicJson(receiptFile, receipt);
+          try {
+            await ctx.ask({ permission: 'paid_delegate', patterns: [selected], always: [selected],
+              metadata: { model: selected, surface: selection.surface, role: args.role,
+                reason: (selection.reason_codes || []).join('; '),
+                consumption_estimate: selection.consumption_estimate || null,
+                note: 'Uses subscription capacity. Provider price proxies are not a cash charge estimate.' } });
+          } catch {
+            receipt.status = ctx.abort?.aborted ? 'cancelled' : 'paid_permission_declined';
+            receipt.subscription_request.status = 'not_granted'; break;
+          }
+          receipt.subscription_request.status = 'allowed_by_native_permission';
+          receipt.status = 'running';
+        }
         const model = splitModel(selected);
         const attempt = { selected_model: selected, dispatched_model: null, observed_model: null,
           surface: selection.surface, selection_reasons: selection.reason_codes || [], adequacy: selection.adequacy,
+          review_basis: selection.review_basis || null,
           started_at: stamp(), status: 'starting', abort_verified: null };
         receipt.attempts.push(attempt);
         const permissions = [
@@ -237,7 +262,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
         try {
           child = await call('session', 'create', { query: query(ctx.directory), body: {
             parentID: ctx.sessionID, title: `Toolkit ${args.role} (${id.slice(0, 8)})`, agent: args.role, permission: permissions,
-            metadata: { ai_toolkit: { selected, readOnly } },
+            metadata: { ai_toolkit: { selected, readOnly, freeOnly } },
           } }, ctx.abort);
           if (!child?.id || child.id === ctx.sessionID) throw fault('UnsupportedRuntime', 'Child session was not created');
           attempt.child_session = child.id;
@@ -246,7 +271,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
           if (verify.parentID !== ctx.sessionID || !equalRules(verify.permission, permissions)) {
             throw fault('UnsupportedRuntime', 'Server did not preserve child linkage/permissions; no inference sent');
           }
-          live.set(child.id, { selected, readOnly, directory: ctx.directory });
+          live.set(child.id, { selected, readOnly, freeOnly, directory: ctx.directory });
           ctx.metadata?.({ title: `@${args.role} · ${selected}`, metadata: { sessionId: child.id, parentSessionId: ctx.sessionID, role: args.role, selected_model: selected, model, task_id: id } });
           submitted = true;
           attempt.dispatched_model = selected;
@@ -297,7 +322,9 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
         } finally { if (child?.id && release) live.delete(child.id); }
       }
       await atomicJson(receiptFile, receipt);
-      return { ...receipt, result: 'Return to the unchanged parent. Inspect partial results and the failure classification before further work.' };
+      return { ...receipt, result: receipt.attempts.length === 0
+        ? 'NO CHILD RAN. No independent review or validated outcome exists. Report the status and routing diagnostics. Do not record success or present parent self-review as independent. Keep the parent model unchanged; do not retry the same request or relax free-only/quality requirements silently.'
+        : 'No completed child result. Inspect the listed sessions and partial results. Do not record success or claim independent verification. Keep the parent model unchanged.' };
     } finally {
       if (lock) { await lock.close(); if (release) await unlink(lockPath).catch(() => {}); }
     }

@@ -3,6 +3,7 @@ description: Plan difficult changes, evaluate tradeoffs, and solve complex archi
 mode: subagent
 steps: 32
 permission:
+  paid_delegate: ask
   task:
     "*": deny
     explore: allow

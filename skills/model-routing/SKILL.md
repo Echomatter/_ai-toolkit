@@ -19,11 +19,19 @@ Build is our customized parent. Worker implements bounded work. Architect resolv
 
 Reorient's required Researcher/Worker handoff remains. Other tasks do not need every helper. Prefer a capable distinct model family for independent review when available; do not pretend a same-model review is cross-model verification.
 
+For a bounded independent code review, call `delegate` with `role: review`, canonical `taskTypes: [code_review]`, and the actual requirements and files to inspect. Review defaults to a different canonical model from the parent; pass `excludeModel` for the implementation model if it differs from the parent. Do not lead the reviewer toward a desired verdict. Default bounded review qualifies from known coding evidence; it does not establish specialist review ability. Use `reviewMode: specialist` or the applicable consequence/deep-reasoning flags for stronger review requirements.
+
+When the user asks for free models, set `freeOnly: true` on every applicable delegation, including follow-up reviews. This is inherited by children. `preferredCostClass: free` is a preference, not a spending limit. The CLI equivalent is `-FreeOnly true` (PowerShell 5.1). No qualifying free model means no child runs; report the diagnostics without silently trying a subscription.
+
 ## Economics and failure
 
 Qualify capability first, then compare expected capacity consumption and scarcity. Unknown evidence is not adequacy. Missing telemetry is not unlimited quota; unknown prices are not free. Use validated task history and labeled workload estimates without making the caller guess tokens. Preserve provider-qualified routes and separate shared pools from model identity.
 
 No separately metered gateways or unapproved overage. A known exhausted pool is not a useful fallback. The tool permits at most one appropriate read-only retry and returns failed writers for inspection. Do not create another writer while the original may still run.
+
+Subscription children request OpenCode's native `paid_delegate` permission after selection and before session creation. Managed agents default this permission to `ask`; explicit user permission rules and saved approvals remain OpenCode's responsibility. The prompt identifies the model and surface. Declining leaves the parent unchanged and does not dispatch a child. Never approve this prompt on the user's behalf.
+
+Require a `completed` receipt with matching selected/dispatched/observed identity before claiming a child reviewed anything. A no-route result or declined permission is not an independent review and cannot be recorded as success. A parent self-review can help but must be labeled as such. Do not repeat the same failed delegation unchanged.
 
 ## Maintenance
 

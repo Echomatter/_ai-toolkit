@@ -3,6 +3,7 @@ description: Own Reorient orientation and broader investigation. Combine the con
 mode: subagent
 steps: 24
 permission:
+  paid_delegate: ask
   edit: deny
   task:
     "*": deny

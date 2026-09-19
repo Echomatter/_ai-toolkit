@@ -9,7 +9,8 @@ function Json([string]$rel,$obj) {
     [IO.File]::WriteAllText($p,(ConvertTo-Json -InputObject $obj -Depth 15),(New-Object Text.UTF8Encoding($false)))
 }
 function Run-Selection($extra=@{}) {
-    $args2=@('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $RepoRoot 'scripts\select-model.ps1'),'-ToolkitRoot',$Root,'-Role','worker')
+    $args2=@('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $RepoRoot 'scripts\select-model.ps1'),'-ToolkitRoot',$Root)
+    if (-not $extra.ContainsKey('Role')) { $args2 += @('-Role','worker') }
     # Append separately: PS 5.1's array/comma precedence must not join a flag and value.
     foreach ($k in $extra.Keys) { $args2 += ('-' + [string]$k); $args2 += [string]$extra[$k] }
     $raw = & powershell.exe @args2
@@ -136,6 +137,33 @@ try {
     $ordinary=Run-Selection @{TaskType='simple_edit'}
     $consequential=Run-Selection @{TaskType='architecture'}
     Check ($ordinary.selected_model-eq'opencode/free'-and$consequential.selected_model-eq'openai/other'-and($consequential.reason_codes-join' ')-match'capability advantage') 'stronger subscription wins only when a consequential task warrants the measured advantage'
+    $hardFree=Run-Selection @{TaskType='architecture';FreeOnly='true'}
+    Check ($hardFree.selected_model-eq'opencode/free'-and$hardFree.free_only-and@($hardFree.ranking|Where-Object {$_.id-ne'opencode/free'}).Count-eq 0) 'FreeOnly survives consequential escalation and filters all subscription candidates'
+    $roster.eligible_models=@(@{id='opencode-go/cheap';surface='opencode-go'},@{id='github-copilot/example';surface='github-copilot-oauth'})
+    Json 'routing\model-roster.json' $roster
+    Json '.state\quota-state.json' (State 20)
+    $noneFree=Run-Selection @{FreeOnly='true'}
+    Check ($null-ne$noneFree-and$null-eq$noneFree.selected_model-and$noneFree.free_only-and@($noneFree.filtered_out).Count-eq 2) 'healthy economic-class-zero subscriptions cannot satisfy FreeOnly; no route is structured'
+    $falseFree=Run-Selection @{FreeOnly='false'}
+    Check ($falseFree.selected_model-and-not$falseFree.free_only) 'PowerShell 5.1 CLI parses false as false'
+    $invalidFreeRejected=$false
+    try { & (Join-Path $RepoRoot 'scripts\select-model.ps1') -ToolkitRoot $Root -FreeOnly 'tru' | Out-Null } catch { $invalidFreeRejected=$true }
+    Check $invalidFreeRejected 'invalid FreeOnly input fails closed instead of spending subscription quota'
+    $reviewCaps=@{};foreach($key in $goodCaps.Keys){$reviewCaps[$key]=$goodCaps[$key]}
+    $reviewCaps.Remove('code_review')
+    $models['opencode/free'].capabilities=$reviewCaps
+    $roster.eligible_models=@(@{id='opencode/free';surface='opencode-free'},@{id='openai/other';surface='openai-oauth'})
+    Json 'routing\model-roster.json' $roster
+    Json 'routing\model-evidence.json' @{models=$models;alias_index=$aliases}
+    $bounded=Run-Selection @{Role='review';TaskType='code review,token economics';FreeOnly='true';NeedsModelDiversity='true';CurrentModel='openai/other'}
+    Check ($bounded.selected_model-eq'opencode/free'-and$bounded.review_basis-eq'bounded_coding_evidence') 'bounded independent review uses known coding evidence and normalizes natural task labels'
+    $specialist=Run-Selection @{Role='review';TaskType='code_review';ReviewMode='specialist';FreeOnly='true'}
+    $consequenceReview=Run-Selection @{Role='review';TaskType='code_review';HighConsequence='true';FreeOnly='true'}
+    Check ($null-eq$specialist.selected_model-and$null-eq$consequenceReview.selected_model) 'specialist and consequential review still reject unknown review evidence'
+    $reviewCaps['coding']=@{rating='unknown';confidence='low'}
+    Json 'routing\model-evidence.json' @{models=$models;alias_index=$aliases}
+    $unknownCoding=Run-Selection @{Role='review';TaskType='code_review';FreeOnly='true'}
+    Check ($null-eq$unknownCoding.selected_model) 'bounded review still rejects unknown coding evidence'
     $roster.eligible_models=@()
     Json 'routing\model-roster.json' $roster
     $m=Run-Selection

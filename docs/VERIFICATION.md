@@ -1,5 +1,45 @@
 # Verification — 2026-09-19
 
+## Follow-up: free-only review and subscription approval
+
+The user's two review attempts in `ses_f45708efdffeMKWqS0McUcoMrL` returned
+`no_qualified_route` with zero attempts. No independent reviewer ran. The parent's
+claimed successful review/outcome was incorrect; the recorder rejected those
+unexecuted results and did not add false successes.
+
+Repaired the user's FreeOnly addition: PS 5.1 boolean parsing, pre-scoring
+`opencode-free` surface filtering, structured empty results, plugin/bridge wiring,
+dispatch enforcement and inherited child constraints. Invalid CLI flag values fail
+closed. Bounded review now requires known coding evidence and discloses that basis;
+specialist/consequential reviews retain strict review-evidence requirements. Review
+defaults to a distinct canonical model. No capability ratings were invented.
+
+Validation: all eight offline suites passed, including 44 Node runtime/presentation/
+usage tests. The final selector suite passed 33 checks; additional outcome tests
+reject no-route and declined-permission successes without changing history.
+
+Live free validation:
+
+- Nemotron 3.5 Lightning parent -> Muse Spark 1.3 reviewer, completed with matching
+  selected/dispatched/observed identity; scoped static review found no defects.
+  Child `ses_f4531f342ffeotCN1VAniu79rw`: input 36,455, output 1,703, reasoning
+  5,263, cache read 7,394, provider-reported dollars 0. Recorded once as a validated
+  review observation; the parent ran the actual offline checks.
+- A plain-language request, without prescribed tool arguments, made Muse delegate
+  to MiMo v2.5 Free with `freeOnly: true`, role Review and model diversity. It
+  completed its bounded static review without edits or findings. Receipt
+  `98f8bf7082d044dce7196c31281065467f997142035497773edc451cf504c0d0`.
+- Desktop displayed the native permission prompt for `openai/gpt-5.5` before any
+  child creation. Deny produced `paid_permission_declined`, attempts `[]`, and no
+  subscription inference. The initial Desktop test also exercised no-route reporting
+  and correctly said no child ran. Native permission allows explicit saved approvals;
+  it does not guarantee a new prompt after the user chooses Always Allow.
+
+The updated plugin/profiles were installed and Desktop restarted. No paid model
+inference was used in this follow-up. Session counters remain separate from parent
+usage; savings remain unmeasured without a comparable parent-only baseline.
+Packaging was assessed in [PACKAGING.md](PACKAGING.md), not migrated.
+
 ## Source and installed environment
 
 Started from local main `8b496a25accb67ea31160d6b18971f38c0d8c36f`.
@@ -114,7 +154,8 @@ Delegation fixtures cover paid-parent/free-child, free-parent/stronger-child,
 independent review, no route, wrong model, permission refusal, cancellation,
 ambiguous dispatch, writer locking, tool continuation and restart. Nested depth 2
 is tested offline; the real user's unset depth remains OpenCode's default 1.
-No global shell approval rule, permission override or depth increase was installed.
+No broad shell approval rule or depth increase was installed. The follow-up adds
+only the narrow `paid_delegate: ask` default to managed agents.
 The inspected user configuration retains `permission: "allow"` and an unset depth.
 Helpers inherit native permissions and parent session rules; Researcher/Review and
 explicit no-write assignments additionally receive edit denies plus pre-tool guards.
@@ -129,8 +170,9 @@ Go was weekly-limited and Copilot's live small-model request reported exhausted
 monthly quota. They were not retried. The connected ChatGPT account explicitly
 rejected gpt-5.3-codex-spark as unsupported; that model-specific failure is cached
 locally. These are provider/account limitations, not implementation success claims.
-Paid-parent/free-child and successful independent Review are covered by fixtures;
-we did not spend more subscription quota to make every branch live. Desktop did
+The initial pass covered paid-parent/free-child and independent Review with fixtures;
+the follow-up above also verified two live free independent reviews. We did not
+spend more subscription quota to make every branch live. Desktop did
 successfully exercise free-parent/subscription-child execution.
 
 Evidence remains partial for some newly discovered models; unknown capability

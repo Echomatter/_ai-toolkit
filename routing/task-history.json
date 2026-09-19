@@ -1,6 +1,6 @@
 {
     "generated":  true,
-    "generated_at":  "2026-09-19T17:10:49.1508217Z",
+    "generated_at":  "2026-09-19T17:58:35.3103387Z",
     "entries":  [
                     {
                         "task_id":  "873e5e1f-ee3d-466e-9dc4-f420f51cf967",
@@ -193,6 +193,83 @@
                         "review_found_defects":  true,
                         "reviewed_at":  "2026-09-19T17:10:49.1508217Z",
                         "review_task_id":  "economics-audit-2026-09-19"
+                    },
+                    {
+                        "task_id":  "c0a1d4e7db2c1258c60002d2c4be049867a6cab6f106c284b18f544be27a42f8",
+                        "timestamp":  "2026-09-19T17:58:35.3103387Z",
+                        "repo":  "F:\\_ai-toolkit",
+                        "task_type":  [
+                                          "code_review"
+                                      ],
+                        "model":  "opencode/muse-spark-1.3-contributor-free",
+                        "access":  "opencode-free",
+                        "success":  true,
+                        "tests_passed":  true,
+                        "attempts":  1,
+                        "escalated":  false,
+                        "review_found_defects":  false,
+                        "elapsed_band":  "",
+                        "role":  "review",
+                        "delegated_model":  "",
+                        "parent_model":  "opencode/nemotron-3.5-lightning-free",
+                        "user_task_id":  "ses_f453290dbffeFdiTJDY6TQkkEK/msg_0bacd7678001YvKajNRjkhm4Zg",
+                        "observation_kind":  "review",
+                        "fallback_used":  false,
+                        "execution_source":  "runtime_receipt",
+                        "elapsed_ms":  75727,
+                        "parent_session":  "ses_f453290dbffeFdiTJDY6TQkkEK",
+                        "child_session":  "ses_f4531f342ffeotCN1VAniu79rw",
+                        "selected_model":  "opencode/muse-spark-1.3-contributor-free",
+                        "dispatched_model":  "opencode/muse-spark-1.3-contributor-free",
+                        "observed_model":  "opencode/muse-spark-1.3-contributor-free",
+                        "execution_attempts":  [
+                                                   {
+                                                       "selected_model":  "opencode/muse-spark-1.3-contributor-free",
+                                                       "dispatched_model":  "opencode/muse-spark-1.3-contributor-free",
+                                                       "observed_model":  "opencode/muse-spark-1.3-contributor-free",
+                                                       "surface":  "opencode-free",
+                                                       "selection_reasons":  [
+                                                                                 "free-first: an adequate free route wins ordinary bounded work",
+                                                                                 "free_only: only opencode-free routes may execute; no subscription fallback",
+                                                                                 "bounded second opinion qualified by coding evidence; specialist review capability is not established",
+                                                                                 "task: code_review | writes=False terminal=False large_ctx=0 deep=False diversity=True consequence=False",
+                                                                                 "capabilities: coding=strong/high",
+                                                                                 "benchmarks (same-version only, harness-noted): index 54",
+                                                                                 "local history: n=1 anecdotal only (needs n\u003e=3)",
+                                                                                 "economics: qualify first; compare normalized capacity estimates, use explicit price proxies only when quota mapping is unknown",
+                                                                                 "quota: Currently free eligible route; quota failures still exclude it.",
+                                                                                 "availability: opencode-go pool-exhausted (go window weekly status=rate-limited); github-copilot-oauth pool-exhausted (copilot AI-credit pool depleted (premium_interactions) with no permitted overage)"
+                                                                             ],
+                                                       "adequacy":  "strong",
+                                                       "review_basis":  "bounded_coding_evidence",
+                                                       "started_at":  "2026-09-19T17:54:20.958Z",
+                                                       "status":  "completed",
+                                                       "abort_verified":  null,
+                                                       "child_session":  "ses_f4531f342ffeotCN1VAniu79rw",
+                                                       "usage":  {
+                                                                     "input":  36455,
+                                                                     "output":  1703,
+                                                                     "reasoning":  5263,
+                                                                     "cache_read":  7394,
+                                                                     "cache_write":  0,
+                                                                     "provider_dollars":  0
+                                                                 },
+                                                       "usage_source":  "session_messages",
+                                                       "completed_at":  "2026-09-19T17:55:36.934Z",
+                                                       "elapsed_ms":  75727
+                                                   }
+                                               ],
+                        "consumption":  {
+                                            "input_tokens":  36455,
+                                            "output_tokens":  1703,
+                                            "reasoning_tokens":  5263,
+                                            "cache_read_tokens":  7394,
+                                            "cache_write_tokens":  0,
+                                            "cost_dollars":  0,
+                                            "quality":  "measured",
+                                            "source":  "session_messages",
+                                            "reason":  "Structured child counters; provider dollars are not subscription quota or a cash charge."
+                                        }
                     }
                 ]
 }

@@ -3,6 +3,7 @@ description: Independently inspect work against the request, implementation, and
 mode: subagent
 steps: 18
 permission:
+  paid_delegate: ask
   edit: deny
   task:
     "*": deny

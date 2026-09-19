@@ -3,6 +3,7 @@ description: Carry out the bounded additional task assigned by Build. Preserve t
 mode: subagent
 steps: 32
 permission:
+  paid_delegate: ask
   task:
     "*": deny
     explore: allow
