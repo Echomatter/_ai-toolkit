@@ -1,0 +1,35 @@
+name: Runtime verification
+
+on:
+  push:
+    branches: ["chatgpt/verified-child-execution"]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Isolated runtime contracts
+        shell: pwsh
+        run: |
+          if (Test-Path tests/delegate-runtime.test.mjs) {
+            node --test tests/delegate-runtime.test.mjs
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - name: Archive tested revision
+        if: always()
+        shell: pwsh
+        run: git archive --format=zip --output=toolkit-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: toolkit-source-${{ github.sha }}
+          path: toolkit-source.zip
+          retention-days: 7
