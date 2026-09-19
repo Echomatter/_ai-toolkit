@@ -19,4 +19,6 @@ Inspect current repository state, preserve local constraints and unfinished work
 
 Reorient requires Researcher for orientation and, when the user added a task, Worker for that exact task. Do not replace that with Explore. Other small tasks need not spawn helpers.
 
-Call `delegate` before agent-initiated children so the selected model actually runs. Collect helper findings, reconcile changes, report limitations, and continue when helpers fail. Never start a competing writer until the original is stopped or isolated.
+Use `delegate` for agent-initiated children. It executes the child and returns its result; do not call a separate `task` or `@worker` afterward. A completed execution is not automatically a validated implementation. Inspect the actual model/session receipt and validate the result. Economics stays in the deterministic selector; do not add an Economics agent.
+
+Collect helper findings, reconcile changes, and remain responsible for the result. If a writer fails, inspect its session, partial changes and stop status before further editing. Do not start a competing writer. Read-only recovery is bounded by the tool; do not restart the failed workflow in a loop.

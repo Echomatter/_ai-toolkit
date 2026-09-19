@@ -1,305 +1,148 @@
-<#
-.SYNOPSIS
-  Installs or refreshes this toolkit's portable Agent Skills.
-
-.DESCRIPTION
-  Manages individual directories under %USERPROFILE%\.agents\skills.
-  Prefers symbolic links, then directory junctions, then managed copies.
-  Preserves unrelated user skills and prunes only toolkit-owned/recognized legacy items.
-
-  Windows PowerShell 5.1 compatible.
-#>
-
+<# Ownership-aware, recoverable deployment. Windows PowerShell 5.1.
+   No user credentials, conversations or unrelated resources are removed.
+   HomeRoot/ToolkitRoot exist for isolated deployment tests, not model routing. #>
+[CmdletBinding()]
+param([string]$ToolkitRoot = '', [string]$HomeRoot = '', [switch]$Uninstall)
 $ErrorActionPreference = 'Stop'
-
-$ToolkitRoot  = Split-Path -Parent $PSScriptRoot
-$StateDir     = Join-Path $ToolkitRoot '.state'
-$ManifestPath = Join-Path $StateDir 'install-manifest.json'
-$SkillsSrc    = Join-Path $ToolkitRoot 'skills'
-$SkillsDst    = Join-Path $env:USERPROFILE '.agents\skills'
-$OpenCodeRoot = Join-Path $env:USERPROFILE '.config\opencode'
-$AgentSrc     = Join-Path $ToolkitRoot 'opencode\agents'
-$AgentDst     = Join-Path $OpenCodeRoot 'agents'
-$CommandSrc   = Join-Path $ToolkitRoot 'opencode\commands'
-$CommandDst   = Join-Path $OpenCodeRoot 'commands'
-$ToolSrc      = Join-Path $ToolkitRoot 'opencode\tools'
-$ToolDst      = Join-Path $OpenCodeRoot 'tools'
-
-function Ensure-Dir([string]$Path) {
-    if (-not (Test-Path -LiteralPath $Path)) {
-        New-Item -ItemType Directory -Path $Path -Force | Out-Null
+if (-not $ToolkitRoot) { $ToolkitRoot = Split-Path -Parent $PSScriptRoot }
+if (-not $HomeRoot) { $HomeRoot = $env:USERPROFILE }
+$ToolkitRoot = [IO.Path]::GetFullPath($ToolkitRoot)
+$HomeRoot = [IO.Path]::GetFullPath($HomeRoot)
+$state = Join-Path $ToolkitRoot '.state'
+New-Item -ItemType Directory -Path $state -Force | Out-Null
+$manifestPath = Join-Path $state 'install-manifest.json'
+$backupRoot = Join-Path $HomeRoot ('.local\share\ai-toolkit\backups\' + [guid]::NewGuid().ToString('N'))
+$configBase = if ($env:XDG_CONFIG_HOME -and $HomeRoot -eq $env:USERPROFILE) { $env:XDG_CONFIG_HOME } else { Join-Path $HomeRoot '.config' }
+$config = Join-Path $configBase 'opencode'
+$roots = @((Join-Path $HomeRoot '.agents\skills'), (Join-Path $config 'agents'), (Join-Path $config 'commands'), (Join-Path $config 'tools'), (Join-Path $config 'plugins'))
+$locator = Join-Path $config 'ai-toolkit-root.txt'
+$old = @()
+if (Test-Path -LiteralPath $manifestPath) {
+    try { $old = @(Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json) }
+    catch { throw 'Install manifest is malformed. Preserved unchanged; refusing unowned cleanup.' }
+}
+function Full([string]$p) { return [IO.Path]::GetFullPath($p).TrimEnd('\','/') }
+function Same([string]$a,[string]$b) { return (Full $a) -ieq (Full $b) }
+function Allowed([string]$p) {
+    if (-not $p) { return $false }
+    if (Same $p $locator) { return $true }
+    $parent = Split-Path -Parent (Full $p)
+    foreach ($r in $roots) { if (Same $parent $r) { return $true } }
+    return $false
+}
+function Item([string]$p) {
+    $i = Get-Item -LiteralPath $p -Force -ErrorAction SilentlyContinue
+    if ($i) { return $i }
+    # A dangling junction may fail direct resolution but still has a directory entry.
+    $parent = Split-Path -Parent $p; $leaf = Split-Path -Leaf $p
+    if (Test-Path -LiteralPath $parent) { return Get-ChildItem -LiteralPath $parent -Force | Where-Object { $_.Name -eq $leaf } | Select-Object -First 1 }
+}
+function Fingerprint([string]$p) {
+    if (Test-Path -LiteralPath $p -PathType Leaf) { return (Get-FileHash -LiteralPath $p -Algorithm SHA256).Hash }
+    $rows = @()
+    foreach ($f in @(Get-ChildItem -LiteralPath $p -File -Recurse -Force | Sort-Object FullName)) {
+        $rel = $f.FullName.Substring($p.Length).Replace('\','/')
+        $rows += ($rel + '=' + (Get-FileHash -LiteralPath $f.FullName -Algorithm SHA256).Hash)
     }
+    return ($rows -join '|')
 }
-
-
-function Remove-PathItem([string]$Path, [switch]$RecurseRegular) {
-    if (-not (Test-Path -LiteralPath $Path)) { return }
-    $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
-    $isReparse = (($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0)
-    if ($isReparse -and $item.PSIsContainer) {
-        & cmd.exe /d /c rmdir "$Path" | Out-Null
-        if ($LASTEXITCODE -ne 0 -and (Test-Path -LiteralPath $Path)) { throw "Could not remove directory link: $Path" }
-    } elseif ($isReparse) {
-        Remove-Item -LiteralPath $Path -Force -Confirm:$false
-    } elseif ($item.PSIsContainer) {
-        if (-not $RecurseRegular) { throw "Refusing to remove regular directory without -RecurseRegular: $Path" }
-        Remove-Item -LiteralPath $Path -Recurse -Force -Confirm:$false
-    } else {
-        Remove-Item -LiteralPath $Path -Force -Confirm:$false
-    }
+function Backup([string]$p) {
+    $i = Item $p
+    if (-not $i) { return }
+    New-Item -ItemType Directory -Path $backupRoot -Force | Out-Null
+    $dest = Join-Path $backupRoot ([guid]::NewGuid().ToString('N') + '-' + $i.Name)
+    if (($i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        @{ path=$p; target=@($i.Target); link_type=$i.LinkType } | ConvertTo-Json | Set-Content -LiteralPath ($dest + '.link.json') -Encoding UTF8
+    } else { Copy-Item -LiteralPath $p -Destination $dest -Recurse -Force }
+    Write-Output "Backed up: $p"
 }
-
-function Load-Manifest {
-    $list = New-Object System.Collections.ArrayList
-    $seenTargets = @{}
-    if (Test-Path -LiteralPath $ManifestPath) {
-        try {
-            $raw = Get-Content -LiteralPath $ManifestPath -Raw
-            if ($raw -and $raw.Trim()) {
-                $entries = $raw | ConvertFrom-Json
-                foreach ($e in @($entries)) {
-                    $target = if ($e.target) { [string]$e.target } else { '' }
-                    if ($target -and $seenTargets.ContainsKey($target)) { continue }
-                    if ($target) { $seenTargets[$target] = $true }
-                    [void]$list.Add($e)
-                }
-            }
-        } catch {
-            Write-Warning "Could not read old install manifest; recognized legacy items will still be handled safely."
-        }
-    }
-    return $list
+function Remove-Owned([string]$p) {
+    if (-not (Allowed $p)) { throw "Manifest target outside managed deployment roots: $p" }
+    $i = Item $p
+    if (-not $i) { return }
+    Backup $p
+    if (($i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+        if ($i.PSIsContainer) { [IO.Directory]::Delete($p) }
+        else { [IO.File]::Delete($p) }
+    } else { Remove-Item -LiteralPath $p -Recurse -Force }
 }
-
-function Save-Manifest($List) {
-    Ensure-Dir $StateDir
-    @($List) | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $ManifestPath -Encoding UTF8
-}
-
-function Find-Entry([string]$Target, $Manifest) {
-    foreach ($e in @($Manifest)) { if ($e.target -eq $Target) { return $e } }
-    return $null
-}
-
-function Remove-Managed($Entry) {
-    if (-not $Entry -or -not $Entry.target -or -not (Test-Path -LiteralPath $Entry.target)) { return }
-    if ($Entry.method -eq 'copy') {
-        Remove-PathItem -Path $Entry.target -RecurseRegular
-    } else {
-        Remove-PathItem -Path $Entry.target
-    }
-}
-
-function Recognized-Skill([string]$Path, [string]$Name) {
-    $skill = Join-Path $Path 'SKILL.md'
-    if (-not (Test-Path -LiteralPath $skill)) { return $false }
+function Write-Manifest($entries) {
+    $tmp = $manifestPath + '.' + [guid]::NewGuid().ToString('N') + '.tmp'
     try {
-        $text = Get-Content -LiteralPath $skill -Raw
-        return $text.Contains("name: $Name")
-    } catch { return $false }
+        $json = ConvertTo-Json -InputObject @($entries) -Depth 8
+        [IO.File]::WriteAllText($tmp, $json, (New-Object Text.UTF8Encoding($false)))
+        if (Test-Path -LiteralPath $manifestPath) { [IO.File]::Replace($tmp,$manifestPath,$null) }
+        else { [IO.File]::Move($tmp,$manifestPath) }
+    } finally { if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force } }
 }
-
-$manifest = Load-Manifest
-$nextManifest = New-Object System.Collections.ArrayList
-$currentTargets = @()
-$currentTargets += @(Get-ChildItem -LiteralPath $SkillsSrc -Directory | ForEach-Object { Join-Path $SkillsDst $_.Name })
-if (Test-Path -LiteralPath $AgentSrc) {
-    $currentTargets += @(Get-ChildItem -LiteralPath $AgentSrc -File -Filter '*.md' | Where-Object { $_.Name -notlike '*.template.md' } | ForEach-Object { Join-Path $AgentDst $_.Name })
-}
-if (Test-Path -LiteralPath $CommandSrc) {
-    $currentTargets += @(Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | ForEach-Object { Join-Path $CommandDst $_.Name })
-}
-if (Test-Path -LiteralPath $ToolSrc) {
-    $currentTargets += @(Get-ChildItem -LiteralPath $ToolSrc -File | ForEach-Object { Join-Path $ToolDst $_.Name })
-}
-$currentTargets += (Join-Path $OpenCodeRoot 'ai-toolkit-root.txt')
-
-# Prune anything previously installed by this toolkit that is not part of the current
-# skill set, even if an old source folder still exists after an overlay.
-# Also prune managed entries whose canonical source disappeared.
-foreach ($entry in @($manifest)) {
-    $isCurrent = $entry.target -and ($currentTargets -contains $entry.target)
-    $sourceMissing = $entry.source -and -not (Test-Path -LiteralPath $entry.source)
-    if (-not $isCurrent -or $sourceMissing) {
-        try {
-            Remove-Managed $entry
-            Write-Output "pruned retired managed item: $($entry.target)"
-        } catch {
-            Write-Warning "could not prune $($entry.target): $($_.Exception.Message)"
-            [void]$nextManifest.Add($entry)
-        }
-    } else {
-        [void]$nextManifest.Add($entry)
-    }
-}
-$manifest = $nextManifest
-
-# Earlier toolkit items that are no longer canonical are removed automatically only when
-# the install manifest proves this toolkit owns them. If the manifest was lost, leave
-# same-named user files alone and report them for manual cleanup.
-$retiredSkills = @(
-    'cost-aware-routing','task-contract','workspace-map','public-repo-research',
-    'local-first-escalation','external-research','model-escalation',
-    'bounded-experiment','change-audit','content-index-research','enhanced-explore',
-    'evidence-ledger','github-ops','handoff-brief','local-repo-research',
-    'model-advisor','repo-reorient'
-)
-foreach ($name in $retiredSkills) {
-    $target = Join-Path $SkillsDst $name
-    if (-not (Test-Path -LiteralPath $target)) { continue }
-    $owned = Find-Entry $target $manifest
-    if ($owned) {
-        try {
-            Remove-Managed $owned
-            [void]$manifest.Remove($owned)
-            Write-Output "removed retired toolkit skill: $target"
-        } catch { Write-Warning "could not remove retired skill ${target}: $($_.Exception.Message)" }
-    } elseif (Recognized-Skill $target $name) {
-        Write-Warning "retired skill exists but is not in this toolkit's manifest; left untouched: $target"
-    }
-}
-
-# Legacy custom-agent profiles are no longer needed. The earlier manifest pruning above
-# removes toolkit-owned copies/links whose canonical sources disappeared. Unmanaged
-# same-named agent files are deliberately left untouched.
-$legacyFiles = @(
-    (Join-Path $env:USERPROFILE '.copilot\agents\github-operator.agent.md'),
-    (Join-Path $env:USERPROFILE '.copilot\agents\public-repo-scout.agent.md'),
-    (Join-Path $env:USERPROFILE '.copilot\agents\local-repo-researcher.agent.md'),
-    (Join-Path $env:USERPROFILE '.copilot\agents\independent-verifier.agent.md'),
-    (Join-Path $env:USERPROFILE '.copilot\agents\task-switchboard.agent.md'),
-    (Join-Path $env:USERPROFILE '.codex\agents\github-operator.toml'),
-    (Join-Path $env:USERPROFILE '.codex\agents\public-repo-scout.toml'),
-    (Join-Path $env:USERPROFILE '.codex\agents\local-repo-researcher.toml'),
-    (Join-Path $env:USERPROFILE '.codex\agents\independent-verifier.toml'),
-    (Join-Path $env:USERPROFILE '.codex\agents\task-switchboard.toml')
-)
-foreach ($path in $legacyFiles) {
-    if (Test-Path -LiteralPath $path) {
-        Write-Warning "legacy agent profile is not manifest-owned and was left untouched: $path"
-    }
-}
-
-Ensure-Dir $SkillsDst
-$created = 0
-$refreshed = 0
-$conflicts = 0
-
-foreach ($src in Get-ChildItem -LiteralPath $SkillsSrc -Directory) {
-    $target = Join-Path $SkillsDst $src.Name
-    $owned = Find-Entry $target $manifest
-
-    if (Test-Path -LiteralPath $target) {
-        if (-not $owned) {
-            Write-Warning "conflict: $target exists and is not toolkit-managed; left untouched"
-            $conflicts++
-            continue
-        }
-        if ($owned.method -eq 'copy') {
-            Remove-Item -LiteralPath $target -Recurse -Force
-            Copy-Item -LiteralPath $src.FullName -Destination $target -Recurse -Force
-            $owned.source = $src.FullName
-            $refreshed++
-            Write-Output "refreshed copy: $target"
-            continue
-        }
-        # Existing managed link/junction remains correct if it points at the live toolkit tree.
-        $owned.source = $src.FullName
-        Write-Output "already managed: $target"
-        continue
-    }
-
-    $method = $null
-    try {
-        New-Item -ItemType SymbolicLink -Path $target -Target $src.FullName -ErrorAction Stop | Out-Null
-        $method = 'symlink'
-    } catch {
-        try {
-            New-Item -ItemType Junction -Path $target -Target $src.FullName -ErrorAction Stop | Out-Null
-            $method = 'junction'
-        } catch {
-            Copy-Item -LiteralPath $src.FullName -Destination $target -Recurse -Force
-            $method = 'copy'
-        }
-    }
-
-    $entry = [PSCustomObject]@{ target=$target; source=$src.FullName; kind='dir'; method=$method }
-    [void]$manifest.Add($entry)
-    $created++
-    Write-Output "$method -> $target"
-}
-
-# Install OpenCode Desktop-visible global agents and commands without replacing the user's
-# global opencode.json. OpenCode Desktop loads these directories natively.
-function Install-ManagedFile([string]$Source, [string]$Target) {
-    $parent = Split-Path -Parent $Target
-    Ensure-Dir $parent
-    $owned = Find-Entry $Target $manifest
-
-    if (Test-Path -LiteralPath $Target) {
-        if (-not $owned) {
-            Write-Warning "conflict: $Target exists and is not toolkit-managed; left untouched"
-            $script:conflicts++
-            return
-        }
-        if ($owned.method -eq 'copy') {
-            Copy-Item -LiteralPath $Source -Destination $Target -Force
-            $owned.source = $Source
-            $script:refreshed++
-            Write-Output "refreshed copy: $Target"
-            return
-        }
-        $owned.source = $Source
-        Write-Output "already managed: $Target"
+$lock = $null
+try { $lock = New-Object System.IO.FileStream(($manifestPath + '.lock'),[IO.FileMode]::OpenOrCreate,[IO.FileAccess]::ReadWrite,[IO.FileShare]::None,4096,[IO.FileOptions]::DeleteOnClose) }
+catch { throw 'Another deployment is active. No changes made.' }
+try {
+    # Read under lock as well; never operate from a manifest another installer replaced.
+    if (Test-Path -LiteralPath $manifestPath) { $old = @(Get-Content -LiteralPath $manifestPath -Raw -Encoding UTF8 | ConvertFrom-Json) }
+    foreach ($e in $old) { if (-not (Allowed $e.target)) { throw "Refusing out-of-scope manifest target: $($e.target)" } }
+    if ($Uninstall) {
+        foreach ($e in $old) { Remove-Owned $e.target }
+        Write-Manifest @()
+        & (Join-Path $ToolkitRoot 'scripts\sync-global-instructions.ps1') -ToolkitRoot $ToolkitRoot -HomeRoot $HomeRoot -Remove
+        Write-Output 'Toolkit uninstalled. Backups retained; credentials and unrelated resources untouched.'
         return
     }
-
-    $method = $null
-    try {
-        New-Item -ItemType SymbolicLink -Path $Target -Target $Source -ErrorAction Stop | Out-Null
-        $method = 'symlink'
-    } catch {
-        Copy-Item -LiteralPath $Source -Destination $Target -Force
-        $method = 'copy'
+    $desired = @()
+    foreach ($d in @(Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'skills') -Directory)) {
+        if (-not (Test-Path -LiteralPath (Join-Path $d.FullName 'SKILL.md'))) { throw "Invalid skill source: $($d.FullName)" }
+        $desired += [pscustomobject]@{ source=$d.FullName; target=(Join-Path $roots[0] $d.Name); kind='dir' }
     }
-    $entry = [PSCustomObject]@{ target=$Target; source=$Source; kind='file'; method=$method }
-    [void]$manifest.Add($entry)
-    $script:created++
-    Write-Output "$method -> $Target"
-}
-
-Ensure-Dir $AgentDst
-Ensure-Dir $CommandDst
-Ensure-Dir $ToolDst
-foreach ($src in Get-ChildItem -LiteralPath $AgentSrc -File -Filter '*.md' | Where-Object { $_.Name -notlike '*.template.md' }) {
-    Install-ManagedFile $src.FullName (Join-Path $AgentDst $src.Name)
-}
-foreach ($src in Get-ChildItem -LiteralPath $CommandSrc -File -Filter '*.md' | Where-Object { $_.Name -notlike '*.template.md' }) {
-    Install-ManagedFile $src.FullName (Join-Path $CommandDst $src.Name)
-}
-if (Test-Path -LiteralPath $ToolSrc) {
-    foreach ($src in Get-ChildItem -LiteralPath $ToolSrc -File) {
-        Install-ManagedFile $src.FullName (Join-Path $ToolDst $src.Name)
+    foreach ($pair in @(@('agents','*.md'), @('tools','*.ts'), @('plugins','*.ts'))) {
+        $src = Join-Path $ToolkitRoot ('opencode\' + $pair[0])
+        foreach ($f in @(Get-ChildItem -LiteralPath $src -File -Filter $pair[1] | Where-Object { $_.Name -notlike '*.template.md' })) {
+            $desired += [pscustomobject]@{ source=$f.FullName; target=(Join-Path (Join-Path $config $pair[0]) $f.Name); kind='file' }
+        }
     }
-}
-
-# Publish a tiny managed locator so global commands can invoke deterministic toolkit
-# scripts from any project without assuming a drive letter.
-$rootLocatorSrc = Join-Path $StateDir 'toolkit-root.txt'
-$rootLocatorDst = Join-Path $OpenCodeRoot 'ai-toolkit-root.txt'
-$enc = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($rootLocatorSrc, $ToolkitRoot, $enc)
-Install-ManagedFile $rootLocatorSrc $rootLocatorDst
-
-# Merge the toolkit's generated global guidance into OpenCode's global AGENTS.md
-# without replacing user-authored instructions outside the managed markers.
-$syncGlobal = Join-Path $PSScriptRoot 'sync-global-instructions.ps1'
-if (Test-Path -LiteralPath $syncGlobal) {
-    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $syncGlobal
-    if ($LASTEXITCODE -ne 0) { throw 'Could not synchronize OpenCode global instructions.' }
-}
-
-Save-Manifest $manifest
-Write-Output ""
-Write-Output "Toolkit install summary: $created created, $refreshed refreshed, $conflicts conflicts."
-Write-Output "OpenCode Desktop agents: native build override, index, worker, deep, review; content_index and delegate tools and global toolkit guidance synchronized"
+    $rootFile = Join-Path $state 'toolkit-root.txt'
+    [IO.File]::WriteAllText($rootFile,$ToolkitRoot,(New-Object Text.UTF8Encoding($false)))
+    $desired += [pscustomobject]@{ source=$rootFile; target=$locator; kind='file' }
+    # Conflicts are not ownership. Stop before altering any deployment resource.
+    foreach ($d in $desired) {
+        $owned = @($old | Where-Object { Same $_.target $d.target })
+        if ((Item $d.target) -and -not $owned.Count) { throw "Unmanaged resource conflict; left untouched: $($d.target)" }
+    }
+    $next = @($old)
+    foreach ($e in @($old)) {
+        if (-not @($desired | Where-Object { Same $_.target $e.target }).Count) {
+            Remove-Owned $e.target
+            $next = @($next | Where-Object { -not (Same $_.target $e.target) })
+            Write-Manifest $next
+        }
+    }
+    foreach ($d in $desired) {
+        New-Item -ItemType Directory -Path (Split-Path -Parent $d.target) -Force | Out-Null
+        $existing = Item $d.target
+        $method = 'copy'; $unchanged = $false
+        if ($existing) {
+            if (($existing.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) {
+                $targets = @($existing.Target)
+                if ($targets.Count -eq 1 -and $targets[0] -and (Same $targets[0] $d.source)) {
+                    $method = if ($existing.LinkType -eq 'Junction') { 'junction' } else { 'symlink' }
+                    $unchanged = $true
+                }
+            } else { $unchanged = (Fingerprint $d.source) -eq (Fingerprint $d.target) }
+            if (-not $unchanged) { Remove-Owned $d.target }
+        }
+        if (-not $unchanged) {
+            if ($d.kind -eq 'dir') {
+                try { New-Item -ItemType Junction -Path $d.target -Target $d.source -ErrorAction Stop | Out-Null; $method='junction' }
+                catch { Copy-Item -LiteralPath $d.source -Destination $d.target -Recurse -Force; $method='copy' }
+            } else { Copy-Item -LiteralPath $d.source -Destination $d.target -Force; $method='copy' }
+        }
+        if ((Fingerprint $d.source) -ne (Fingerprint $d.target)) { throw "Deployment verification failed: $($d.target)" }
+        $next = @($next | Where-Object { -not (Same $_.target $d.target) })
+        $next += [pscustomobject]@{ target=$d.target; source=$d.source; kind=$d.kind; method=$method; fingerprint=(Fingerprint $d.target) }
+        Write-Manifest $next
+        Write-Output "Verified $method`: $($d.target)"
+    }
+    & (Join-Path $ToolkitRoot 'scripts\sync-global-instructions.ps1') -ToolkitRoot $ToolkitRoot -HomeRoot $HomeRoot
+    Write-Output 'Verified toolkit deployment complete. Fully restart OpenCode to load the new plugin and profiles.'
+    if (Test-Path -LiteralPath $backupRoot) { Write-Output "Recoverable backups: $backupRoot" }
+} finally { if ($lock) { $lock.Dispose() } }

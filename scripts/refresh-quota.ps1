@@ -1,47 +1,41 @@
-<# Quota telemetry refresh (read-only on routing data; writes .state/quota-state.json only).
-Reads live usage from provider endpoints using the user's existing OpenCode credentials.
-Never logs or echoes credential material. Exit code is 0 even when telemetry is
-unavailable; per-surface telemetry health is recorded instead.
-Telemetry health is kept separate from execution availability: a failed telemetry
-request never blocks a model route. Execution blocks are recorded only via
--BlockSurface on confirmed execution-side failure, and a telemetry refresh never
-clears one merely because local statistics look inexpensive.
-Windows PowerShell 5.1 compatible.
-#>
+<# Quota telemetry refresh. Writes only runtime .state/quota-state.json.
+Preserves last-known-good observations separately from failed refresh attempts.
+Telemetry authentication failure does not establish execution failure.
+Windows PowerShell 5.1. Never logs credential material. #>
 param(
     [string]$ToolkitRoot = '',
     [string]$BlockSurface = '',
     [string]$BlockReason = '',
     [string]$BlockResetAt = '',
-    [int]$BlockRecheckMinutes = 15
+    [int]$BlockRecheckMinutes = 15,
+    [string]$AuthPath = ''
 )
 $ErrorActionPreference = 'Stop'
 if ($ToolkitRoot -eq '') { $ToolkitRoot = Split-Path -Parent $PSScriptRoot }
 $StatePath = Join-Path $ToolkitRoot '.state\quota-state.json'
-
+$stateDir = Split-Path -Parent $StatePath
+if (-not (Test-Path -LiteralPath $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force | Out-Null }
+$lock = $null
+try { $lock = New-Object System.IO.FileStream(($StatePath + '.lock'), [IO.FileMode]::OpenOrCreate, [IO.FileAccess]::ReadWrite, [IO.FileShare]::None, 4096, [IO.FileOptions]::DeleteOnClose) }
+catch { Write-Output 'Quota refresh already active; using existing observations.'; return }
+try {
 function Write-Utf8NoBom([string]$Path, [string]$Text) {
     $enc = New-Object System.Text.UTF8Encoding($false)
-    [System.IO.File]::WriteAllText($Path, $Text, $enc)
+    $tmp = $Path + '.' + [guid]::NewGuid().ToString('N') + '.tmp'
+    try {
+        [System.IO.File]::WriteAllText($tmp, $Text, $enc)
+        if (Test-Path -LiteralPath $Path) { [System.IO.File]::Replace($tmp, $Path, $null) }
+        else { [System.IO.File]::Move($tmp, $Path) }
+    } finally { if (Test-Path -LiteralPath $tmp) { Remove-Item -LiteralPath $tmp -Force } }
 }
 function Now-UtcIso() { return (Get-Date).ToUniversalTime().ToString('o') }
-function Redact([string]$s) {
-    if ([string]::IsNullOrEmpty($s)) { return '' }
-    if ($s.Length -le 8) { return '***' }
-    return $s.Substring(0, 4) + '***'
-}
-
-# Load prior state so execution blocks and cached telemetry survive refreshes.
 $prior = $null
 try {
-    if (Test-Path -LiteralPath $StatePath) {
-        $prior = Get-Content -LiteralPath $StatePath -Raw -Encoding UTF8 | ConvertFrom-Json
-    }
-} catch { $prior = $null }
+    if (Test-Path -LiteralPath $StatePath) { $prior = Get-Content -LiteralPath $StatePath -Raw -Encoding UTF8 | ConvertFrom-Json }
+} catch { throw 'Quota state is malformed; original preserved. Repair it rather than discarding known execution failures.' }
 function Get-PriorSurface([string]$name) {
     if ($prior -and $prior.surfaces) {
-        foreach ($p in @($prior.surfaces.PSObject.Properties)) {
-            if ($p.Name -eq $name) { return $p.Value }
-        }
+        foreach ($p in @($prior.surfaces.PSObject.Properties)) { if ($p.Name -eq $name) { return $p.Value } }
     }
     return $null
 }
@@ -50,39 +44,48 @@ function Get-PriorExecution([string]$name) {
     if ($s -and $s.execution) { return $s.execution }
     return $null
 }
-
-$authPath = Join-Path $env:USERPROFILE '.local\share\opencode\auth.json'
+# Record confirmed execution failures before any unrelated network request.
+if ($BlockSurface) {
+    if ($BlockSurface -notin @('opencode-go','openai-oauth','github-copilot-oauth','opencode-free')) { throw 'Unknown execution surface.' }
+    if (-not $prior) { $prior = [pscustomobject]@{ generated=$true; generated_at=(Now-UtcIso); surfaces=[pscustomobject]@{} } }
+    if (-not $prior.surfaces) { $prior | Add-Member -NotePropertyName surfaces -NotePropertyValue ([pscustomobject]@{}) -Force }
+    $s = Get-PriorSurface $BlockSurface
+    if (-not $s) { $s = [pscustomobject]@{}; $prior.surfaces | Add-Member -NotePropertyName $BlockSurface -NotePropertyValue $s -Force }
+    $s | Add-Member -NotePropertyName execution -NotePropertyValue ([ordered]@{
+        blocked=$true; reason=$BlockReason; reset_at=$BlockResetAt;
+        recorded_at=(Now-UtcIso); recheck_at=(Get-Date).ToUniversalTime().AddMinutes($BlockRecheckMinutes).ToString('o')
+    }) -Force
+    Write-Utf8NoBom $StatePath ($prior | ConvertTo-Json -Depth 10)
+    Write-Output "Recorded execution block: $BlockSurface"
+    return
+}
+if (-not $AuthPath) {
+    $dataRoot = if ($env:XDG_DATA_HOME) { $env:XDG_DATA_HOME } else { Join-Path $env:USERPROFILE '.local\share' }
+    $AuthPath = Join-Path $dataRoot 'opencode\auth.json'
+}
 $auth = $null
 try {
-    if (Test-Path -LiteralPath $authPath) {
-        $auth = Get-Content -LiteralPath $authPath -Raw -Encoding UTF8 | ConvertFrom-Json
-    }
+    if (Test-Path -LiteralPath $authPath) { $auth = Get-Content -LiteralPath $authPath -Raw -Encoding UTF8 | ConvertFrom-Json }
 } catch { $auth = $null }
-
-function Invoke-QuotaGet([string]$Url, [hashtable]$Headers, [int]$TimeoutSec = 15) {
-    # Returns @{ok; status; body}. Never includes credential material in outputs.
+function Invoke-QuotaGet([string]$Url, [hashtable]$Headers, [int]$TimeoutSec = 3) {
     try {
         $resp = Invoke-WebRequest -Uri $Url -Headers $Headers -UseBasicParsing -TimeoutSec $TimeoutSec -ErrorAction Stop
         return @{ ok = $true; status = [int]$resp.StatusCode; body = [string]$resp.Content }
     } catch {
-        $code = 0
-        $body = ''
+        $code = 0; $body = ''
         try {
             if ($_.Exception.Response) {
                 $code = [int]$_.Exception.Response.StatusCode.value__
                 $sr = New-Object System.IO.StreamReader($_.Exception.Response.GetResponseStream())
-                $body = $sr.ReadToEnd()
-                $sr.Close()
+                $body = $sr.ReadToEnd(); $sr.Close()
             }
         } catch {}
         return @{ ok = $false; status = $code; body = $body }
     }
 }
-
 $now = Now-UtcIso
 $surfaces = [ordered]@{}
 
-# ---- OpenCode Go: live account windows ----
 $goTelemetry = [ordered]@{ status = 'unavailable'; source = 'go-usage-api'; as_of = $now; note = '' }
 $goWindows = $null
 $goKeyPresent = ($auth -and $auth.'opencode-go' -and $auth.'opencode-go'.key)
@@ -92,45 +95,28 @@ if ($goKeyPresent) {
     if ($r.ok) {
         try {
             $u = ($r.body | ConvertFrom-Json).usage
+            if (-not $u) { throw 'missing usage' }
             $goWindows = [ordered]@{}
             foreach ($w in @('rolling', 'weekly', 'monthly')) {
                 $wu = $u.$w
-                if ($wu) {
-                    $goWindows[$w] = [ordered]@{
-                        status = [string]$wu.status
-                        used_percent = [double]$wu.percent
-                        resets_at = [string]$wu.resetsAt
-                    }
-                }
+                if (-not $wu -or $null -eq $wu.percent -or -not $wu.status -or -not $wu.resetsAt) { throw 'missing Go window fields' }
+                if ([double]$wu.percent -lt 0 -or [double]::IsNaN([double]$wu.percent) -or [double]::IsInfinity([double]$wu.percent)) { throw 'invalid percentage' }
+                $goWindows[$w] = [ordered]@{ status = [string]$wu.status; used_percent = [double]$wu.percent; resets_at = [string]$wu.resetsAt }
             }
             $goTelemetry.status = 'ok'
         } catch { $goTelemetry.status = 'unparseable'; $goTelemetry.note = 'response did not match expected shape' }
     } elseif ($r.status -eq 401) {
         $goTelemetry.status = 'auth-failed'
         $goTelemetry.note = 'usage endpoint rejected the stored key (telemetry only; execution availability unchanged)'
-    } elseif ($r.status -eq 403) {
+    } elseif ($r.status -eq 403 -and $r.body -match 'EntitlementError') {
         $goTelemetry.status = 'no-plan'
-        $goTelemetry.note = 'server reports no active Go plan for this key (authoritative for telemetry)'
-    } else {
-        $goTelemetry.status = 'unreachable'
-        $goTelemetry.note = ("http status " + $r.status)
-    }
-} else {
-    $goTelemetry.status = 'no-credential'
-    $goTelemetry.note = 'no opencode-go key in auth.json'
-}
-$goExec = Get-PriorExecution 'opencode-go'
-$surfaces['opencode-go'] = [ordered]@{
-    quota_type = 'subscription'
-    telemetry = $goTelemetry
-    windows = $goWindows
-    execution = $goExec
-}
+        $goTelemetry.note = 'server reports no active Go plan for this key'
+    } else { $goTelemetry.status = 'unreachable'; $goTelemetry.note = ("http status " + $r.status) }
+} else { $goTelemetry.status = 'no-credential'; $goTelemetry.note = 'no opencode-go key in auth.json' }
+$surfaces['opencode-go'] = [ordered]@{ quota_type = 'subscription'; telemetry = $goTelemetry; windows = $goWindows; execution = (Get-PriorExecution 'opencode-go') }
 
-# ---- GitHub Copilot: live quota snapshots ----
 $cpTelemetry = [ordered]@{ status = 'unavailable'; source = 'github-copilot-internal-api'; as_of = $now; note = '' }
-$cpBuckets = $null
-$cpReset = ''
+$cpBuckets = $null; $cpReset = ''
 $cpTokenPresent = ($auth -and $auth.'github-copilot' -and $auth.'github-copilot'.access)
 if ($cpTokenPresent) {
     $cpHeaders = @{ Authorization = ("token " + [string]$auth.'github-copilot'.access); 'User-Agent' = 'ai-toolkit-refresh-quota' }
@@ -139,12 +125,14 @@ if ($cpTokenPresent) {
         try {
             $cu = ($r.body | ConvertFrom-Json)
             $cpReset = [string]$cu.quota_reset_date_utc
+            if (-not $cu.quota_snapshots) { throw 'missing quota snapshots' }
             $cpBuckets = [ordered]@{}
             foreach ($b in @($cu.quota_snapshots.PSObject.Properties)) {
                 $v = $b.Value
+                if ($v.unlimited -ne $true -and $null -eq $v.percent_remaining) { throw 'missing remaining capacity' }
                 $cpBuckets[$b.Name] = [ordered]@{
                     unlimited = [bool]$v.unlimited
-                    percent_remaining = [double]$v.percent_remaining
+                    percent_remaining = if ($null -eq $v.percent_remaining) { $null } else { [double]$v.percent_remaining }
                     quota_remaining = $v.quota_remaining
                     credits_used = $v.credits_used
                     entitlement = $v.entitlement
@@ -154,125 +142,66 @@ if ($cpTokenPresent) {
             $cpTelemetry.status = 'ok'
         } catch { $cpTelemetry.status = 'unparseable'; $cpTelemetry.note = 'response did not match expected shape' }
     } elseif ($r.status -eq 401 -or $r.status -eq 403) {
-        $cpTelemetry.status = 'auth-failed'
-        $cpTelemetry.note = 'token rejected for quota lookup (telemetry only; execution availability unchanged)'
-    } else {
-        $cpTelemetry.status = 'unreachable'
-        $cpTelemetry.note = ("http status " + $r.status)
-    }
-} else {
-    $cpTelemetry.status = 'no-credential'
-    $cpTelemetry.note = 'no github-copilot token in auth.json'
-}
-$cpExec = Get-PriorExecution 'github-copilot-oauth'
-$surfaces['github-copilot-oauth'] = [ordered]@{
-    quota_type = 'subscription'
-    telemetry = $cpTelemetry
-    buckets = $cpBuckets
-    reset_at = $cpReset
-    execution = $cpExec
-}
+        $cpTelemetry.status = 'auth-failed'; $cpTelemetry.note = 'token rejected for quota lookup (telemetry only)'
+    } else { $cpTelemetry.status = 'unreachable'; $cpTelemetry.note = ("http status " + $r.status) }
+} else { $cpTelemetry.status = 'no-credential'; $cpTelemetry.note = 'no github-copilot token in auth.json' }
+$surfaces['github-copilot-oauth'] = [ordered]@{ quota_type = 'subscription'; telemetry = $cpTelemetry; buckets = $cpBuckets; reset_at = $cpReset; execution = (Get-PriorExecution 'github-copilot-oauth') }
 
-# ---- ChatGPT: attempt first-party usage surface ----
 $aiTelemetry = [ordered]@{ status = 'unavailable'; source = 'chatgpt-wham-usage'; as_of = $now; note = '' }
-$aiWindows = $null
+$aiWindows = $null; $aiAllowed = $null; $aiLimitReached = $null
 $aiTokenPresent = ($auth -and $auth.openai -and $auth.openai.access)
 if ($aiTokenPresent) {
     $aiHeaders = @{
         Authorization = ("Bearer " + [string]$auth.openai.access)
         'ChatGPT-Account-Id' = [string]$auth.openai.accountId
-        Accept = 'application/json'
-        Origin = 'https://chatgpt.com'
-        Referer = 'https://chatgpt.com/'
-        'User-Agent' = 'Mozilla/5.0'
+        Accept = 'application/json'; Origin = 'https://chatgpt.com'; Referer = 'https://chatgpt.com/'; 'User-Agent' = 'Mozilla/5.0'
     }
     $r = Invoke-QuotaGet 'https://chatgpt.com/backend-api/wham/usage' $aiHeaders
     if ($r.ok) {
         try {
             $wu = ($r.body | ConvertFrom-Json)
+            if (-not $wu.rate_limit) { throw 'missing coding rate limit' }
+            $aiAllowed = $wu.rate_limit.allowed
+            $aiLimitReached = $wu.rate_limit.limit_reached
             $aiWindows = [ordered]@{ plan_type = [string]$wu.plan_type }
-            if ($wu.rate_limit -and $wu.rate_limit.primary_window) {
+            if ($wu.rate_limit.primary_window) {
                 $pw = $wu.rate_limit.primary_window
-                $aiWindows['primary'] = [ordered]@{
-                    used_percent = [double]$pw.used_percent
-                    window_seconds = [int]$pw.limit_window_seconds
-                    reset_at_unix = [long]$pw.reset_at
-                }
+                if ($null -eq $pw.used_percent -or -not $pw.limit_window_seconds -or -not $pw.reset_at) { throw 'invalid primary window' }
+                $aiWindows['primary'] = [ordered]@{ used_percent = [double]$pw.used_percent; window_seconds = [int]$pw.limit_window_seconds; reset_at_unix = [long]$pw.reset_at }
             }
-            if ($wu.rate_limit -and $wu.rate_limit.secondary_window) {
+            if ($wu.rate_limit.secondary_window) {
                 $sw = $wu.rate_limit.secondary_window
-                $aiWindows['secondary'] = [ordered]@{
-                    used_percent = [double]$sw.used_percent
-                    window_seconds = [int]$sw.limit_window_seconds
-                    reset_at_unix = [long]$sw.reset_at
-                }
+                if ($null -eq $sw.used_percent -or -not $sw.limit_window_seconds -or -not $sw.reset_at) { throw 'invalid secondary window' }
+                $aiWindows['secondary'] = [ordered]@{ used_percent = [double]$sw.used_percent; window_seconds = [int]$sw.limit_window_seconds; reset_at_unix = [long]$sw.reset_at }
             }
             $aiTelemetry.status = 'ok'
         } catch { $aiTelemetry.status = 'unparseable'; $aiTelemetry.note = 'response did not match expected shape' }
     } elseif ($r.status -eq 401 -or $r.status -eq 403) {
-        $aiTelemetry.status = 'auth-failed'
-        $aiTelemetry.note = 'stored ChatGPT token rejected by the first-party usage surface in this installation (telemetry only; execution availability unchanged)'
-    } else {
-        $aiTelemetry.status = 'unreachable'
-        $aiTelemetry.note = ("http status " + $r.status)
-    }
-} else {
-    $aiTelemetry.status = 'no-credential'
-    $aiTelemetry.note = 'no openai token in auth.json'
-}
-$aiExec = Get-PriorExecution 'openai-oauth'
-$surfaces['openai-oauth'] = [ordered]@{
-    quota_type = 'subscription'
-    telemetry = $aiTelemetry
-    windows = $aiWindows
-    execution = $aiExec
-}
-
-# ---- opencode-free: no quota surface; telemetry is intentionally absent ----
-$freeExec = Get-PriorExecution 'opencode-free'
+        $aiTelemetry.status = 'auth-failed'; $aiTelemetry.note = 'stored ChatGPT token rejected by usage surface (telemetry only)'
+    } else { $aiTelemetry.status = 'unreachable'; $aiTelemetry.note = ("http status " + $r.status) }
+} else { $aiTelemetry.status = 'no-credential'; $aiTelemetry.note = 'no openai token in auth.json' }
+$surfaces['openai-oauth'] = [ordered]@{ quota_type = 'subscription'; telemetry = $aiTelemetry; windows = $aiWindows; allowed = $aiAllowed; limit_reached = $aiLimitReached; execution = (Get-PriorExecution 'openai-oauth') }
 $surfaces['opencode-free'] = [ordered]@{
     quota_type = 'free-hosted'
     telemetry = [ordered]@{ status = 'not-applicable'; source = 'none'; as_of = $now; note = 'free tier exposes no quota surface; availability is not assumed' }
-    execution = $freeExec
+    execution = (Get-PriorExecution 'opencode-free')
 }
-
-# ---- Execution block recording (confirmed execution-side failures only) ----
-if ($BlockSurface -ne '') {
-    $validSurfaces = @('opencode-go', 'openai-oauth', 'github-copilot-oauth', 'opencode-free')
-    if ($validSurfaces -notcontains $BlockSurface) { throw "Unknown surface for execution block: $BlockSurface" }
-    $priorCount = 0
-    $pe = Get-PriorExecution $BlockSurface
-    if ($pe -and $pe.recheck_count) { try { $priorCount = [int]$pe.recheck_count } catch { $priorCount = 0 } }
-    # Bounded rechecking: cap consecutive unknown-reset blocks at 3, then back off.
-    $recheckAt = ''
-    try {
-        $recheckAt = (Get-Date).ToUniversalTime().AddMinutes([double]$BlockRecheckMinutes).ToString('o')
-    } catch {}
-    $surfaces[$BlockSurface].execution = [ordered]@{
-        blocked = $true
-        reason = $BlockReason
-        reset_at = $BlockResetAt
-        recheck_at = $recheckAt
-        recheck_count = ($priorCount + 1)
-        recorded_at = $now
-    }
-    Write-Output ("Recorded execution block: $BlockSurface reason=$BlockReason recheck_at=$recheckAt")
-}
-
-# A refresh never clears an execution block merely because telemetry looks cheap.
-# Blocks clear only when their reset time has passed (handled by the selector as
-# unknown-reset recheck) or when a same-bucket live check shows headroom. That
-# same-bucket clearing is evaluated in select-model.ps1, not here.
-
-$state = [ordered]@{
-    generated = $true
-    generated_at = $now
-    surfaces = $surfaces
-}
-Write-Utf8NoBom $StatePath ($state | ConvertTo-Json -Depth 8)
-Write-Output "Wrote quota state:"
-Write-Output ("  path: $StatePath")
+# Failed refresh never changes a dated good observation into a fabricated balance.
 foreach ($sn in @($surfaces.Keys)) {
-    $t = $surfaces[$sn].telemetry
-    Write-Output ("  surface=$sn telemetry=" + $t.status)
+    $current = $surfaces[$sn]; $old = Get-PriorSurface $sn
+    if ($current.telemetry.status -ne 'ok' -and $old -and $old.telemetry.status -eq 'ok') {
+        $failedStatus = $current.telemetry.status
+        foreach ($field in @('windows','buckets','reset_at','allowed','limit_reached')) {
+            if ($old.PSObject.Properties.Name -contains $field) { $current[$field] = $old.$field }
+        }
+        $current.telemetry = [ordered]@{
+            status='ok'; source=[string]$old.telemetry.source; as_of=[string]$old.telemetry.as_of;
+            cached=$true; last_attempt_at=$now; last_attempt_status=$failedStatus
+        }
+    }
 }
+$state = [ordered]@{ generated = $true; generated_at = $now; surfaces = $surfaces }
+Write-Utf8NoBom $StatePath ($state | ConvertTo-Json -Depth 8)
+Write-Output "Wrote quota state: $StatePath"
+foreach ($sn in @($surfaces.Keys)) { Write-Output ("  surface=$sn telemetry=" + $surfaces[$sn].telemetry.status) }
+} finally { if ($lock) { $lock.Dispose() } }

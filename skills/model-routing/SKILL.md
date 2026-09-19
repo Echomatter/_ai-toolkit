@@ -1,47 +1,32 @@
 ---
 name: model-routing
-description: Own model-choice guidance, evidence refresh, quota economics, and explanation of delegated selections. Advice does not switch a session. Child selection must execute on the chosen model via the delegate tool.
+description: Model-choice guidance, evidence refresh and quota economics. Advice does not switch a session; delegate executes agent-initiated child work on the selected model.
 ---
 
 # Model Routing
 
-Skills never change the active OpenCode mode. Parent models never change silently.
+Skills do not change mode. Preserve the user's parent model and explicit provider, privacy and spending restrictions. Economics is a deterministic calculation inside the existing selector, not another agent or skill.
 
-## Two jobs
+## Advice versus execution
 
-- **Advice** for the user's next phase: recommend; do not switch.
-- **Child selection**: call `delegate`, then the selected child must actually run on the chosen model. A recommendation that another role ignores is not execution.
+For a requested next-phase recommendation, characterize the work and call `scripts/select-model.ps1`. Explain one recommended route and a useful fallback; do not switch the session. Ordinary localized work may remain in customized Build.
 
-Use `scripts/select-model.ps1`. Do not rank models from memory or lane names. Capability qualification is separate from economics. Unknown capability is not adequate. Unknown price or missing telemetry is not free or unlimited. No unapproved overage.
+For agent-initiated child work, invoke `delegate` with the required role, complete bounded assignment, relevant handoff, constraints and task types. The tool already executes the child. Do not follow it with native `task` or an `@worker` invocation: that duplicates work and may inherit the wrong model. Check selected/dispatched/observed identity in the receipt. A completed execution is not proof of task correctness; validate it.
 
-## Roles (jobs, not models)
+## Roles
 
-- **Build**: customized parent. User's selected model.
-- **Worker**: bounded implementation when assigned.
-- **Architect**: hard tradeoffs / architecture. Name does not force Plan or an expensive model.
-- **Researcher**: orientation and investigation. Read-only on project source.
-- **Review**: independent read-only verification. Prefer a different model family when a capable alternative exists. Same-model review is not cross-model verification.
+Build is our customized parent. Worker implements bounded work. Architect resolves hard technical decisions. Researcher owns orientation and investigation using appropriate index, Explore and web sources. Review checks without editing. Roles have no permanent model identity.
 
-User-invoked skills/helpers inherit the selected parent model unless the user overrides. Agent-initiated children use `delegate`. Explicit user model override wins.
+Reorient's required Researcher/Worker handoff remains. Other tasks do not need every helper. Prefer a capable distinct model family for independent review when available; do not pretend a same-model review is cross-model verification.
 
-## Stay in Build when
+## Economics and failure
 
-Localized work, tests can settle it, retrieval reduced uncertainty, a free/adequate model can finish it.
+Qualify capability first, then compare expected capacity consumption and scarcity. Unknown evidence is not adequacy. Missing telemetry is not unlimited quota; unknown prices are not free. Use validated task history and labeled workload estimates without making the caller guess tokens. Preserve provider-qualified routes and separate shared pools from model identity.
 
-## Delegate a child when
+No separately metered gateways or unapproved overage. A known exhausted pool is not a useful fallback. The tool permits at most one appropriate read-only retry and returns failed writers for inspection. Do not create another writer while the original may still run.
 
-Bounded extra work, orientation (Researcher), independent review, or a narrowed hard decision (Architect). Call `delegate` first for agent-initiated work. Preserve parent. One attempt; no competing writer.
+## Maintenance
 
-## Advice line (optional)
+Ordinary routing uses dated cached evidence. Explicit evidence refresh may use Researcher for targeted current research. Index maintenance can coordinate freshness checks once, but must not create an index/routing/research loop. Provider telemetry failure must not break project search.
 
-After a meaningful completed task, one line only when the next phase is clear and another model has a material advantage:
-
-`Next model: <id> — <reason>. <stay | use @researcher/@explore | delegate via @worker | @architect | @review | switch with /models>`
-
-Otherwise say nothing about models.
-
-## Refresh
-
-Only an explicit evidence refresh does live model research. Ordinary routing uses cached evidence. Coordinated index refresh may light-check inventory/quota once; do not cycle index → routing → research → index.
-
-Eligible surfaces: OpenCode free, OpenCode Go, OpenAI OAuth, GitHub Copilot OAuth. Provider-qualified IDs stay distinct. No metered API gateways.
+After validation, use Record Outcome with the returned task ID so actual session usage is linked once. Provider/binding/infrastructure failures are not poor coding performance by the recommended model.

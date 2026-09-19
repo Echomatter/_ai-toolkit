@@ -2,7 +2,7 @@ name: Runtime verification
 
 on:
   push:
-    branches: ["chatgpt/verified-child-execution"]
+    branches: [main, "chatgpt/**"]
   pull_request:
 
 permissions:
@@ -16,13 +16,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
-      - name: Isolated runtime contracts
+      - name: Isolated execution contracts
         shell: pwsh
         run: |
-          if (Test-Path tests/delegate-runtime.test.mjs) {
-            node --test tests/delegate-runtime.test.mjs
-            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          }
+          node --test tests/delegate-runtime.test.mjs
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Selector and quota contracts
+        shell: powershell
+        run: .\tests\selector-contract.ps1
+      - name: Isolated deployment contracts
+        shell: powershell
+        run: .\tests\deployment-contract.ps1
+      - name: Isolated outcome contracts
+        shell: powershell
+        run: .\tests\outcome-contract.ps1
       - name: Archive tested revision
         if: always()
         shell: pwsh

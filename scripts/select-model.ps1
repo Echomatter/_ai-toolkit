@@ -5,6 +5,8 @@ Lane membership is used only as a deterministic tie-breaker, never as evidence.
 Windows PowerShell 5.1 compatible. All file reads use UTF8 to preserve encoding.
 #>
 param(
+    [string]$ToolkitRoot = '',
+    [string]$ExcludedModels = '',
     [string[]]$TaskType = @('bounded_feature'),
     $NeedsWrites = $false,
     $NeedsTerminal = $false,
@@ -25,7 +27,7 @@ param(
     [double]$QuotaStalenessMinutes = 30
 )
 $ErrorActionPreference = 'Stop'
-$ToolkitRoot = Split-Path -Parent $PSScriptRoot
+if (-not $ToolkitRoot) { $ToolkitRoot = Split-Path -Parent $PSScriptRoot }
 
 function To-Bool($v) {
     if ($v -is [bool]) { return $v }
@@ -61,7 +63,7 @@ function Rating-Score([string]$r) {
         'good' { return 3.0 }
         'adequate' { return 2.0 }
         'weak' { return 0.0 }
-        default { return 1.0 }
+        default { return 0.0 }
     }
 }
 function Confidence-Mult($c) {
@@ -100,40 +102,22 @@ try {
     if ($h.entries) { $historyEntries = @($h.entries) }
 } catch { $historyEntries = @() }
 
-# Quota state (optional, runtime, never committed): .state/quota-state.json written
-# by refresh-quota.ps1. The selector never performs network calls; it reads the
-# cache only. Missing or stale telemetry means UNKNOWN, which is preference-neutral
-# and never a lockout. Telemetry health is separate from execution availability.
-# Freshness requires both a recent file AND at least one surface reporting
-# telemetry status 'ok': an all-failed cache (auth-failed/unreachable/...) is
-# reported as stale so failed telemetry stays neutral and never gates blocks.
+# Runtime quota observations are independently dated; a failed provider does not
+# inherit another provider's freshness. Execution blocks remain separate.
 if ($QuotaStatePath -eq '') { $QuotaStatePath = Join-Path $ToolkitRoot '.state\quota-state.json' }
 $quotaState = $null
+try { if (Test-Path -LiteralPath $QuotaStatePath) { $quotaState = Get-Content -LiteralPath $QuotaStatePath -Raw -Encoding UTF8 | ConvertFrom-Json } } catch {}
+function Test-SurfaceFresh($s) {
+    if (-not $s -or -not $s.telemetry -or $s.telemetry.status -ne 'ok' -or -not $s.telemetry.as_of) { return $false }
+    try {
+        $age = ((Get-Date).ToUniversalTime() - ([DateTime]$s.telemetry.as_of).ToUniversalTime()).TotalMinutes
+        return ($age -ge 0 -and $age -le $QuotaStalenessMinutes)
+    } catch { return $false }
+}
 $quotaFresh = $false
-try {
-    if (Test-Path -LiteralPath $QuotaStatePath) {
-        $quotaState = Get-Content -LiteralPath $QuotaStatePath -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($quotaState -and $quotaState.generated_at) {
-            # generated_at carries a Z suffix; normalize to UTC before diffing
-            # (a raw [DateTime] cast would land in local time and false-age).
-            $genUtc = ([DateTime]"$($quotaState.generated_at)").ToUniversalTime()
-            $qAge = ((Get-Date).ToUniversalTime() - $genUtc).TotalMinutes
-            if ($qAge -ge 0 -and $qAge -le $QuotaStalenessMinutes) { $quotaFresh = $true }
-        }
-        if ($quotaFresh) {
-            # File age alone is not freshness: with zero 'ok' surfaces the cache
-            # carries no usable signal, so report stale (neutral, blocks nothing).
-            $anyOk = $false
-            if ($quotaState -and $quotaState.surfaces) {
-                foreach ($sp in @($quotaState.surfaces.PSObject.Properties)) {
-                    if ($sp.Value -and $sp.Value.telemetry -and ([string]$sp.Value.telemetry.status).ToLower() -eq 'ok') { $anyOk = $true; break }
-                }
-            }
-            if (-not $anyOk) { $quotaFresh = $false }
-        }
-    }
-} catch { $quotaState = $null; $quotaFresh = $false }
-
+if ($quotaState -and $quotaState.surfaces) {
+    foreach ($q in $quotaState.surfaces.PSObject.Properties) { if (Test-SurfaceFresh $q.Value) { $quotaFresh = $true } }
+}
 # Static public Go pricing reference (committed; NOT account data).
 $goPricing = $null
 try {
@@ -173,7 +157,7 @@ function Get-QuotaSurface([string]$SurfaceName) {
 }
 function Get-GoWindow([string]$WindowName) {
     $s = Get-QuotaSurface 'opencode-go'
-    if (-not $s -or -not $s.windows) { return $null }
+    if (-not (Test-SurfaceFresh $s) -or -not $s.windows) { return $null }
     foreach ($p in @($s.windows.PSObject.Properties)) {
         if ($p.Name -eq $WindowName) { return $p.Value }
     }
@@ -281,7 +265,16 @@ if ($bNeedsDeep -or $bNeedsTerminal -or ($NeedsLargeContextTokens -gt 0) -or $bH
 }
 $isConsequential = ($bNeedsDeep -or $bHighConseq -or ($NeedsLargeContextTokens -ge 200000) -or ($tasks -contains 'architecture') -or ($tasks -contains 'large_refactor') -or (($tasks -contains 'debugging') -and ($tasks -contains 'terminal_heavy')))
 
+$goIdentity = $null
+try { $goIdentity = Get-Content -LiteralPath (Join-Path $ToolkitRoot 'routing\go-identity-map.json') -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
 function Get-Canonical-Key($Evidence, [string]$RosterId) {
+    if ($goIdentity -and $goIdentity.mappings) {
+        foreach ($m in $goIdentity.mappings.PSObject.Properties) {
+            if ($m.Name -eq $RosterId -and $m.Value.underlying -and $Evidence.models.PSObject.Properties.Name -contains $m.Value.underlying) {
+                return [string]$m.Value.underlying
+            }
+        }
+    }
     if (-not $Evidence.alias_index) { return $null }
     foreach ($p in @($Evidence.alias_index.PSObject.Properties)) {
         if ($p.Name -eq $RosterId) { return [string]$p.Value }
@@ -320,15 +313,8 @@ function Get-ModelProvider($entry, [string]$id) {
     return ''
 }
 function Get-ExecutionSurface([string]$ModelId, [string]$Purpose) {
+    if ($roleNorm) { return 'delegate' }
     if ($CurrentModel -and $ModelId -eq $CurrentModel) { return 'build' }
-    if ($state) {
-        if ($Purpose -eq 'review' -and $state.review -and $ModelId -eq [string]$state.review) { return '@review' }
-        $archModel = $null
-        if ($state.architect) { $archModel = [string]$state.architect }
-        elseif ($state.deep) { $archModel = [string]$state.deep }
-        if ($Purpose -eq 'implementation' -and $archModel -and $ModelId -eq $archModel) { return '@architect chunk' }
-        if ($state.routine -and $ModelId -eq [string]$state.routine) { return 'build' }
-    }
     return '/models switch'
 }
 
@@ -358,36 +344,17 @@ foreach ($sn in @('opencode-go', 'openai-oauth', 'github-copilot-oauth', 'openco
     }
 }
 
-# ---- Execution availability (separate from telemetry health) ----
-# A block applies when: reset is known and in the future; or reset is unknown
-# and the bounded recheck time is still in the future. Unknown-reset blocks carry
-# a bounded recheck budget (recorded by refresh-quota.ps1); when the budget is
-# spent, the route is treated as unknown rather than blocked.
+# Execution blocks require confirmed recovery or a known reset, never a failure-count threshold.
 function Test-ExecutionBlock($exec) {
     if (-not $exec -or -not $exec.blocked) { return $null }
     $now = (Get-Date).ToUniversalTime()
     if ($exec.reset_at -and ("$($exec.reset_at)".Trim() -ne '')) {
         try {
-            # Normalize to UTC: a raw [DateTime] cast lands in local time, so a
-            # future reset within the UTC offset would false-compare as past.
             $reset = ([DateTime]"$($exec.reset_at)").ToUniversalTime()
             if ($reset -gt $now) {
                 return [ordered]@{ active = $true; reason = [string]$exec.reason; reset_at = [string]$exec.reset_at; recheck_at = ''; kind = 'execution-block' }
             }
             return $null
-        } catch {}
-    }
-    if ($exec.recheck_at -and ("$($exec.recheck_at)".Trim() -ne '')) {
-        try {
-            # Same UTC normalization: without it a future recheck inside the
-            # local UTC offset compares as past and the block wrongly lapses.
-            $recheck = ([DateTime]"$($exec.recheck_at)").ToUniversalTime()
-            $count = 0
-            try { $count = [int]$exec.recheck_count } catch {}
-            if ($recheck -gt $now -and $count -lt 4) {
-                return [ordered]@{ active = $true; reason = [string]$exec.reason; reset_at = ''; recheck_at = [string]$exec.recheck_at; kind = 'execution-block-recheck' }
-            }
-            return [ordered]@{ active = $false; reason = 'recheck budget spent; treating route as unknown'; reset_at = ''; recheck_at = ''; kind = 'recheck-spent' }
         } catch {}
     }
     return [ordered]@{ active = $true; reason = [string]$exec.reason; reset_at = ''; recheck_at = ''; kind = 'execution-block-unknown-reset' }
@@ -406,13 +373,12 @@ foreach ($sn in @('opencode-go', 'openai-oauth', 'github-copilot-oauth', 'openco
     }
 }
 
-# ---- Telemetry-confirmed shared-pool exhaustion (fresh telemetry only) ----
-# Go: a window whose status is not ok means the pool refused work in that window.
+# Telemetry-confirmed shared-pool exhaustion (fresh telemetry only).
 $goBlockedWindow = $null
-if ($quotaFresh) {
+if (Test-SurfaceFresh (Get-QuotaSurface 'opencode-go')) {
     foreach ($w in @('rolling', 'weekly', 'monthly')) {
         $wu = Get-GoWindow $w
-        if ($wu -and $wu.status -and ([string]$wu.status).ToLower() -ne 'ok') {
+        if ($wu -and $wu.status -and ([string]$wu.status).ToLower() -in @('rate-limited','rate_limited','limit_reached','exhausted')) {
             $goBlockedWindow = [ordered]@{ window = $w; status = [string]$wu.status; resets_at = [string]$wu.resets_at }
             break
         }
@@ -421,22 +387,18 @@ if ($quotaFresh) {
         $appliedBlocks += [ordered]@{ surface = 'opencode-go'; reason = ("go window " + $goBlockedWindow.window + " status=" + $goBlockedWindow.status); reset_at = $goBlockedWindow.resets_at; recheck_at = ''; kind = 'pool-exhausted' }
     }
 }
-# Copilot: delegated execution (worker/review/deep/index via a third-party coding
-# agent) consumes AI credits, which the API reports as the premium_interactions
-# bucket. chat/completions unlimited does NOT cover agentic delegation, so only
-# the premium bucket is evaluated here. Depletion without permitted overage blocks
-# the pool until the known reset; permitted overage allows with an explicit flag
-# (never silent paid fallthrough).
+# Copilot agentic work uses the premium bucket. Provider overage permission alone
+# never authorizes the toolkit to spend beyond included capacity.
 $copilotPremium = $null
 $copilotOverage = $false
-if ($quotaFresh) {
+if (Test-SurfaceFresh (Get-QuotaSurface 'github-copilot-oauth')) {
     $cs = Get-QuotaSurface 'github-copilot-oauth'
-    if ($cs -and $cs.buckets -and $cs.buckets.premium_interactions) {
+    if ($cs -and $cs.buckets -and $cs.buckets.premium_interactions -and $null -ne $cs.buckets.premium_interactions.percent_remaining) {
         $pb = $cs.buckets.premium_interactions
         $premRem = 100.0
         try { $premRem = [double]$pb.percent_remaining } catch {}
         $overPerm = $false
-        try { $overPerm = [bool]$pb.overage_permitted } catch {}
+        try { $overPerm = ([bool]$pb.overage_permitted -and $policy.allow_overage -eq $true) } catch {}
         $entVal = 0.0
         try { if ($null -ne $pb.entitlement) { $entVal = [double]$pb.entitlement } } catch {}
         $copilotPremium = [ordered]@{ percent_remaining = $premRem; overage_permitted = $overPerm; reset_at = [string]$cs.reset_at; entitlement = $entVal }
@@ -448,9 +410,60 @@ if ($quotaFresh) {
         }
     }
 }
+# Only relevant ChatGPT windows govern coding availability, not unrelated
+# account features. Explicit refusal is authoritative while the observation is fresh.
+$openaiBlocked = $false
+$os = Get-QuotaSurface 'openai-oauth'
+if (Test-SurfaceFresh $os) {
+    if ($os.limit_reached -eq $true -or ($null -ne $os.allowed -and $os.allowed -eq $false)) { $openaiBlocked = $true }
+    if ($os.windows) {
+        foreach ($w in $os.windows.PSObject.Properties) {
+            if ($w.Name -in @('primary','secondary') -and $null -ne $w.Value.used_percent -and [double]$w.Value.used_percent -ge 100) { $openaiBlocked = $true }
+        }
+    }
+}
+# Execution-side health is durable and scoped. Its files contain no credentials.
+$health = @()
+$healthDir = Join-Path $ToolkitRoot '.state\delegation\blocks'
+if (Test-Path -LiteralPath $healthDir) {
+    foreach ($f in Get-ChildItem -LiteralPath $healthDir -File -Filter '*.json') {
+        try { $health += (Get-Content -LiteralPath $f.FullName -Raw -Encoding UTF8 | ConvertFrom-Json) } catch { throw 'Execution health state is malformed; repair it rather than bypass a known block.' }
+    }
+}
+$excluded = @($ExcludedModels.Split(',') | Where-Object { $_ })
 foreach ($rm in @($roster.eligible_models)) {
     $rid = [string]$rm.id
     $surface = [string]$rm.surface
+    if (@($policy.allowed_surfaces) -notcontains $surface -or $excluded -contains $rid) {
+        $filtered += [pscustomobject]@{ id=$rid; reason='route excluded by policy or failed attempt' }; continue
+    }
+    if ($surface -eq 'openai-oauth' -and $openaiBlocked) {
+        $filtered += [pscustomobject]@{ id=$rid; reason='ChatGPT coding pool exhausted' }; continue
+    }
+    $healthBlocked = $false
+    foreach ($block in $health) {
+        if (($block.scope -eq 'model' -and $block.key -eq $rid) -or ($block.scope -eq 'surface' -and $block.key -eq $surface)) {
+            $expired = $false
+            if ($block.reason -in @('throttle','provider') -and $block.retry_after) {
+                try { $expired = ([DateTime]$block.retry_after).ToUniversalTime() -le (Get-Date).ToUniversalTime() } catch {}
+            }
+            # A new successful Go observation with all windows usable proves
+            # recovery; old/stale/partial telemetry must not erase the block.
+            if ($block.reason -eq 'quota' -and $surface -eq 'opencode-go') {
+                $gs = Get-QuotaSurface 'opencode-go'
+                if ((Test-SurfaceFresh $gs) -and ([DateTime]$gs.telemetry.as_of).ToUniversalTime() -gt ([DateTime]$block.recorded_at).ToUniversalTime()) {
+                    $good = 0
+                    foreach ($wn in @('rolling','weekly','monthly')) {
+                        $gw = Get-GoWindow $wn
+                        if ($gw -and $gw.status -eq 'ok' -and $null -ne $gw.used_percent -and [double]$gw.used_percent -lt 100) { $good++ }
+                    }
+                    if ($good -eq 3) { $expired = $true }
+                }
+            }
+            if (-not $expired) { $healthBlocked = $true }
+        }
+    }
+    if ($healthBlocked) { $filtered += [pscustomobject]@{ id=$rid; reason='confirmed execution health block' }; continue }
     if ($ExcludeModel -ne '' -and $rid -eq $ExcludeModel) {
         $filtered += [pscustomobject]@{ id=$rid; reason='excluded (diversity)' }
         continue
@@ -495,6 +508,12 @@ foreach ($rm in @($roster.eligible_models)) {
             }
         } catch {}
     }
+    if ($bNeedsWrites -or $bNeedsTerminal -or $bNeedsWeb) {
+        $toolCap = Get-Capability $entry 'tool_use'
+        if (-not $toolCap -or $toolCap.rating -notin @('adequate','good','strong')) {
+            $filtered += [pscustomobject]@{ id=$rid; reason='Required tool-use evidence is missing or insufficient' }; continue
+        }
+    }
     # Weighted capability average.
     $sum = 0.0
     $wsum = 0.0
@@ -508,6 +527,9 @@ foreach ($rm in @($roster.eligible_models)) {
         if ($cap -and $cap.rating) { $rating = [string]$cap.rating }
         if ($cap -and $cap.confidence) { $conf = [string]$cap.confidence }
         if ($cap -and $cap.evidence) { $srcs = @($cap.evidence) }
+        if ($surface -eq 'opencode-go' -and $canon -notlike 'unresearched:*') {
+            if ($conf -eq 'high') { $conf = 'medium' } elseif ($conf -eq 'medium') { $conf = 'low' }
+        }
         $contrib = (Rating-Score $rating) * (Confidence-Mult $conf)
         $sum += $contrib * $w
         $wsum += $w
@@ -520,9 +542,8 @@ foreach ($rm in @($roster.eligible_models)) {
     # Capability qualification first: economics may decide among qualified
     # candidates but never promote an unqualified one. Harder tasks require
     # stronger evidence before a cheap candidate qualifies.
-    $capFloor = 0.5
-    if ($isTrivial) { $capFloor = 0.3 }
-    if ($isConsequential) { $capFloor = 2.0 }
+    $capFloor = 2.0
+    if ($isConsequential) { $capFloor = 2.5 }
     if ($capAvg -lt $capFloor) {
         $filtered += [pscustomobject]@{ id=$rid; reason=("capability floor: cap_avg " + ([Math]::Round($capAvg,2)) + " < required " + $capFloor) }
         continue
@@ -556,6 +577,8 @@ foreach ($rm in @($roster.eligible_models)) {
     # Local history: n<3 anecdotal only; n>=3 may influence; n>=10 substantial.
     # Reward validated first-pass success and penalize repeated attempts,
     # escalation, and defects later found by independent review.
+    $useSet = @()
+    $overlap = @()
     $histN = 0
     $histRate = $null
     $histAdj = 0.0
@@ -564,7 +587,7 @@ foreach ($rm in @($roster.eligible_models)) {
     $histReviewDefectRate = $null
     $histAvgAttempts = $null
     if ($historyEntries.Count -gt 0) {
-        $rel = @($historyEntries | Where-Object { $_.model -eq $rid })
+        $rel = @($historyEntries | Where-Object { $_.model -eq $rid -and $_.synthetic -ne $true -and $_.failure_kind -notin @('quota','provider','binding','auth','timeout') })
         # Prefer task-overlapping history when enough samples exist.
         $overlap = @($rel | Where-Object {
             $hit = $false
@@ -611,144 +634,86 @@ foreach ($rm in @($roster.eligible_models)) {
         }
     }
 
-    # Economics, two parts. Base preserves the existing triviality/role policy
-    # exactly (backward compatible when quota data is absent). The quota term
-    # below is window-consistent normalized expense: monthly estimates against
-    # monthly capacity, short-window pressure against the matching short-window
-    # capacity. Windows are never summed as separate charges; pressure takes
-    # the maximum across windows. All dollar figures are allocation estimates,
-    # not charges or cash savings.
-    $econBase = 0.0
-    if ($isTrivial) {
-        if ($surface -eq 'opencode-free') { $econBase = 1.0 }
-        else { $econBase = -0.25 }
-    } elseif ($isConsequential) {
-        if ($surface -ne 'opencode-free') { $econBase = -0.15 }
+    if ($overlap -and $overlap.Count -ge 3 -and $histRate -lt 0.4) {
+        $filtered += [pscustomobject]@{ id=$rid; reason='validated outcomes are inadequate for this task class' }; continue
     }
-    if ($roleNorm -eq 'researcher' -or $roleNorm -eq 'index') {
-        if ($surface -eq 'opencode-free') { $econBase = $econBase + 2.0 }
-        else { $econBase = $econBase - 1.0 }
-    } elseif ($prefCost -eq 'free') {
-        if ($surface -eq 'opencode-free') { $econBase = $econBase + 1.5 }
-        else { $econBase = $econBase - 1.0 }
-    }
-
-    $quotaEcon = 0.0
-    $quotaDetail = 'no quota signal (unknown telemetry is neutral)'
-    $estCost = 0.0
-    $monthlyFrac = $null
-    $winPressure = $null
-    $hasEst = (($ExpectedInputTokens -gt 0) -or ($ExpectedOutputTokens -gt 0) -or ($ExpectedCacheReadTokens -gt 0))
-    if ($surface -eq 'opencode-go' -and $quotaFresh) {
-        $maxUsed = 0.0
-        foreach ($w in @('rolling', 'weekly', 'monthly')) {
-            $wu = Get-GoWindow $w
-            if ($wu -and $wu.used_percent) {
-                try { $u = [double]$wu.used_percent; if ($u -gt $maxUsed) { $maxUsed = $u } } catch {}
-            }
-        }
-        # Shared pool scarcity: identical for every Go model, moves Go as a
-        # whole against other surfaces without differentiating inside the pool.
-        $quotaEcon = $quotaEcon - (($maxUsed / 100.0) * 0.5)
-        $quotaDetail = ("go pool max-window used " + ([Math]::Round($maxUsed, 1)) + "%")
-        if ($hasEst) {
-            $gp = Get-GoPrice $rid
-            if ($gp -and $gp.monthly_limit) {
-                try {
-                    $ml = [double]$gp.monthly_limit
-                    $estCost = ([double]$ExpectedInputTokens / 1000000.0) * [double]$gp.input + ([double]$ExpectedOutputTokens / 1000000.0) * [double]$gp.output + ([double]$ExpectedCacheReadTokens / 1000000.0) * [double]$gp.cache_read
-                    if ($estCost -gt 0 -and $ml -gt 0) {
-                        $monthlyFrac = $estCost / $ml
-                        $quotaEcon = $quotaEcon - (($monthlyFrac * 100.0) * 0.3)
-                        $maxP = 0.0
-                        foreach ($w in @('rolling', 'weekly', 'monthly')) {
-                            $wu = Get-GoWindow $w
-                            $share = Get-WindowShare $w
-                            if ($wu -and $share -and ([double]$share -gt 0)) {
-                                $capw = $ml * [double]$share
-                                if ($capw -gt 0) {
-                                    $pts = $estCost / $capw * 100.0
-                                    $rem = 100.0 - [double]$wu.used_percent
-                                    if ($rem -lt 5.0) { $rem = 5.0 }
-                                    $p = $pts / $rem
-                                    if ($p -gt $maxP) { $maxP = $p }
-                                }
-                            }
-                        }
-                        $winPressure = $maxP
-                        $quotaEcon = $quotaEcon - [Math]::Min($maxP, 1.0) * 1.0
-                        $quotaDetail = ("go est $" + ([Math]::Round($estCost, 4)) + " = " + ([Math]::Round(($monthlyFrac * 100.0), 2)) + "% of monthly limit $" + $ml + "; window pressure " + ([Math]::Round($maxP, 3)))
-                    }
-                } catch {}
-            } elseif ($gp) {
-                $quotaDetail = 'go pricing has no verified monthly limit for this model; pool scarcity only'
-            }
-        }
-    } elseif ($surface -eq 'github-copilot-oauth' -and $copilotPremium) {
-        # Delegated agentic work runs as a third-party coding agent, which
-        # consumes AI credits from the premium_interactions bucket. Per-model
-        # rates are public; the monthly credit entitlement comes from live
-        # telemetry because it is plan-dependent (1500 credits on Pro).
-        $premRem = [double]$copilotPremium.percent_remaining
-        $quotaEcon = $quotaEcon - ((1.0 - ($premRem / 100.0)) * 0.5)
-        $quotaDetail = ("copilot premium pool " + ([Math]::Round($premRem, 1)) + "% remaining")
-        if ($hasEst) {
-            $cp = Get-CopilotPrice $rid
-            $ent = 0.0
-            try { $ent = [double]$copilotPremium.entitlement } catch {}
-            if ($cp -and ($ent -gt 0)) {
-                try {
-                    $estD = ([double]$ExpectedInputTokens / 1000000.0) * [double]$cp.input + ([double]$ExpectedOutputTokens / 1000000.0) * [double]$cp.output + ([double]$ExpectedCacheReadTokens / 1000000.0) * [double]$cp.cache_read
-                    if ($estD -gt 0) {
-                        $estCredits = $estD / 0.01
-                        $estCost = $estD
-                        $monthlyFrac = $estCredits / $ent
-                        $quotaEcon = $quotaEcon - (($monthlyFrac * 100.0) * 0.3)
-                        $rem = $premRem
-                        if ($rem -lt 5.0) { $rem = 5.0 }
-                        $winPressure = (($monthlyFrac * 100.0) / $rem)
-                        $quotaEcon = $quotaEcon - [Math]::Min($winPressure, 1.0) * 1.0
-                        $quotaDetail = ("copilot est " + ([Math]::Round($estCredits, 1)) + " credits = " + ([Math]::Round(($monthlyFrac * 100.0), 2)) + "% of " + $ent + " entitlement; pressure " + ([Math]::Round($winPressure, 3)))
-                    }
-                } catch {}
-            }
-        }
-        if ($copilotOverage) {
-            $quotaEcon = $quotaEcon - 0.5
-            $quotaDetail = $quotaDetail + '; depleted with permitted overage (explicit, never silent)'
-        }
-    } elseif ($surface -eq 'openai-oauth' -and $quotaFresh) {
-        $os = Get-QuotaSurface 'openai-oauth'
-        $maxUsed = $null
-        if ($os -and $os.windows) {
-            foreach ($wp in @($os.windows.PSObject.Properties)) {
-                if ($wp.Name -eq 'plan_type') { continue }
-                try { $u = [double]$wp.Value.used_percent; if (($null -eq $maxUsed) -or ($u -gt $maxUsed)) { $maxUsed = $u } } catch {}
-            }
-        }
-        if ($null -ne $maxUsed) {
-            $quotaEcon = $quotaEcon - (($maxUsed / 100.0) * 0.5)
-            $quotaDetail = ("chatgpt window used " + ([Math]::Round($maxUsed, 1)) + "%")
-        }
-    }
-    # Learned consumption: measured-only observations (quality=measured) may
-    # nudge when this task class is historically far costlier on this model.
-    # Estimated or unmeasurable observations never train.
-    if (($histN -ge 3) -and ($estCost -gt 0) -and $useSet) {
-        $measured = @($useSet | Where-Object { $_ -and $_.consumption -and ([string]$_.consumption.quality) -eq 'measured' -and $_.consumption.cost_dollars })
+    # Task-consumption estimate: explicit caller data, then measured same-task
+    # history, then a documented conservative workload prior. No extra LLM call.
+    $inputEst = $ExpectedInputTokens; $outputEst = $ExpectedOutputTokens; $cacheEst = $ExpectedCacheReadTokens
+    $estimateSource = 'caller'
+    if (($inputEst + $outputEst + $cacheEst) -eq 0) {
+        $estimateSource = 'workload-prior'
+        $inputEst = 12000; $outputEst = 2000; $cacheEst = 0
+        if (-not $isTrivial) { $inputEst = 30000; $outputEst = 4000 }
+        if ($isConsequential) { $inputEst = 60000; $outputEst = 8000 }
+        $measured = @($useSet | Where-Object { $_.consumption -and $_.consumption.source -eq 'session_messages' -and $_.consumption.quality -eq 'measured' -and $_.success -eq $true })
         if ($measured.Count -ge 3) {
-            $avgC = 0.0
-            foreach ($me in $measured) { try { $avgC += [double]$me.consumption.cost_dollars } catch {} }
-            $avgC = $avgC / [double]$measured.Count
-            if ($avgC -gt 0 -and (($estCost / $avgC) -gt 2.0)) {
-                $quotaEcon = $quotaEcon - 0.2
-                $quotaDetail = $quotaDetail + ("; historically >2x measured avg ($" + ([Math]::Round($avgC, 4)) + ", n=" + $measured.Count + ")")
+            $inputEst = [int](($measured | ForEach-Object { $_.consumption.input_tokens } | Measure-Object -Average).Average)
+            $outputEst = [int](($measured | ForEach-Object { $_.consumption.output_tokens } | Measure-Object -Average).Average)
+            $cacheEst = [int](($measured | ForEach-Object { $_.consumption.cache_read_tokens } | Measure-Object -Average).Average)
+            $estimateSource = 'validated-local-history'
+        }
+    }
+    $estCost = $null; $monthlyFrac = $null; $winPressure = $null
+    $quotaEcon = 0.0; $econBase = 0.0; $economicClass = 2; $expense = [double]::PositiveInfinity
+    $quotaDetail = 'No comparable normalized expense; unknown is not free.'
+    $gp = $null
+    if ($surface -eq 'opencode-free') {
+        $economicClass = 0; $expense = 0.0; $estCost = 0.0
+        $quotaDetail = 'Currently free eligible route; quota failures still exclude it.'
+    } elseif ($surface -eq 'opencode-go') {
+        $gp = Get-GoPrice $rid
+        if ($gp -and $gp.monthly_limit -gt 0 -and $null -ne $gp.input -and $null -ne $gp.output -and $null -ne $gp.cache_read) {
+            $estCost = ($inputEst * [double]$gp.input + $outputEst * [double]$gp.output + $cacheEst * [double]$gp.cache_read) / 1000000.0
+            $monthlyFrac = $estCost / [double]$gp.monthly_limit
+            $economicClass = 0; $expense = $monthlyFrac
+            $maxP = 0.0
+            foreach ($w in @('rolling','weekly','monthly')) {
+                $wu = Get-GoWindow $w; $share = Get-WindowShare $w
+                if ($wu -and $null -ne $wu.used_percent -and $share -gt 0) {
+                    $remaining = [Math]::Max(0.01, (100.0 - [double]$wu.used_percent) / 100.0)
+                    $pressure = ($monthlyFrac / $share) / $remaining
+                    if ($pressure -gt $maxP) { $maxP = $pressure }
+                }
+            }
+            $winPressure = $maxP
+            $expense = $expense * (1.0 + $maxP)
+            $quotaDetail = "Go monthly fraction=$monthlyFrac; max-window pressure=$maxP; estimate=$estimateSource (not a cash charge)."
+        }
+    } elseif ($surface -eq 'github-copilot-oauth') {
+        $cp = Get-CopilotPrice $rid
+        if ($cp) {
+            $estCost = ($inputEst * [double]$cp.input + $outputEst * [double]$cp.output + $cacheEst * [double]$cp.cache_read) / 1000000.0
+            if ($copilotPremium -and $copilotPremium.entitlement -gt 0) {
+                $monthlyFrac = $estCost / (0.01 * [double]$copilotPremium.entitlement)
+                $economicClass = 0
+                $winPressure = $monthlyFrac / [Math]::Max(0.0001, [double]$copilotPremium.percent_remaining / 100.0)
+                $expense = $monthlyFrac * (1.0 + $winPressure)
+                $quotaDetail = "Copilot fraction=$monthlyFrac; pressure=$winPressure; estimate=$estimateSource."
             }
         }
     }
-    if ($quotaEcon -lt -2.5) { $quotaEcon = -2.5 }
-    if ($quotaEcon -gt 0) { $quotaEcon = 0 }
-    $econAdj = $econBase + $quotaEcon
+    # Unknown OpenAI quota mapping is NOT inferred from API prices. The existing
+    # table is only a relative proxy when no normalized candidate is available.
+    if ($surface -eq 'openai-oauth') {
+        try {
+            $ap = Get-Content -LiteralPath (Join-Path $ToolkitRoot 'routing\openai-pricing.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+            $entryPrice = $ap.models.PSObject.Properties | Where-Object { $_.Name -eq $rid } | Select-Object -First 1
+            if ($entryPrice) {
+                $price = $entryPrice.Value
+                $estCost = ($inputEst * [double]$price.input + $outputEst * [double]$price.output + $cacheEst * [double]$price.cache_read) / 1000000.0
+                $quotaDetail = "API-rate proxy only; ChatGPT quota mapping unmeasured; estimate=$estimateSource."
+            }
+        } catch {}
+    }
+    if ($economicClass -eq 2 -and $null -ne $estCost) { $economicClass = 1; $expense = $estCost }
+    # Account for repeated validated failures/retries without converting a
+    # provider outage into a model-capability penalty. Quality gates still hold.
+    if ($histN -ge 3 -and $null -ne $histRate -and $expense -lt [double]::PositiveInfinity) {
+        $expense = $expense / [Math]::Max(0.25, $histRate)
+    }
+    if ($expense -lt [double]::PositiveInfinity) { $quotaEcon = -$expense }
+    $econAdj = $quotaEcon
 
     $total = $capAvg + $benchBonus + $histAdj + $econAdj + $diversityAdj
     $scored += [pscustomobject]@{
@@ -766,6 +731,9 @@ foreach ($rm in @($roster.eligible_models)) {
         hist_review_defect_rate = $histReviewDefectRate
         hist_avg_attempts = $histAvgAttempts
         econ_adj = $econAdj
+        economic_class = $economicClass
+        expense = $expense
+        estimate_source = $estimateSource
         econ_base = $econBase
         quota_econ = [Math]::Round($quotaEcon, 3)
         quota_detail = $quotaDetail
@@ -781,9 +749,7 @@ foreach ($rm in @($roster.eligible_models)) {
 }
 
 if ($scored.Count -eq 0) {
-    # Zero eligible candidates: return a well-formed null result instead of
-    # throwing, and never invent a null-model reviewer. Callers (delegate tool,
-    # tests) must handle selected_model=null as "no adequate route right now".
+    # Zero candidates is an ordinary no-route result, not a fabricated reviewer.
     $emptyResult = [ordered]@{
         recommended = $null
         top_scored = $null
@@ -813,11 +779,11 @@ if ($scored.Count -eq 0) {
             overage = $copilotOverage
         }
         consumption_estimate = [ordered]@{
-            allocation_estimate_dollars = 0
+            provider_cost_proxy_dollars = $null
             monthly_fraction = $null
             window_pressure = $null
             quota_detail = 'no eligible model'
-            note = 'allocation estimate against subscription capacity, not a charge or cash saving'
+            note = 'Provider price proxy and normalized capacity are distinct; neither is a literal cash saving.'
         }
         selected_model = $null
         surface = $null
@@ -829,84 +795,19 @@ if ($scored.Count -eq 0) {
     $emptyResult | ConvertTo-Json -Depth 6
     return
 }
-$ranked = @($scored | Sort-Object -Property @{Expression='total';Descending=$true}, @{Expression='priority';Descending=$false}, @{Expression='id';Descending=$false})
+$ranked = @($scored | Sort-Object -Property @{Expression='economic_class';Descending=$false}, @{Expression='expense';Descending=$false}, @{Expression='total';Descending=$true}, @{Expression='priority';Descending=$false}, @{Expression='id';Descending=$false})
 
 $top = $ranked[0]
-# Fallback: prefer a materially close alternative. When the winner is paid,
-# always retain the best hosted-free candidate as a graceful quota/service fallback.
+# One bounded child selection. Compound requests are coordinated by customized
+# Build, not by silently changing the required role or inventing a reviewer.
 $fallback = $null
-if ($ranked.Count -gt 1) {
-    $cands = @($ranked | Where-Object { ($_.id -ne $top.id) -and ($_.canonical -ne $top.canonical) })
-    if ($cands.Count -eq 0) { $cands = @($ranked | Where-Object { $_.id -ne $top.id }) }
-    if ($cands.Count -gt 0 -and (($top.total - $cands[0].total) -le 1.5)) { $fallback = $cands[0] }
-
-    if ($top.surface -ne 'opencode-free') {
-        $freeFallback = @($ranked | Where-Object { $_.surface -eq 'opencode-free' } | Select-Object -First 1)
-        if ($freeFallback.Count -gt 0) { $fallback = $freeFallback[0] }
-    }
-}
-
-# Execution surface + compound phases. needs_writes=true can never be sole @review.
-$isReviewTask = ($tasks -contains 'code_review') -or ($tasks -contains 'independent_verification')
-$execSurface = 'build'
-$phases = @()
+if ($ranked.Count -gt 1) { $fallback = $ranked[1] }
+$isReviewTask = ($roleNorm -eq 'review' -or $tasks -contains 'code_review' -or $tasks -contains 'independent_verification')
+$execSurface = Get-ExecutionSurface $top.id 'implementation'
+$phases = @([ordered]@{ phase=1; name=$roleNorm; surface=$execSurface; model=$top.id })
 $diagnosisModel = $null
-if ($isReviewTask -and (-not $bNeedsWrites)) {
-    $execSurface = Get-ExecutionSurface $top.id 'review'
-    $phases = @(
-        [ordered]@{ phase=1; name='diagnosis/review'; surface=$execSurface; model=$top.id }
-    )
-} elseif ($isReviewTask -and $bNeedsWrites) {
-    $execSurface = 'combination'
-    # Repair model is the ranked winner; diagnosis is the best review-capable model != repair.
-    $repairModel = $top
-    $diag = $null
-    foreach ($c in $ranked) {
-        if ($c.id -eq $repairModel.id) { continue }
-        $ce = Get-Canonical-Entry $ev (Get-Canonical-Key $ev $c.id)
-        $cr = Get-Capability $ce 'code_review'
-        $r = 'unknown'
-        if ($cr -and $cr.rating) { $r = [string]$cr.rating }
-        if ($r -eq 'strong' -or $r -eq 'good') { $diag = $c; break }
-    }
-    if (-not $diag) {
-        if ($fallback) { $diag = $fallback }
-        else { $diag = $ranked[1] }
-    }
-    $diagnosisModel = $diag
-    # Primary recommendation stays the repair model so the two requirement sets differ.
-    $diagSurface = Get-ExecutionSurface $diag.id 'review'
-    $repairSurface = Get-ExecutionSurface $repairModel.id 'implementation'
-    $phases = @(
-        [ordered]@{ phase=1; name='diagnosis/review'; surface=$diagSurface; model=$diag.id },
-        [ordered]@{ phase=2; name='implementation/repair'; surface=$repairSurface; model=$repairModel.id }
-    )
-    # Fallback for compound is the diagnosis model (already distinct).
-    $fallback = $diag
-} else {
-    $execSurface = Get-ExecutionSurface $top.id 'implementation'
-    $phases = @(
-        [ordered]@{ phase=1; name='implementation'; surface=$execSurface; model=$top.id }
-    )
-}
-
-# Preserve a hosted-free fallback for any paid recommendation, even when
-# compound task handling selected a separate diagnosis model.
-if ($top.surface -ne 'opencode-free') {
-    $freeFallback = @($ranked | Where-Object { $_.surface -eq 'opencode-free' } | Select-Object -First 1)
-    if ($freeFallback.Count -gt 0) { $fallback = $freeFallback[0] }
-}
-
-# Marginal-difference stay-put: if current model is eligible and within 0.5, stay.
-$stayPut = $false
+$stayPut = ($top.id -eq $CurrentModel -and -not $roleNorm)
 $currentScore = $null
-if ($CurrentModel -ne '' -and -not $bNeedsDiversity -and -not $isReviewTask) {
-    foreach ($s in $ranked) { if ($s.id -eq $CurrentModel) { $currentScore = $s; break } }
-    if ($currentScore -and ($top.id -ne $CurrentModel) -and (($top.total - $currentScore.total) -lt 0.5)) {
-        $stayPut = $true
-    }
-}
-
 # Research gating.
 function Test-CandidateEvidenceGap($candidate) {
     if (-not $candidate) { return $false }
@@ -945,7 +846,7 @@ if ($stayPut) {
     $phases = @([ordered]@{ phase=1; name='implementation'; surface='build'; model=$CurrentModel })
 }
 
-# Build why lines (task-specific, evidence-tied, no lane identity as evidence).
+# Explain the final selected candidate, not an earlier winner or static lane.
 $why = @()
 $why += ("task: " + ($tasks -join ' + ') + " | writes=$bNeedsWrites terminal=$bNeedsTerminal large_ctx=$NeedsLargeContextTokens deep=$bNeedsDeep diversity=$bNeedsDiversity consequence=$bHighConseq")
 if ($top.why_caps -ne '') { $why += ("capabilities: " + $top.why_caps) }
@@ -955,18 +856,15 @@ if ($top.hist_n -ge 3) {
     $why += ("local history: n=$($top.hist_n) success=$([Math]::Round([double]$top.hist_rate,2)) tests=$([Math]::Round([double]$top.hist_tests_rate,2)) escalation=$([Math]::Round([double]$top.hist_escalation_rate,2)) review_defects=$([Math]::Round([double]$top.hist_review_defect_rate,2)) avg_attempts=$([Math]::Round([double]$top.hist_avg_attempts,2)) adj=$($top.hist_adj)")
 }
 else { $why += ("local history: n=$($top.hist_n) anecdotal only (needs n>=3)") }
-if ($isTrivial) { $why += ("economics: trivial task prefers inexpensive free/local default") }
-else { $why += ("economics: evidence-led; subscription OAuth is quota-limited, and paid failures fall back to the best hosted-free candidate") }
+$why += "economics: qualify first; compare normalized capacity estimates, use explicit price proxies only when quota mapping is unknown"
 if ($top.quota_detail -and ([string]$top.quota_detail).Trim() -ne '') { $why += ("quota: " + [string]$top.quota_detail) }
 if ($appliedBlocks.Count -gt 0) {
     $why += ("availability: " + (($appliedBlocks | ForEach-Object { ($_.surface + " " + $_.kind + " (" + $_.reason + ")") }) -join '; '))
 } elseif (-not $quotaFresh) {
     $why += "availability: quota telemetry unknown or stale; no route blocked on telemetry"
 }
-if ($bNeedsWrites -and $isReviewTask) { $why += ("compatibility: needs_writes=true rejects read-only @review as sole surface; split Phase1 diagnosis + Phase2 repair") }
+if ($bNeedsWrites -and $isReviewTask) { $why += "A read-only review cannot perform repairs; Build must assign the authorized repair separately." }
 
-# Adequacy band for delegation consumers: derived from the winner's capability
-# average, not from price. strong>=3.0, adequate>=2.0, weak<2.0, unknown when 0.
 $adequacy = 'unknown'
 try {
     $topCap = [double]$top.cap_avg
@@ -1009,11 +907,12 @@ $result = [ordered]@{
         overage = $copilotOverage
     }
     consumption_estimate = [ordered]@{
-        allocation_estimate_dollars = $top.est_cost_dollars
+        provider_cost_proxy_dollars = $top.est_cost_dollars
+        estimate_source = $top.estimate_source
         monthly_fraction = $top.monthly_fraction
         window_pressure = $top.window_pressure
         quota_detail = $top.quota_detail
-        note = 'allocation estimate against subscription capacity, not a charge or cash saving'
+        note = 'Provider price proxy and normalized capacity are distinct; neither is a literal cash saving.'
     }
     selected_model = $finalRecommended
     surface = $top.surface
