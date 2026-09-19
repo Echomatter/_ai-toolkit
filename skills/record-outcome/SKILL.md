@@ -1,30 +1,16 @@
 ---
 name: record-outcome
-description: Record or correct a meaningful task's actual model, result, validation, retries, consumption, and review findings. Automatic recording must stay reliable; explicit recording updates or links the same task rather than duplicating it.
+description: Record or correct validated task results using actual execution receipts. Link reviews and consumption once; distinguish measured, estimated and unknown.
 ---
 
 # Record Outcome
 
-Do not record trivial orientation/search-only work. Do not invent results. Recording does not rerun the task.
+Do not infer successful implementation from a completed model response. Validate the requested behavior first. Do not rerun the task merely to record it.
 
-1. Read toolkit root from `$HOME\.config\opencode\ai-toolkit-root.txt`.
-2. Prefer values from the actual child dispatch/completion (selected, dispatched, runtime-observed). Distinguish measured, estimated, and unknown.
-3. Invoke `scripts\record-task-outcome.ps1`. Pass `-TaskId` when known so a later correction or review finding updates the same observation.
+Resolve the toolkit root from the installed `ai-toolkit-root.txt`. Call `scripts/record-task-outcome.ps1` with the real task ID returned by `delegate`, actual model, repo, task types and observed test/result values. Pass task types as one comma-separated string when using PowerShell `-File`.
 
-```powershell
-$root = (Get-Content "$HOME\.config\opencode\ai-toolkit-root.txt" -Raw).Trim()
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$root\scripts\record-task-outcome.ps1" `
-  -Repo "<repo>" -TaskType "bounded_feature" -Model "<actual-model>" -Access "<surface>" `
-  -Success:$true -TestsPassed:$true -Attempts 1 -Escalated:$false -ElapsedBand "short" `
-  -Role "worker" -ParentModel "<parent-model>" -DelegatedModel "<child-model>"
-```
+The recorder reads a matching runtime receipt, checks selected versus observed model, and imports child-specific usage. Same task ID updates one observation. A later review defect uses `-TaskId <id> -MarkReviewDefect` and remains attached to the original attempt. Do not create a new success to hide it.
 
-Pass `-TaskType` as a single optionally comma-separated string.
+Parent/child costs are related, not separate charges to sum twice. A fallback leaves an honest attempt history. Legacy all-session CLI measurements remain estimates because same-model concurrency and rounded counters cannot establish exact task consumption.
 
-To attach a later review defect:
-
-```powershell
-powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$root\scripts\record-task-outcome.ps1" -TaskId "<task-id>" -MarkReviewDefect
-```
-
-Parent and child attempts are related but distinct. Do not double-count child consumption in parent totals. A failed attempt plus successful fallback is one user task with honest attempt history.
+Binding, provider, quota and deployment failures are operational observations, not poor coding performance by the intended model. No fabricated model self-identification, measured zero balances, or subscription-dollar savings. Read-only reviewers return their findings to Build for recording rather than bypassing the role's write boundary.

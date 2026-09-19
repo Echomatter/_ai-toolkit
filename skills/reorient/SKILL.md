@@ -1,38 +1,18 @@
 ---
 name: reorient
-description: Have Researcher recover task-relevant repository context. When the user adds a specific task, also assign that exact task to Worker after the orientation handoff. Bare Reorient returns orientation without inventing work.
+description: Researcher recovers task-relevant repository context. Worker performs the user's additional task after the handoff. Bare Reorient returns orientation without inventing work.
 ---
 
 # Reorient
 
-Build owns the user's full request. This skill defines required handoffs; it does not transfer ownership or switch Plan.
+Our customized Build owns the complete request and keeps the selected parent model.
 
-## Dispatch (required)
+1. Call `delegate` with role `researcher`, task types appropriate to research/repo navigation, and `needsWrites: false`. Include the added user's task as orientation context. Researcher chooses read/index/Explore/web as appropriate; do not substitute a generic Explore invocation for Researcher.
+2. Read the returned research result and receipt. The tool already executed Researcher: do not launch a second copy via native task. The handoff includes applicable instructions, branch/worktree and existing changes, relevant source locations/decisions, blockers, observed versus inferred findings, and actual validation commands.
+3. For a specific additional task, call `delegate` with role `worker` and that exact wording, exclusions and relevant research handoff. Set `needsWrites: true` only when edits are authorized. Explanations and planning-only tasks remain read-only. Receive context before orientation-dependent edits; sequential dispatch is sufficient.
+4. Bare Reorient or a focus qualifier alone does not invent an implementation. An explicit no-subagents override wins and must be described honestly. A Researcher already assigned orientation loads this procedure without recursively delegating itself.
+5. Validate the added work, reconcile results and return the requested deliverable, not merely 'reoriented'. Record meaningful validated outcomes using their actual receipt IDs, without duplicating child usage in the parent total.
 
-1. Dispatch **Researcher** for repository orientation. Do not substitute Explore, Search Index, or a parent-only survey and claim Researcher ran.
-2. If the user also asked for a specific additional task, dispatch **Worker** with that exact wording plus exclusions, repo instructions, and existing-work constraints.
-3. If there is no additional task, dispatch Researcher only. A focus qualifier (e.g. "focus on quota") narrows orientation; it does not invent a repair.
-4. An explicit no-subagents override wins. Report that deviation.
+Reuse relevant existing research and recheck affected facts if the worktree changed. Do not keep a model generating to wait, repeat the same full survey in Worker, or assign Build the same implementation in parallel.
 
-## Ordering
-
-Researcher and Worker may run sequentially. Worker may prepare safely, but must not make orientation-dependent edits before the handoff. Do not keep a model generating merely to wait. Do not give Build and Worker the same implementation assignment in parallel.
-
-## Researcher handoff (compact)
-
-Include only what the task needs:
-
-- applicable repo instructions
-- branch/worktree and uncommitted-change state
-- relevant source locations and decisions
-- known blockers
-- actual validation commands
-- observed vs inferred, marked
-
-Worker uses this handoff; it does not repeat a full reorientation. It still verifies governing sources for files it will change. Recheck affected state if it changed before editing.
-
-## Completion
-
-Orientation delivered. Additional task, when present, completed, user-deferred, or reported blocked. An orientation summary alone is not completion of an implementation request.
-
-If a required helper is unavailable, use bounded recovery. Build may do a clearly disclosed fallback. Never start a second writer before the original is stopped or isolated.
+If a helper is unavailable, use bounded recovery or a disclosed direct Build fallback. Never claim an agent ran from a recommendation alone. Failed writers require inspection and confirmed stop before further writing. Reorient does not authorize Sync or publication.

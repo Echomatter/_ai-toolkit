@@ -10,7 +10,8 @@ function Json([string]$rel,$obj) {
 }
 function Run-Selection($extra=@{}) {
     $args2=@('-NoProfile','-ExecutionPolicy','Bypass','-File',(Join-Path $RepoRoot 'scripts\select-model.ps1'),'-ToolkitRoot',$Root,'-Role','worker')
-    foreach ($k in $extra.Keys) { $args2 += @('-' + $k,[string]$extra[$k]) }
+    # Append separately: PS 5.1's array/comma precedence must not join a flag and value.
+    foreach ($k in $extra.Keys) { $args2 += ('-' + [string]$k); $args2 += [string]$extra[$k] }
     $raw = & powershell.exe @args2
     if ($LASTEXITCODE -ne 0) { throw 'Selector failed' }
     return (($raw -join "`n") | ConvertFrom-Json)
@@ -86,7 +87,9 @@ try {
     Json '.state\quota-state.json' $q
     $k=Run-Selection
     Check (@($k.filtered_out | Where-Object {$_.id -eq 'openai/other' -and $_.reason -match 'exhausted'}).Count -eq 1) 'confirmed relevant ChatGPT exhaustion is a hard exclusion'
-    $q.surfaces['openai-oauth'].telemetry.as_of=(Get-Date).ToUniversalTime().AddDays(-1).ToString('o')
+    # A stale observation with unknown numeric shape must not become a fresh balance
+    # merely because the Go observation is recent.
+    $q.surfaces['openai-oauth']=@{telemetry=@{status='ok';as_of=(Get-Date).ToUniversalTime().AddDays(-1).ToString('o')};windows=@{primary=@{used_percent=20}}}
     Json '.state\quota-state.json' $q
     $l=Run-Selection
     Check (@($l.ranking | Where-Object {$_.id -eq 'openai/other'}).Count -eq 1) 'one successful provider does not make unrelated stale data fresh'

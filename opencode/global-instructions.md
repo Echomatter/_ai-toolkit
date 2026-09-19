@@ -1,45 +1,29 @@
 # AI Toolkit global workflow
 
-These instructions apply across OpenCode projects. Project `AGENTS.md` files remain authoritative for project-specific facts.
-
-## Runtime truth
-
-- OpenCode's actual selected agent determines Build versus Plan. A skill, read-before-write step, denied command, or inspection task never changes the mode by itself.
-- Never claim to be in Plan unless OpenCode actually selected Plan.
-- If a tool is permission-blocked, report the permission block rather than inventing a mode change.
-- The parent model is the user's selected model. Do not switch it silently.
-
-## Public catalog
+Our customized native Build owns the user's complete request. Project instructions govern project-specific facts. Skills, inspection, and denied tools do not change Build into Plan. Preserve the user-selected parent model; do not silently change modes, models or spending permissions.
 
 Five skills: `reorient`, `search-index`, `sync`, `model-routing`, `record-outcome`.
 Four helpers: `@worker`, `@architect`, `@researcher`, `@review`.
-Two tools: `content_index`, `delegate`.
-Native Plan and Explore remain available. There are no toolkit slash-command wrappers.
+Two tools: `content_index`, `delegate`. Native Plan and Explore remain available.
 
-## Delegation
+## Execution
 
-User-invoked skills and helpers inherit the initiating model unless the user overrides. Agent-initiated children call `delegate` so the selected model actually runs. Selection is not execution. Whole-session model changes remain explicit `/models` actions.
+Direct user-invoked skills/helpers use the selected model unless explicitly overridden. Agent-initiated helper work uses `delegate` with the required role and complete assignment. This tool already runs the child and returns the result: do not invoke native task or another helper afterward for the same assignment. Native Explore may provide bounded source investigation.
 
-Reorient dispatches Researcher for orientation and Worker for any added task. Do not substitute Explore for Researcher.
+Check the receipt's selected/dispatched/observed model, failure state and returned result. Execution completion is not validated correctness. Run meaningful checks, then use Record Outcome with the receipt task ID. Never credit the recommended model for work actually done by another model.
 
-## Paid-lane failure
+Economics remains inside the existing deterministic selector. No Economics agent or second model router. Routine routing uses cached evidence; targeted new research belongs to an explicitly requested maintenance task. Other small tasks may remain in Build instead of spawning a ceremonial chain.
 
-If Worker, Architect, or Review fails for quota/rate/provider/auth, do not loop or jump to a metered route. Try the selector fallback when known, then continue on the parent with Researcher/Explore, web tools, and tests. Report only the unresolved remainder.
+## Coordinated workflows
 
-## Next-phase model advice
+Reorient requires Researcher for orientation. For a specific added task, pass the exact user wording, exclusions and Researcher's relevant handoff to Worker before dependent edits. Bare Reorient does not invent a Worker task. A no-subagents request overrides the default. Loading a supporting skill inside an already-assigned helper must not spawn it recursively.
 
-After a meaningful completed task, one compact line only when the next phase is clear and another model has a material advantage. Otherwise say nothing. Load `model-routing` for an explicit comparison; it must invoke `scripts/select-model.ps1`. Never claim a role ran on a selected model unless dispatch and runtime identity agree.
+Researcher chooses indexed docs/data, native code search/Explore, relevant sibling repositories and web as the question requires. Missing index hits must not restrict code search. Review reports findings without editing. Managed read-only children cannot execute arbitrary shell or mutate local index/cache files; return necessary authorized maintenance/validation to Build.
 
-## Workstyle
+Sync requires explicit publishing intent. One owner checkpoints work, reconciles compatible incoming changes, validates the final integration and publishes through allowed protections. Research does not authorize publication. Preserve secrets, unrelated work and user settings.
 
-1. Inspect actual repository state before proposing changes.
-2. Prefer deterministic tools before model speculation.
-3. Keep changes bounded to the request.
-4. Preserve explicit constraints, names, formats, and numbers.
-5. Use native web search/fetch for current external research.
-6. Search sibling repos only when prior work is likely to matter.
-7. Validate with the smallest meaningful test.
-8. Do not launch large training runs, exhaustive searches, destructive migrations, or irreversible operations without explicit operator intent.
-9. Use `git` locally and authenticated `gh` for remote GitHub. Read before remote writes; never merge, force-push, delete, or close resources without explicit intent.
-10. Keep claims tied to evidence. State what remains unverified.
-11. For a real model/session transfer, produce a factual handoff rather than a transcript.
+## Recovery and evidence
+
+Delegate handles one bounded attempt and, only for appropriate read-only failures, one alternative. Do not retry a failed writer automatically: inspect partial changes, session stop evidence and any detached process first. A retained writer lock means stop was not verified. No new writer may race with it. Do not clear all history or quota state to recover one route.
+
+Keep infrastructure/provider failures separate from model-capability failures. Preserve original user constraints, use meaningful tests, and state unresolved limitations. Give concise handoffs when work actually transfers. Do not launch full training, exhaustive trials or destructive operations without explicit intent. Model advice should be sparse and material, not appended to every task.

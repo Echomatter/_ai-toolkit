@@ -9,16 +9,14 @@ function W([string]$m){[void]$warn.Add($m);Write-Output "WARN: $m"}
 $required=@('README.md','AGENTS.md','skills','global','opencode','routing','scripts','tools','docs')
 foreach($x in $required){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot $x)){OK "$x present"}else{F "$x missing"}}
 
-# Parse every PowerShell script with the current Windows PowerShell parser before any
-# installer/bootstrap script is executed. This catches interpolation and syntax mistakes
-# (including PowerShell 5.1 incompatibilities) with exact file/line information.
-foreach($ps1 in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'scripts') -Filter '*.ps1' -File){
+# Parse scripts before running installation. Tests are parsed as well.
+$psFiles=@(Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'scripts') -Filter '*.ps1' -File)
+if(Test-Path -LiteralPath (Join-Path $ToolkitRoot 'tests')){$psFiles+=@(Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'tests') -Filter '*.ps1' -File)}
+foreach($ps1 in $psFiles){
   $tokens=$null; $parseErrors=$null
   [System.Management.Automation.Language.Parser]::ParseFile($ps1.FullName,[ref]$tokens,[ref]$parseErrors) | Out-Null
   if($parseErrors -and $parseErrors.Count -gt 0){
-    foreach($pe in $parseErrors){
-      F "PowerShell parse error in $($ps1.Name):$($pe.Extent.StartLineNumber): $($pe.Message)"
-    }
+    foreach($pe in $parseErrors){F "PowerShell parse error in $($ps1.Name):$($pe.Extent.StartLineNumber): $($pe.Message)"}
   } else { OK "PowerShell parses: $($ps1.Name)" }
 }
 
@@ -26,9 +24,9 @@ $expected=@('reorient','search-index','sync','model-routing','record-outcome')
 $skillsDir=Join-Path $ToolkitRoot 'skills'
 $actual=@(Get-ChildItem -LiteralPath $skillsDir -Directory | ForEach-Object{$_.Name})
 foreach($s in $expected){$p=Join-Path $skillsDir "$s\SKILL.md";if(Test-Path -LiteralPath $p){OK "skill present: $s"}else{F "skill missing: $s"}}
-foreach($s in $actual){if($expected -notcontains $s){W "unexpected extra skill: $s"}}
+foreach($s in $actual){if($expected -notcontains $s){F "unexpected extra toolkit skill: $s"}}
 foreach($dir in Get-ChildItem -LiteralPath $skillsDir -Directory){
-  $file=Join-Path $dir.FullName 'SKILL.md'; $lines=Get-Content -LiteralPath $file
+  $file=Join-Path $dir.FullName 'SKILL.md'; $lines=Get-Content -LiteralPath $file -Encoding UTF8
   if($lines.Count -lt 4 -or $lines[0].Trim() -ne '---'){F "invalid frontmatter: $($dir.Name)";continue}
   $end=-1;for($i=1;$i -lt $lines.Count;$i++){if($lines[$i].Trim() -eq '---'){$end=$i;break}}
   if($end -lt 2){F "unclosed frontmatter: $($dir.Name)";continue}
@@ -51,8 +49,6 @@ if(Test-Path -LiteralPath $config){
   if($c.Contains('"permission":')){F "toolkit config still defines top-level permissions"}else{OK "toolkit config leaves global permissions to user settings"}
   foreach($bad in @('openrouter/','vercel/')){if($c -match [regex]::Escape($bad)){F "metered gateway present in routing config: $bad"}else{OK "no $bad routing"}}
 }
-
-
 $agentTemplates=@('build','researcher','worker','architect','review')
 foreach($a in $agentTemplates){
   $tp=Join-Path $ToolkitRoot "opencode\templates\$a.template.md"
@@ -66,13 +62,12 @@ foreach($retired in @('index.md','deep.md','index.template.md','deep.template.md
 }
 $templateLeak=@(Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents') -File -Filter '*.template.md' -ErrorAction SilentlyContinue)
 if($templateLeak.Count -gt 0){F 'generation templates remain under opencode/agents'}else{OK 'generation templates kept out of agent discovery'}
-
 foreach($agentFile in Get-ChildItem -LiteralPath (Join-Path $ToolkitRoot 'opencode\agents') -File -Filter '*.md'){
   $at=Get-Content -LiteralPath $agentFile.FullName -Raw
   if($at.Contains('"*": ask')){F "agent overrides all shell commands to ask: $($agentFile.Name)"}
   if($at.Contains('external_directory: ask')){F "agent overrides external_directory to ask: $($agentFile.Name)"}
+  if($at -match '(?m)^model:\s*\S+'){F "role has a permanent model pin: $($agentFile.Name)"}
 }
-
 $globalTemplate=Join-Path $ToolkitRoot 'opencode\global-instructions.template.md'
 $globalGenerated=Join-Path $ToolkitRoot 'opencode\global-instructions.md'
 foreach($p in @($globalTemplate,$globalGenerated)){if(Test-Path -LiteralPath $p){OK "present: $([IO.Path]::GetFileName($p))"}else{F "missing: $p"}}
@@ -81,17 +76,14 @@ if(Test-Path -LiteralPath $globalTemplate){
   if($g.Contains('__ROUTINE_MODEL__') -or $g.Contains('__DEEP_MODEL__')){F 'global instruction template still pins lane models'}else{OK 'global instruction template is model-neutral'}
   if($g.Contains('@architect') -and $g.Contains('@researcher')){OK 'global instructions name retained helpers'}else{F 'global instructions missing architect/researcher'}
 }
-
 $roster=Join-Path $ToolkitRoot 'routing\model-roster.json'
-try{Get-Content -LiteralPath $roster -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: model-roster.json'}catch{F "invalid JSON: $roster"}
-
+try{Get-Content -LiteralPath $roster -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null;OK 'valid JSON: model-roster.json'}catch{F "invalid JSON: $roster"}
 $policy=Join-Path $ToolkitRoot 'routing\policy.json'
 $state=Join-Path $ToolkitRoot 'routing\state.json'
-foreach($p in @($policy,$state)){try{Get-Content -LiteralPath $p -Raw | ConvertFrom-Json | Out-Null;OK "valid JSON: $([IO.Path]::GetFileName($p))"}catch{F "invalid JSON: $p"}}
-
+foreach($p in @($policy,$state)){try{Get-Content -LiteralPath $p -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null;OK "valid JSON: $([IO.Path]::GetFileName($p))"}catch{F "invalid JSON: $p"}}
 $evidence=Join-Path $ToolkitRoot 'routing\model-evidence.json'
 $ev=$null
-try{$ev=Get-Content -LiteralPath $evidence -Raw | ConvertFrom-Json;OK 'valid JSON: model-evidence.json'}catch{F "invalid JSON: $evidence"}
+try{$ev=Get-Content -LiteralPath $evidence -Raw -Encoding UTF8 | ConvertFrom-Json;OK 'valid JSON: model-evidence.json'}catch{F "invalid JSON: $evidence"}
 if($ev){
   if($ev.schema_version -ne 2){F "model-evidence.json schema_version is $($ev.schema_version), expected 2"}
   $sources=@(); if($ev.sources){$sources=@($ev.sources.PSObject.Properties.Name)}
@@ -118,44 +110,27 @@ if($ev){
   }
   OK "model-evidence.json counts: $($modelProps.Count) models, $($sources.Count) sources, $((@($ev.alias_index.PSObject.Properties)).Count) aliases"
 }
-
 $history=Join-Path $ToolkitRoot 'routing\task-history.json'
-try{Get-Content -LiteralPath $history -Raw | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}
-
+try{Get-Content -LiteralPath $history -Raw -Encoding UTF8 | ConvertFrom-Json | Out-Null;OK 'valid JSON: task-history.json'}catch{F "invalid JSON: $history"}
 $cmdDir=Join-Path $ToolkitRoot 'opencode\commands'
 $cmdFiles=@()
 if(Test-Path -LiteralPath $cmdDir){$cmdFiles=@(Get-ChildItem -LiteralPath $cmdDir -File -Filter '*.md')}
 if($cmdFiles.Count -eq 0){OK 'no toolkit slash-command wrappers'}else{F ("toolkit command wrappers remain: " + (($cmdFiles|ForEach-Object{$_.Name}) -join ', '))}
 foreach($s in @('refresh-routing.ps1','bootstrap.ps1','doctor.ps1','install.ps1','sync-global-instructions.ps1','record-task-outcome.ps1','test-advisor.ps1','test-delegate.ps1','test-content-index.ps1','select-model.ps1','opencode.cmd')){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot "scripts\$s")){OK "script present: $s"}else{F "script missing: $s"}}
-
-
 $indexer=Join-Path $ToolkitRoot 'tools\Project_Content_Indexer.py'
 $indexTool=Join-Path $ToolkitRoot 'opencode\tools\content_index.ts'
-$delegateTool=Join-Path $ToolkitRoot 'opencode\tools\delegate.ts'
+$delegateTool=Join-Path $ToolkitRoot 'opencode\plugins\delegation.ts'
 if(Test-Path -LiteralPath $indexer){OK 'project content indexer present'}else{F 'project content indexer missing'}
 if(Test-Path -LiteralPath $indexTool){OK 'OpenCode content_index tool present'}else{F 'OpenCode content_index tool missing'}
-if(Test-Path -LiteralPath $delegateTool){OK 'OpenCode delegate tool present'}else{F 'OpenCode delegate tool missing'}
-
-$retiredLocal=@(
-  'scripts\install-local-fallback.ps1',
-  'scripts\install-local-fallback.cmd',
-  'docs\LOCAL-FALLBACK.md',
-  'ollama\Modelfile.qwen2.5-coder-7b-16k'
-)
-foreach($rel in $retiredLocal){
-  if(Test-Path -LiteralPath (Join-Path $ToolkitRoot $rel)){F "retired local-engine artifact remains: $rel"}else{OK "retired local-engine artifact absent: $rel"}
-}
-foreach($p in @(
-  (Join-Path $ToolkitRoot 'routing\policy.json'),
-  (Join-Path $ToolkitRoot 'scripts\refresh-routing.ps1'),
-  (Join-Path $ToolkitRoot 'scripts\select-model.ps1'),
-  (Join-Path $ToolkitRoot 'README.md'),
-  (Join-Path $ToolkitRoot 'AGENTS.md')
-)){
+if(Test-Path -LiteralPath $delegateTool){OK 'OpenCode delegate plugin present'}else{F 'OpenCode delegate plugin missing'}
+if(Test-Path -LiteralPath (Join-Path $ToolkitRoot 'opencode\tools\delegate.ts')){F 'retired advisory delegate would duplicate the plugin tool'}
+foreach($f in @('tools\runtime\delegation.mjs','tools\runtime\bridge.mjs')){if(-not(Test-Path -LiteralPath (Join-Path $ToolkitRoot $f))){F "missing runtime implementation: $f"}}
+$retiredLocal=@('scripts\install-local-fallback.ps1','scripts\install-local-fallback.cmd','docs\LOCAL-FALLBACK.md','ollama\Modelfile.qwen2.5-coder-7b-16k')
+foreach($rel in $retiredLocal){if(Test-Path -LiteralPath (Join-Path $ToolkitRoot $rel)){F "retired local-engine artifact remains: $rel"}else{OK "retired local-engine artifact absent: $rel"}}
+foreach($p in @((Join-Path $ToolkitRoot 'routing\policy.json'),(Join-Path $ToolkitRoot 'scripts\refresh-routing.ps1'),(Join-Path $ToolkitRoot 'scripts\select-model.ps1'),(Join-Path $ToolkitRoot 'README.md'),(Join-Path $ToolkitRoot 'AGENTS.md'))){
   $lt=Get-Content -LiteralPath $p -Raw
   if($lt -match '(?i)ollama|ollama-local|local-compute|install-local-fallback|__LOCAL_PROVIDER_BLOCK__'){F "retired local-engine reference remains: $p"}
 }
-
 Write-Output ''
 Write-Output "Validation summary: $($fail.Count) failures, $($warn.Count) warnings."
 if($fail.Count -gt 0){exit 1}else{exit 0}

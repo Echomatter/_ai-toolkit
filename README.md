@@ -1,60 +1,43 @@
 # OpenCode Build Routing Toolkit
 
-A thin workflow layer for OpenCode Desktop and CLI. OpenCode remains the execution harness. This toolkit adds five skills, a customized Build parent plus four helpers, a deterministic content index, and evidence-aware child delegation.
+A thin workflow layer for OpenCode Desktop and CLI: five skills, our customized Build parent plus four helpers, the deterministic content index, and evidence-aware child execution. OpenCode owns the underlying models, authentication, native tools, permissions and sessions.
 
 ## Public catalog
 
-**Skills** (one name each): `reorient`, `search-index`, `sync`, `model-routing`, `record-outcome`.
+| Kind | Names |
+|---|---|
+| Skills | `reorient`, `search-index`, `sync`, `model-routing`, `record-outcome` |
+| Helpers | `@worker`, `@architect`, `@researcher`, `@review` |
+| Custom tools | `content_index`, `delegate` |
 
-**Helpers:** `@worker`, `@architect`, `@researcher`, `@review`.
+Build is customized, not stock. Native Plan and Explore remain. There are no toolkit slash-command wrappers. Skills may still appear in OpenCode's native slash menu, but only one definition exists per skill.
 
-**Tools:** `content_index`, `delegate`.
+User-invoked work keeps the selected parent model. Roles do not own models. For automatic child work, `delegate` calls the existing selector, creates a native child session, sends the provider-qualified model with the prompt, and checks returned session/message identity. It already runs the child: do not invoke another Worker after its result.
 
-Native Plan and Explore remain. There are no toolkit slash-command wrappers.
+**Verification status:** the repository contains isolated execution/selection/deployment/outcome tests. Live cross-model execution through your installed, authenticated OpenCode remains a release gate. Read [verification and limits](docs/VERIFICATION.md) before treating fixture passes as live proof.
 
-Roles are jobs, not models. User-invoked skills and helpers inherit the selected parent model. Agent-initiated children use `delegate` plus `scripts/select-model.ps1` and must actually run on the chosen model.
-
-## What OpenCode already owns
-
-Build, Plan, Explore, tools, permissions, provider authentication, websearch/webfetch, context management, model discovery, `/models`, and child sessions.
-
-## Install / refresh
+## Install the candidate
 
 ```powershell
-F:\_ai-toolkit\scripts\bootstrap.cmd
-F:\_ai-toolkit\scripts\doctor.cmd -Deep
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File "F:\_ai-toolkit\scripts\install.ps1"
 ```
 
-Bootstrap preserves user-authored `%USERPROFILE%\.config\opencode\AGENTS.md` content outside the toolkit-managed block.
+Use the checked-out candidate revision. Fully quit and restart OpenCode afterward. The installer deploys the existing `delegate` tool through a plugin and removes its manifest-owned old advisory definition. It backs up changed owned resources, verifies copies/link targets, preserves unrelated skills and global instructions, and fails on unowned conflicts rather than deleting them.
 
-After bootstrap, fully quit and reopen OpenCode Desktop. You should see **Build** and **Plan**. Typing `@` should expose `researcher`, `worker`, `architect`, `review`, and native `explore`.
+For missing prerequisite software, `scripts/bootstrap.cmd` remains available. For an existing installation, use the normal installer above. Do not wipe account credentials, chat history or the OpenCode database.
 
-When connected inventory changes:
+## Working model
 
-```powershell
-F:\_ai-toolkit\scripts\refresh-routing.cmd
-```
+Reorient assigns orientation to Researcher and an additional task to Worker, preserving its full constraints and using the handoff before dependent edits. Other small tasks can stay in customized Build; useful roles are not compulsory stations in every request.
 
-Then start a new OpenCode session so refreshed guidance loads.
+Researcher chooses index, native code search, relevant sibling repositories and web sources according to the question. The content index searches documents/data, not ordinary `.ts`, `.ps1` or `.py` source. Missing index hits never prevent code search.
 
-## Permissions and nested agents
+Model Routing owns guidance; the existing selector owns deterministic capability and economic comparisons. No Economics agent or second ranking system is needed. Quota observations and recorded execution failures remain distinct from model capability evidence.
 
-The toolkit does not set broad shell/PowerShell approval rules.
+Review is read-only. Managed read-only children cannot use arbitrary shell or mutating custom tools. Return authorized validation/index maintenance to Build. Record Outcome attaches actual receipt usage after meaningful validation rather than assuming an agent's final answer is correct.
 
-- Build -> Explore / Researcher / Worker / Architect / Review
-- Worker -> Explore / Researcher / Review
-- Architect -> Explore / Researcher / Review
-- Review -> Explore / Researcher
-- Researcher is read-only on project source
+Sync is an explicit publishing workflow: checkpoint current work, inspect and integrate compatible incoming improvements, validate the final revision, then publish to `main` through permitted protections. Research alone never authorizes Sync.
 
-OpenCode defaults to `subagent_depth` 1; set it to 2 in your own config if you want one nested level.
+## Tests
 
-## Content index
-
-`content_index` indexes mixed project docs/data, not ordinary `.ts`/`.ps1`/`.py` source. Missing index hits must never block code search. See `docs/CONTENT-INDEX.md`.
-
-## Sync
-
-An explicit Sync request checkpoints, reconciles compatible incoming work, validates, and publishes to `main`. Mentioning the skill is not permission to publish.
-
-Eligible automatic surfaces: OpenCode free, OpenCode Go, OpenAI OAuth, GitHub Copilot OAuth. No separately metered API gateways.
+See [verification](docs/VERIFICATION.md) for isolated commands, the required live exercise and remaining limitations. The runtime workflow runs on Windows with no paid-model dependency; results are not evidence of actual provider model quality.
