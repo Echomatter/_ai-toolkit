@@ -8,7 +8,7 @@ param(
     [switch]$MeasureStart, [switch]$MeasureFinalize,
     $InputTokens = $null, $OutputTokens = $null, $CacheReadTokens = $null, $CostDollars = $null,
     [string]$ConsumptionQuality = '', [string]$ConsumptionReason = '',
-    [string]$UserTaskId = '', [string]$ReviewTaskId = ''
+    [string]$UserTaskId = '', [string]$ReviewTaskId = '', [switch]$Operational
 )
 $ErrorActionPreference = 'Stop'
 function To-Bool($v) {
@@ -23,7 +23,9 @@ foreach($t in @($TaskType)) {
 }
 if (-not $TaskTypeNorm.Count -and -not $MarkReviewDefect) { throw '-TaskType is required.' }
 if (-not $ToolkitRoot) { $ToolkitRoot=Split-Path -Parent $PSScriptRoot }
-$HistoryPath=Join-Path $ToolkitRoot 'routing\task-history.json'
+$HistoryPath=Join-Path $ToolkitRoot '.state\task-history.json'
+$LegacyHistoryPath=Join-Path $ToolkitRoot 'routing\task-history.json'
+New-Item -ItemType Directory -Path (Split-Path -Parent $HistoryPath) -Force|Out-Null
 function Write-Utf8NoBom([string]$Path,[string]$Text) {
     $tmp=$Path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
     try {
@@ -84,8 +86,9 @@ try{$historyLock=New-Object System.IO.FileStream(($HistoryPath+'.lock'),[IO.File
 catch{throw 'Outcome history is busy; retry this same TaskId without duplicating work.'}
 try {
     $historyData=$null
-    if(Test-Path -LiteralPath $HistoryPath){
-        try{$historyData=Get-Content -LiteralPath $HistoryPath -Raw -Encoding UTF8|ConvertFrom-Json}
+    $historyReadPath=if(Test-Path -LiteralPath $HistoryPath){$HistoryPath}else{$LegacyHistoryPath}
+    if(Test-Path -LiteralPath $historyReadPath){
+        try{$historyData=Get-Content -LiteralPath $historyReadPath -Raw -Encoding UTF8|ConvertFrom-Json}
         catch{throw "History is malformed; preserved unchanged: $HistoryPath"}
     }
     if(-not $historyData){$historyData=[pscustomobject]@{generated=$true;generated_at='';entries=@()}}
@@ -156,7 +159,9 @@ try {
         if($receiptPath -and(Test-Path -LiteralPath $receiptPath)){
             $receipt=Get-Content -LiteralPath $receiptPath -Raw -Encoding UTF8|ConvertFrom-Json
             $attempt=@($receipt.attempts|Select-Object -Last 1)[0]
-            if($receipt.status-ne'completed'-or$attempt.status-ne'completed'-or$attempt.observed_model-ne$attempt.selected_model){throw 'Do not assign capability success to an unverified or failed execution receipt.'}
+            $operationalReceipt = $Operational -and $receipt.status -in @('failed','stop_unverified') -and $attempt.status -eq 'failed'
+            if($Operational -and (-not $operationalReceipt -or $Success -or $TestsPassed)){throw 'Operational recording requires a failed execution and cannot claim task success or passed tests.'}
+            if(-not $operationalReceipt -and ($receipt.status-ne'completed'-or$attempt.status-ne'completed'-or$attempt.observed_model-ne$attempt.selected_model)){throw 'Do not assign capability success to an unverified or failed execution receipt.'}
             if($Model-and$Model-ne$attempt.observed_model){throw 'Recorded model differs from actual execution model.'}
             $entry.model=$attempt.observed_model;$entry.access=$attempt.surface;$entry.role=$receipt.role
             $entry.parent_model=$receipt.parent_model;$entry.attempts=@($receipt.attempts).Count
@@ -168,6 +173,10 @@ try {
             $entry.selected_model=$attempt.selected_model;$entry.dispatched_model=$attempt.dispatched_model;$entry.observed_model=$attempt.observed_model
             $entry.execution_attempts=@($receipt.attempts)
             $entry.observation_kind=if($receipt.role-eq'review'){'review'}elseif($receipt.role-eq'researcher'){'research'}else{'implementation'}
+            if($operationalReceipt){
+                $entry.observation_kind='operational';$entry.failure_kind=$attempt.failure
+                $entry.model=$attempt.selected_model;$entry.success=$false;$entry.tests_passed=$false
+            }
             if($attempt.usage){
                 $entry.consumption=[ordered]@{
                     input_tokens=$attempt.usage.input;output_tokens=$attempt.usage.output;reasoning_tokens=$attempt.usage.reasoning;cache_read_tokens=$attempt.usage.cache_read;cache_write_tokens=$attempt.usage.cache_write;
@@ -175,6 +184,7 @@ try {
                     reason='Structured child counters; provider dollars are not subscription quota or a cash charge.'}
             }
         }
+        if($Operational -and -not $operationalReceipt){throw 'Operational recording requires an actual failed runtime receipt.'}
         $priorEntry=@($existing|Where-Object{$_.task_id-eq$TaskId}|Select-Object -Last 1)
         if($priorEntry.Count-and$priorEntry[0].review_found_defects){$entry.review_found_defects=$true}
         if($priorEntry.Count-and$priorEntry[0].review_task_id){$entry.review_task_id=$priorEntry[0].review_task_id}

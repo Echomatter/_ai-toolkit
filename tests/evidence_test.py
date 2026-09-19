@@ -1,0 +1,43 @@
+import importlib.util
+import json
+from pathlib import Path
+import tempfile
+import unittest
+
+spec = importlib.util.spec_from_file_location('evidence', Path(__file__).resolve().parents[1] / 'tools/evidence.py')
+e = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(e)
+
+
+class EvidenceTests(unittest.TestCase):
+    def test_duplicate_key_rejected(self):
+        with self.assertRaises(ValueError):
+            json.loads('{"models":{},"models":{}}', object_pairs_hook=e.pairs)
+
+    def test_batch_is_atomic_and_stale_or_unsourced_batch_cannot_replace_cache(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            target = root / 'routing/model-evidence.json'
+            e.write(target, {'schema_version': 2, 'evidence_as_of': '2020-01-01', 'sources': {}, 'alias_index': {'p/m': 'm'}, 'models': {'m': {}}})
+            e.write(root / 'routing/model-roster.json', {'eligible_models': [{'id': 'p/m'}]})
+            before = target.read_bytes()
+            batch = {'base_sha256': 'stale', 'models': {'m': {'positioning': 'new'}}}
+            with self.assertRaises(ValueError):
+                e.apply(root, batch)
+            batch['base_sha256'] = e.digest(target)
+            batch['models']['m'] = {'capabilities': {'coding': {'rating': 'strong', 'confidence': 'high', 'evidence': ['missing']}}}
+            with self.assertRaises(ValueError):
+                e.apply(root, batch)
+            self.assertEqual(target.read_bytes(), before)
+            batch['models']['m'] = {'research_gaps': ['Searched; no published score found']}
+            e.apply(root, batch)
+            self.assertEqual(e.read(target)['evidence_as_of'], '2020-01-01')
+            self.assertEqual(e.read(target)['models']['m']['research_gaps'], batch['models']['m']['research_gaps'])
+
+    def test_context_evidence_and_inventory_aliases_are_validated(self):
+        errors = e.validate({'schema_version': 2, 'models': {'m': {'context': {'input_tokens': -1, 'evidence': ['missing']}}}, 'alias_index': {}, 'sources': {}}, {'eligible_models': [{'id': 'p/m'}]})
+        self.assertEqual(len(errors), 3)
+
+
+if __name__ == '__main__':
+    unittest.main()

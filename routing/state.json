@@ -1,6 +1,6 @@
 {
     "generated":  true,
-    "generated_at":  "2026-09-19T16:28:01.9249790Z",
+    "generated_at":  "2026-09-19T19:35:00Z",
     "available_count":  67,
     "oauth":  {
                   "openai":  true,
@@ -10,7 +10,7 @@
                      "opencode_free":  8,
                      "opencode_go":  27,
                      "openai_oauth":  15,
-                     "github_copilot_oauth":  15
+                     "github_copilot_oauth":  17
                  },
     "routine":  "opencode/muse-spark-1.3-contributor-free",
     "architect":  "openai/gpt-6-astra",

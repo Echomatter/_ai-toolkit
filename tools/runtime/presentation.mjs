@@ -19,7 +19,7 @@ export function taskCard(part) {
   const selected = attempt?.selected_model || meta.selected_model;
   if (!sessionId || !selected || !['worker','architect','researcher','review'].includes(role)) return null;
   return { ...part, tool: 'task', state: { ...state,
-    input: { subagent_type: role, description: `delegate · ${selected}`, prompt: state.input?.task || '' },
+    input: { subagent_type: role, description: `${selected}${meta.tokenomics_activity?.label ? ` · ${meta.tokenomics_activity.label}` : ''}`, prompt: state.input?.task || '' },
     metadata: { ...meta, sessionId, parentSessionId: part.sessionID,
       [marker]: { version: 1, original_tool: 'delegate', original_input: state.input,
         original_metadata: meta, selected_model: selected, source: 'actual_sdk_child' } },
@@ -36,7 +36,7 @@ export function restoreDelegateTools(messages) {
 }
 export function createPresenter({ client, directory }) {
   const unwrap = r => { if(r?.error) throw new Error('Display update failed'); return r?.data ?? r; };
-  return async function present(part) {
+  async function present(part) {
     const card = taskCard(part);
     if (!card) return false;
     const child = unwrap(await client.session.get({path:{id:card.state.metadata.sessionId},query:{directory}}));
@@ -50,5 +50,21 @@ export function createPresenter({ client, directory }) {
       await client._client.patch({...args,url:'/session/{sessionID}/message/{messageID}/part/{partID}',headers:{'Content-Type':'application/json'}});
     unwrap(result);
     return true;
+  }
+  // OpenCode 1.18.31 bridges plugin ask(), but exposes metadata() as an
+  // unevaluated host Effect. Publish through the same authenticated SDK instead.
+  present.metadata = async (ctx, update) => {
+    const message = unwrap(await client.session.message({path:{id:ctx.sessionID,messageID:ctx.messageID},query:{directory}}));
+    const candidates = (message.parts || []).filter(p => p.type === 'tool' &&
+      ['running','pending'].includes(p.state?.status) && (ctx.callID ? p.callID === ctx.callID :
+        p.tool === 'delegate' || p.state?.metadata?.[marker]?.original_tool === 'delegate'));
+    if (candidates.length !== 1) return false;
+    const original = structuredClone(candidates[0]);
+    restoreDelegateTools([{parts:[original]}]);
+    if (original.tool !== 'delegate' || original.sessionID !== ctx.sessionID) return false;
+    original.state = { ...original.state, status: 'running', title: update.title,
+      metadata: { ...original.state.metadata, ...update.metadata } };
+    return present(original);
   };
+  return present;
 }

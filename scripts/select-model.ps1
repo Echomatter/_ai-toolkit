@@ -91,6 +91,8 @@ $policyPath = Join-Path $ToolkitRoot 'routing\policy.json'
 $rosterPath = Join-Path $ToolkitRoot 'routing\model-roster.json'
 $evidencePath = Join-Path $ToolkitRoot 'routing\model-evidence.json'
 $historyPath = Join-Path $ToolkitRoot 'routing\task-history.json'
+$localHistoryPath = Join-Path $ToolkitRoot '.state\task-history.json'
+if (Test-Path -LiteralPath $localHistoryPath) { $historyPath = $localHistoryPath }
 $statePath = Join-Path $ToolkitRoot 'routing\state.json'
 
 $policy = Get-Content -LiteralPath $policyPath -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -625,7 +627,7 @@ foreach ($rm in @($roster.eligible_models)) {
     $histReviewDefectRate = $null
     $histAvgAttempts = $null
     if ($historyEntries.Count -gt 0) {
-        $rel = @($historyEntries | Where-Object { $_.model -eq $rid -and $_.synthetic -ne $true -and $_.failure_kind -notin @('quota','provider','binding','auth','timeout') })
+        $rel = @($historyEntries | Where-Object { $_.model -eq $rid -and $_.synthetic -ne $true -and $_.observation_kind -ne 'operational' -and $_.failure_kind -notin @('quota','provider','binding','auth','timeout') })
         # Related retries/children are one user-task observation per role/model,
         # not multiple fabricated first-pass successes. Old rows retain TaskId.
         $rel = @($rel | Group-Object { if ($_.user_task_id) { "$($_.user_task_id)/$($_.role)" } else { $_.task_id } } | ForEach-Object { $_.Group | Sort-Object timestamp -Descending | Select-Object -First 1 })

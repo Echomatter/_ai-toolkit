@@ -3,6 +3,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { readFile, mkdir, writeFile, rename, open, unlink, realpath } from 'node:fs/promises';
 import path from 'node:path';
+import { activityOf } from './activity.mjs';
 
 const roles = new Set(['worker', 'architect', 'researcher', 'review']);
 const topology = { build: ['worker', 'architect', 'researcher', 'review'], worker: ['researcher', 'review'], architect: ['researcher', 'review'], review: ['researcher'], researcher: [] };
@@ -272,7 +273,8 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
             throw fault('UnsupportedRuntime', 'Server did not preserve child linkage/permissions; no inference sent');
           }
           live.set(child.id, { selected, readOnly, freeOnly, directory: ctx.directory });
-          ctx.metadata?.({ title: `@${args.role} · ${selected}`, metadata: { sessionId: child.id, parentSessionId: ctx.sessionID, role: args.role, selected_model: selected, model, task_id: id } });
+          const displayMetadata = { sessionId: child.id, parentSessionId: ctx.sessionID, role: args.role, selected_model: selected, model, task_id: id };
+          await ctx.metadata?.({ title: `@${args.role} · ${selected}`, metadata: displayMetadata });
           submitted = true;
           attempt.dispatched_model = selected;
           await call('session', 'promptAsync', { ...sessionArgs(child.id, ctx.directory), body: {
@@ -282,10 +284,22 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
           acknowledged = true;
           attempt.dispatched_model = selected;
           const start = now();
+          let activityKey = '', activityAt = -Infinity;
           while (now() - start < cfg.taskMs) {
             if (ctx.abort?.aborted) throw fault('AbortError', 'Parent cancelled');
             const messages = await call('session', 'messages', sessionArgs(child.id, ctx.directory), ctx.abort);
             const observation = observe(messages, selected, args.role);
+            const activity = activityOf(messages, now() - start);
+            const nextKey = JSON.stringify([activity.phase, activity.label]);
+            if (nextKey !== activityKey || now() - activityAt >= 5000) {
+              activityKey = nextKey; activityAt = now();
+              receipt.activity = { ...activity, child_session: child.id, selected_model: selected, role: args.role };
+              await atomicJson(receiptFile, receipt);
+              // OpenCode emits a native part update; the presenter updates the
+              // same clickable card. Status is never a second agent transcript.
+              await ctx.metadata?.({ title: `@${args.role} · ${activity.label}`,
+                metadata: { ...displayMetadata, tokenomics_activity: receipt.activity } });
+            }
             attempt.observed_model = observation.observed;
             attempt.usage = observation.usage;
             attempt.usage_source = observation.usage ? 'session_messages' : 'unavailable';
@@ -307,7 +321,8 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
         } catch (e) {
           if (e.actual_model) attempt.observed_model = e.actual_model;
           attempt.status = 'failed'; attempt.failure = failureKind(e); attempt.error_type = e.name || 'Error';
-          attempt.completed_at = stamp();
+          attempt.completed_at = stamp(); attempt.elapsed_ms = now() - Date.parse(attempt.started_at);
+          receipt.activity = { schema_version: 1, phase: 'failed', label: `Stopped · ${attempt.failure}`, child_session: child?.id, selected_model: selected, updated_at: stamp() };
           if (child?.id) attempt.abort_verified = await stopped(child.id, ctx.directory);
           else attempt.abort_verified = true; // No prompt was sent without a known child ID.
           // A failed/ambiguous submission is not safe to replay as another writer.

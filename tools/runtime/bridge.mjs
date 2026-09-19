@@ -68,7 +68,16 @@ export function createBridge(toolkitRoot) {
       // The execution receipt is already durable. Only operational failures are
       // promoted here; task correctness remains pending until validation.
       const a = receipt.attempts.at(-1);
-      if (!a || a.status !== 'failed' || !['quota', 'auth', 'throttle', 'provider', 'model'].includes(a.failure)) return;
+      let recordingError;
+      if (a?.status === 'failed') {
+        try { await invoke('record-task-outcome.ps1', ['-TaskId', receipt.task_id, '-Repo', receipt.directory,
+          '-TaskType', (receipt.task_types?.length ? receipt.task_types : [receipt.role]).join(','), '-Operational'], {}, 15000); }
+        catch (error) { recordingError = error; }
+      }
+      if (!a || a.status !== 'failed' || !['quota', 'auth', 'throttle', 'provider', 'model'].includes(a.failure)) {
+        if (recordingError) throw recordingError;
+        return;
+      }
       const pool = a.failure === 'quota' && ['opencode-go', 'opencode-free'].includes(a.surface);
       const key = pool ? a.surface : a.selected_model;
       const dir = path.join(toolkitRoot, '.state', 'delegation', 'blocks');
@@ -81,6 +90,7 @@ export function createBridge(toolkitRoot) {
       const temp = `${file}.${randomUUID()}.tmp`;
       try { await writeFile(temp, JSON.stringify(state), { mode: 0o600 }); await rename(temp, file); }
       finally { await unlink(temp).catch(() => {}); }
+      if (recordingError) throw recordingError;
     },
   };
 }

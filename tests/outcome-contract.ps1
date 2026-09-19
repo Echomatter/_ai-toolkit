@@ -5,7 +5,7 @@ function Check($c,[string]$s){if(-not $c){throw $s};Write-Output "PASS: $s"}
 function Save([string]$p,$o){[IO.File]::WriteAllText($p,($o|ConvertTo-Json -Depth 12),(New-Object Text.UTF8Encoding($false)))}
 try {
  New-Item -ItemType Directory -Path (Join-Path $root 'routing'),(Join-Path $root '.state\delegation') -Force|Out-Null
- $history=Join-Path $root 'routing\task-history.json'
+ $history=Join-Path $root '.state\task-history.json'
  Save $history @{generated=$true;entries=@()}
  $roster=Join-Path $root 'routing\model-roster.json';Save $roster @{generated_at='2020-01-01T00:00:00Z';eligible_models=@()}
  $before=(Get-FileHash $roster).Hash
@@ -52,6 +52,12 @@ try {
    try { & $script @params|Out-Null } catch { $rejected=$true }
    Check ($rejected-and(Get-FileHash $history).Hash-eq$prior) "unexecuted $status review cannot be recorded as success"
  }
+ $params.TaskId='c'*64;$params.Model='';$params.Success=$false;$params.TestsPassed=$false;$params.Operational=$true
+ Save (Join-Path $root ('.state\delegation\'+$params.TaskId+'.json')) @{task_id=$params.TaskId;role='worker';status='failed';attempts=@(@{status='failed';failure='timeout';selected_model='opencode/free';observed_model='opencode/free';surface='opencode-free';usage=@{input=25;output=2}})}
+ & $script @params|Out-Null
+ & $script @params|Out-Null
+ $operational=@((Get-Content $history -Raw|ConvertFrom-Json).entries|Where-Object {$_.task_id-eq$params.TaskId})
+ Check ($operational.Count-eq 1-and$operational[0].observation_kind-eq'operational'-and$operational[0].failure_kind-eq'timeout'-and-not$operational[0].success) 'timeout usage is recorded once as operational, never capability success'
  Set-Content -LiteralPath $history -Value '{broken';$corrupt=(Get-FileHash $history).Hash;$rejected=$false
  try { & $script @params|Out-Null } catch { $rejected=$true }
  Check ($rejected -and (Get-FileHash $history).Hash -eq $corrupt) 'malformed history preserved unchanged'

@@ -1,9 +1,9 @@
 {
     "schema_version":  2,
-    "generated_at":  "2026-09-18T20:05:00Z",
-    "evidence_as_of":  "2026-09-18",
+    "generated_at":  "2026-09-19T19:35:00Z",
+    "evidence_as_of":  "2026-09-19",
     "advisor_readiness":  "PARTIAL",
-    "readiness_reason":  "Live retrieval completed in this refresh for current OpenAI, GitHub Copilot, Google, SpaceXAI, Moonshot, Meta, Xiaomi, NVIDIA, and Microsoft sources. All 37 eligible roster IDs still map to 27 canonical entries. Serious candidates have current provider/catalog evidence and most have independent or harness evidence, but exact hosted-SKU and same-harness TB4 comparisons remain incomplete; readiness stays PARTIAL rather than READY.",
+    "readiness_reason":  "2026-09-19 refresh: OpenCode1.18.31 lists67 eligible IDs (8 free,27 Go,15 OpenAI OAuth,17 Copilot OAuth), mapped to57 evidence entries. All28 prior identity-only entries now have sourced catalog evidence; numeric benchmarks added wherever retrieved and exact identity supported. Two newly discovered Copilot routes added separately. Older model-family research retains original retrieval dates. Readiness remains PARTIAL: catalog support is not measured quality or hosted inference, and independent corroboration remains incomplete. See docs/MODEL-EVIDENCE-REFRESH.md.",
     "policy":  {
                    "selection_mode":  "library_first",
                    "lane_assignment_is_capability_evidence":  false,
@@ -1268,8 +1268,53 @@
                                                            "25% faster streaming and 25% fewer tokens",
                                                            "4% code-survival improvement and 9% return-visit improvement"
                                                        ],
-                                          "caution":  "Production/Copilot-harness claims; not a cross-harness TB4 result."
-                                      }
+                                           "caution":  "Production/Copilot-harness claims; not a cross-harness TB4 result."
+                                       },
+                    "go_docs_20260919": {
+                        "source_type": "PROVIDER_REPORTED", "publisher": "OpenCode", "title": "Go models, pricing and privacy", "url": "https://opencode.ai/docs/go/", "retrieved_at": "2026-09-19",
+                        "supports": ["27 curated Go models and exact endpoint IDs", "Base subscription allowances and token rates", "Contributor prompt training and regional restrictions", "DeepSeek V4.1 Flash temporary 4x promotion ends Sep 20"],
+                        "caution": "Public documentation, not account entitlement or measured usage; endpoint table also includes MiniMax M2.5 which is absent from this installation."
+                    },
+                    "deepseek_pricing_20260919": {
+                        "source_type": "PROVIDER_REPORTED", "publisher": "DeepSeek", "title": "Models and Pricing", "url": "https://api-docs.deepseek.com/quick_start/pricing/", "retrieved_at": "2026-09-19",
+                        "supports": ["Direct API Flash now V4.1 with image support, Pro is Pro-0813", "1M total context and 384K maximum output", "Direct API legacy Flash names redirect to V4.1"],
+                        "caution": "Direct API migration is not proof of Go backend migration."
+                    },
+                    "deepseek41_card_20260919": {
+                        "source_type": "PROVIDER_REPORTED", "publisher": "DeepSeek", "title": "DeepSeek V4.1 Flash model card", "url": "https://huggingface.co/deepseek-ai/DeepSeek-V4.1-Flash", "retrieved_at": "2026-09-19",
+                        "supports": ["V4.1 benchmark results at effort100", "OpenCode scaffold TB2.1 85.0 and DeepSWE1.1 65.5", "DSH Minimal TB2.1 90.6 and TB4.0 31.2", "Comparison table for V4 Flash and Pro"],
+                        "caution": "Vendor reported; distinguish scaffold-specific runs and comparator models. No Go inference tested locally."
+                    },
+                    "glm53_card_20260919": {
+                        "source_type": "PROVIDER_REPORTED", "publisher": "Z.ai", "title": "GLM-5.3 model card", "url": "https://huggingface.co/zai-org/GLM-5.3", "retrieved_at": "2026-09-19",
+                        "supports": ["GLM5.3 TB2.1 88.2, TB3.0 28.3, DeepSWE1.1 66.9", "GLM5.2 TB2.1 81.0 and DeepSWE1.1 46.2", "Kimi K3 and Qwen3.8 Max comparator results"],
+                        "caution": "Vendor table with mixed evaluation provenance; exact harness retained per benchmark. GLM5.2 base equivalence does not transfer GLM5.3 scores."
+                    },
+                    "minimax27_card_20260919": {
+                        "source_type": "PROVIDER_REPORTED", "publisher": "MiniMax", "title": "MiniMax M2.7 model card", "url": "https://huggingface.co/MiniMaxAI/MiniMax-M2.7", "retrieved_at": "2026-09-19",
+                        "supports": ["SWE-Pro 56.22 percent in card text", "Terminal Bench 2 57.0 percent", "SWE Multilingual 76.5 percent", "Native tool calling"],
+                        "caution": "Provider-reported; card does not specify every harness detail. Do not transfer results to M3."
+                    },
+                    "glm53flash_card_20260919": {"source_type":"PROVIDER_REPORTED","publisher":"Z.ai","title":"GLM-5.3-Flash card","url":"https://huggingface.co/zai-org/GLM-5.3-Flash","retrieved_at":"2026-09-19","supports":["TB2.1 84.3, DeepSWE63.4 and evaluation footnotes"],"caution":"Provider reported; blog rendered blank in parent check, use fetched card."},
+                    "minimax3_blog_20260919": {"source_type":"PROVIDER_REPORTED","publisher":"MiniMax","title":"MiniMax M3 release","url":"https://www.minimax.io/blog/minimax-m3","retrieved_at":"2026-09-19","supports":["SWE-Bench Pro59.0 and TB2.1 66.0; explicit methodology"],"caution":"Provider evaluation; four-run average stated for SWE Verified, not Pro."},
+                    "kimi27_card_20260919": {"source_type":"PROVIDER_REPORTED","publisher":"Moonshot AI","title":"Kimi K2.7 Code card","url":"https://huggingface.co/moonshotai/Kimi-K2.7-Code","retrieved_at":"2026-09-19","supports":["Kimi Code Bench v2 62.0 and Program Bench53.6; K2.6 comparator50.9/48.3", "Preserved thinking required; video experimental on official API"],"caution":"Internal coding benchmark is not SWE-bench; Program Bench scale must not be merged with Almost@1 in other cards."},
+                    "mimo25pro_card_20260919": {"source_type":"PROVIDER_REPORTED","publisher":"Xiaomi MiMo","title":"MiMo V2.5 Pro card","url":"https://huggingface.co/XiaomiMiMo/MiMo-V2.5-Pro","retrieved_at":"2026-09-19","supports":["Evaluation widget: SWE Verified78.9, SWE Pro57.2, TB2.0 68.4", "GraphWalks BFS0.37 and Parents0.62 at1M"],"caution":"Main table includes BASE-model results; only named instruct widget and long-context text used here."},
+                    "benchlm_qwen36_20260919": {"source_type":"INDEPENDENT","publisher":"BenchLM","title":"Qwen3.6 Plus benchmark profile","url":"https://benchlm.ai/models/qwen3-6-plus","retrieved_at":"2026-09-19","supports":["TB2.0 61.6 and SWE Pro56.6"],"caution":"Third-party aggregation, not independent reproduction; harness unspecified."},
+                    "benchlm_qwen37plus_20260919": {"source_type":"INDEPENDENT","publisher":"BenchLM","title":"Qwen3.7 Plus comparison","url":"https://benchlm.ai/compare/deepseek-v4-flash-0731-vs-qwen3-7-plus","retrieved_at":"2026-09-19","supports":["Qwen3.7 Plus TB2.0 70.3, SWE Pro57.6"],"caution":"Third-party aggregation; comparator DeepSeek name redirected to0731, no DeepSeek score imported."},
+                    "llmstats_swepro_20260919": {"source_type":"INDEPENDENT","publisher":"LLM Stats","title":"SWE-Bench Pro leaderboard","url":"https://llm-stats.com/benchmarks/swe-bench-pro","retrieved_at":"2026-09-19","supports":["Exact named rows for Luna, Terra, GLM5.1, Hy3, Hy4 preview, MiMoV2.5, Qwen3.7 Max and Qwen3.8 Flash"],"caution":"Aggregator labels all58 rows SELF-REPORTED and0 verified. Values on0-1 scale converted to percent. Separate Flash row used; no Flash-Next equivalence inferred."},
+                    "longcat2_card_20260919": {"source_type":"PROVIDER_REPORTED","publisher":"Meituan LongCat","title":"LongCat2.0 model card","url":"https://huggingface.co/meituan-longcat/LongCat-2.0","retrieved_at":"2026-09-19","supports":["TB2.1 70.8, SWE Pro59.5, SWE Multilingual77.3"],"caution":"In-house unified harness; exact agent version and timeout not specified in fetched text."},
+                    "local_inventory_20260919": {"source_type":"VERIFIED_LOCAL","publisher":"Local OpenCode CLI","title":"OpenCode1.18.31 model inventory","retrieved_at":"2026-09-19","supports":["opencode --version returned1.18.31", "opencode models listed67 IDs:8 free,27 Go,15 OpenAI,17 Copilot", "Copilot Luna/Terra present; no public catalog extras added"],"caution":"Discovery only, not entitlement or successful inference; no credentials exported."},
+                    "models_dev_catalog":  {
+                                               "source_type":  "VERIFIED_CATALOG",
+                                               "publisher":  "models.dev (community catalog)",
+                                               "title":  "models.dev API model catalog",
+                                               "url":  "https://models.dev/api.json",
+                                               "retrieved_at":  "2026-09-19",
+                                               "supports":  [
+                                                                "Provider-qualified opencode-go entries and github-copilot/gpt-5.6-luna/terra: declared context/output limits, input modalities, tool_call and reasoning support. opencode/jev-1.13-free is a typed decision model with no tool calls. Catalog facts are not benchmark scores."
+                                                            ],
+                                               "caution":  "Community-maintained catalog, not an official model card or inference receipt. Context means total window unless a separate input limit is published; output maxima are not additive. Some fields conflict with provider docs."
+                                           }
                 },
     "alias_index":  {
                         "opencode/big-pickle":  "big-pickle",
@@ -1304,6 +1349,8 @@
                         "github-copilot/gpt-5.3-codex":  "gpt-5.3-codex",
                         "github-copilot/gpt-5.4":  "gpt-5.4",
                         "github-copilot/gpt-5.4-mini":  "gpt-5.4-mini",
+                        "github-copilot/gpt-5.6-luna": "catalog:github-copilot/gpt-5.6-luna",
+                        "github-copilot/gpt-5.6-terra": "catalog:github-copilot/gpt-5.6-terra",
                         "github-copilot/grok-4.5":  "grok-4.5",
                         "github-copilot/grok-4.6":  "grok-4.6",
                         "github-copilot/kimi-k2.7-code":  "kimi-k2.7-code",
@@ -1339,6 +1386,26 @@
                         "opencode/jev-1.13-free":  "unresearched:opencode/jev-1.13-free"
                     },
     "models":  {
+                    "catalog:github-copilot/gpt-5.6-luna": {
+                        "provider":"github-copilot", "aliases":["github-copilot/gpt-5.6-luna"], "research_status":"catalog_enriched",
+                        "positioning":"Newly discovered Copilot Luna route; text/image/PDF input, reasoning and tool calls. Separate from Go and OpenAI OAuth entitlement and serving configuration.",
+                        "context":{"input_tokens":922000,"max_output_tokens":128000,"confidence":"medium","evidence":["models_dev_catalog"],"note":"1050000 total context; catalog separates input limit."},
+                        "capabilities":{"tool_use":{"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},"coding":{"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"]}},
+                        "benchmarks":[{"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":62.7,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Luna model row0.627","comparability":"Self-reported model-level; exact Copilot route not measured"}],
+                        "efficiency":{"interpretation":"Copilot subscription quota, not API cash price; exact account allowance unknown."},
+                        "research_gaps":["Exact Copilot inference and independent task-quality corroboration"], "cautions":["Discovery is not entitlement; preserve operational quota blocks."],
+                        "source_keys":["models_dev_catalog","local_inventory_20260919","llmstats_swepro_20260919"], "last_researched_at":"2026-09-19"
+                    },
+                    "catalog:github-copilot/gpt-5.6-terra": {
+                        "provider":"github-copilot", "aliases":["github-copilot/gpt-5.6-terra"], "research_status":"catalog_enriched",
+                        "positioning":"Newly discovered Copilot Terra route; text/image/PDF input, reasoning and tool calls. Separate hosted-route evidence from OpenAI OAuth.",
+                        "context":{"input_tokens":922000,"max_output_tokens":128000,"confidence":"medium","evidence":["models_dev_catalog"],"note":"1050000 total context; catalog separates input limit."},
+                        "capabilities":{"tool_use":{"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},"coding":{"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"]}},
+                        "benchmarks":[{"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":63.4,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Terra model row0.634","comparability":"Self-reported model-level; exact Copilot route not measured"}],
+                        "efficiency":{"interpretation":"Copilot subscription quota, not API cash price; exact account allowance unknown."},
+                        "research_gaps":["Exact Copilot inference and independent task-quality corroboration"], "cautions":["Discovery is not entitlement; preserve operational quota blocks."],
+                        "source_keys":["models_dev_catalog","local_inventory_20260919","llmstats_swepro_20260919"], "last_researched_at":"2026-09-19"
+                    },
                    "big-pickle":  {
                                       "provider":  "unknown/stealth",
                                       "aliases":  [
@@ -4368,85 +4435,159 @@
                                                               ],
                                               "last_researched_at":  "2026-09-18"
                                           },
-                   "unresearched:opencode-go/deepseek-v4.1-flash":  {
-                                                                        "provider":  "opencode-go",
-                                                                        "aliases":  [
-                                                                                        "opencode-go/deepseek-v4.1-flash"
-                                                                                    ],
-                                                                        "research_status":  "identity_only",
-                                                                        "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
-                                                                        "context":  {
-                                                                                        "input_tokens":  null,
-                                                                                        "output_tokens":  null,
-                                                                                        "confidence":  "low"
-                                                                                    },
-                                                                        "capabilities":  {
-
-                                                                                         },
-                                                                        "benchmarks":  [
-
-                                                                                       ],
-                                                                        "efficiency":  {
-                                                                                           "interpretation":  "unresearched"
-                                                                                       },
-                                                                        "research_gaps":  [
-                                                                                              "Official model documentation",
-                                                                                              "Independent coding-agent evidence"
-                                                                                          ],
-                                                                        "cautions":  [
-                                                                                         "Do not recommend for consequential work until current evidence is collected."
+                    "unresearched:opencode-go/deepseek-v4.1-flash":  {
+                                                                         "provider":  "opencode-go",
+                                                                         "aliases":  [
+                                                                                         "opencode-go/deepseek-v4.1-flash"
                                                                                      ],
-                                                                        "source_keys":  [
-
-                                                                                        ],
-                                                                        "last_researched_at":  null
-                                                                    },
-                   "unresearched:opencode-go/deepseek-v4-flash":  {
-                                                                      "provider":  "opencode-go",
-                                                                      "aliases":  [
-                                                                                      "opencode-go/deepseek-v4-flash"
-                                                                                  ],
-                                                                      "research_status":  "identity_only",
-                                                                      "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
-                                                                      "context":  {
-                                                                                      "input_tokens":  null,
-                                                                                      "output_tokens":  null,
-                                                                                      "confidence":  "low"
-                                                                                  },
-                                                                      "capabilities":  {
-
-                                                                                       },
-                                                                      "benchmarks":  [
-
-                                                                                     ],
-                                                                      "efficiency":  {
-                                                                                         "interpretation":  "unresearched"
+                                                                         "research_status":  "catalog_enriched",
+                                                                         "positioning":  "DeepSeek V4.1 Flash: reasoning and agentic coding model with vision input, 1M context, open weights.",
+                                                                         "context":  {
+                                                                                         "input_tokens":  1000000,
+                                                                                         "max_output_tokens":  384000,
+                                                                                         "confidence": "medium", "note": "Catalog total context, shared with output; supported by direct provider docs, not tested Go inference."
                                                                                      },
-                                                                      "research_gaps":  [
-                                                                                            "Official model documentation",
-                                                                                            "Independent coding-agent evidence"
-                                                                                        ],
-                                                                      "cautions":  [
-                                                                                       "Do not recommend for consequential work until current evidence is collected."
-                                                                                   ],
-                                                                      "source_keys":  [
-
+                                                                         "capabilities":  {
+                                                                                              "long_context":  {
+                                                                                                                   "rating":  "good",
+                                                                                                                   "confidence":  "medium",
+                                                                                                                   "evidence":  [
+                                                                                                                                    "models_dev_catalog"
+                                                                                                                                ],
+                                                                                                                   "note":  "1M context window confirmed by catalog."
+                                                                                                               },
+                                                                                              "coding":  {
+                                                                                                             "rating":  "good",
+                                                                                                             "confidence":  "medium",
+                                                                                                             "evidence":  [
+                                                                                                                              "deepseek41_card_20260919"
+                                                                                                                          ],
+                                                                                                             "note": "Provider reports both OpenCode and DSH scaffold results; Go deployment not measured."
+                                                                                                         },
+                                                                                              "tool_use":  {
+                                                                                                              "rating":  "adequate",
+                                                                                                              "confidence":  "medium",
+                                                                                                              "evidence":  [
+                                                                                                                               "models_dev_catalog"
+                                                                                                                           ],
+                                                                                                              "note":  "tool_call: true confirmed by catalog."
+                                                                                                          },
+                                                                                              "deep_reasoning":  {
+                                                                                                               "rating":  "adequate",
+                                                                                                               "confidence":  "medium",
+                                                                                                               "evidence":  [
+                                                                                                                                "models_dev_catalog"
+                                                                                                                            ],
+                                                                                                               "note":  "reasoning: true with toggleable effort (low/high/max)."
+                                                                                                           },
+                                                                                              "vision":  {
+                                                                                                                  "rating":  "adequate",
+                                                                                                                  "confidence":  "medium",
+                                                                                                                  "evidence":  [
+                                                                                                                                   "models_dev_catalog"
+                                                                                                                               ],
+                                                                                                                  "note":  "Input modalities: text, image. Vision input confirmed."
+                                                                                                              }
+                                                                                          },
+                                                                         "benchmarks":  [
+                                                                             {"source":"deepseek41_card_20260919","benchmark":"Terminal-Bench 2.1","value":85.0,"unit":"percent","harness":"OpenCode","configuration":"effort100; temperature1; top_p0.95; 1M context; N=3; max_steps500; Linux; no network","comparability":"Vendor-reported model/scaffold result, not measured Go route; benchmark date not separately stated, retrieved 2026-09-19"},
+                                                                             {"source":"deepseek41_card_20260919","benchmark":"DeepSWE v1.1","value":65.5,"unit":"percent resolved","harness":"OpenCode","configuration":"effort100; temperature1; top_p0.95; 1M context; N=8; max_steps500","comparability":"Vendor reported; separate scaffold from mini-SWE 74.2"},
+                                                                             {"source":"deepseek41_card_20260919","benchmark":"Terminal-Bench 2.1","value":90.6,"unit":"percent","harness":"DeepSeek Harness Minimal","configuration":"effort100; temperature1; top_p0.95; 1M context","comparability":"Vendor best-case; not interchangeable with OpenCode 85.0"},
+                                                                             {"source":"deepseek41_card_20260919","benchmark":"Terminal-Bench 4.0","value":31.2,"unit":"percent","harness":"DeepSeek Harness Minimal","configuration":"effort100; temperature1; top_p0.95; 1M context","comparability":"Different benchmark version from TB2.1"}
+                                                                                          ],
+                                                                         "efficiency":  {
+                                                                                            "interpretation":  "Catalog identity and capabilities confirmed; no independent coding-agent harness evidence yet."
+                                                                                        },
+                                                                         "research_gaps":  [
+                                                                                               "Independent coding-agent benchmark (TB4/SWE-Pro) for this exact SKU",
+                                                                                               "Go subscription hosted behavior may differ from direct API"
+                                                                                           ],
+                                                                         "cautions":  [
+                                                                                          "Catalog-enriched only; no independent harness evidence. Do not use for consequential work without harness validation."
                                                                                       ],
-                                                                      "last_researched_at":  null
-                                                                  },
+                                                                         "source_keys":  [
+                                                                                             "models_dev_catalog", "go_docs_20260919", "deepseek41_card_20260919", "deepseek_pricing_20260919"
+                                                                                         ],
+                                                                         "last_researched_at":  "2026-09-19"
+                                                                     },
+                    "unresearched:opencode-go/deepseek-v4-flash":  {
+                                                                       "provider":  "opencode-go",
+                                                                       "aliases":  [
+                                                                                       "opencode-go/deepseek-v4-flash"
+                                                                                   ],
+                                                                       "research_status":  "catalog_enriched",
+                                                                       "positioning": "Go catalog still lists text-only V4 Flash with tool calls and reasoning. Direct DeepSeek API now redirects the legacy name to multimodal V4.1; exact Go backend version is unresolved.",
+                                                                       "context":  {
+                                                                                       "input_tokens":  1000000,
+                                                                                       "max_output_tokens":  384000,
+                                                                                       "confidence": "medium", "note": "Total context window, shared with output."
+                                                                                   },
+                                                                       "capabilities":  {
+                                                                                            "long_context":  {
+                                                                                                                 "rating":  "good",
+                                                                                                                 "confidence":  "medium",
+                                                                                                                 "evidence":  [
+                                                                                                                                  "models_dev_catalog"
+                                                                                                                              ],
+                                                                                                                 "note":  "1M context window confirmed by catalog."
+                                                                                                             },
+                                                                                            "coding":  {
+                                                                                                           "rating":  "adequate",
+                                                                                                           "confidence":  "medium",
+                                                                                                           "evidence":  [
+                                                                                                                            "models_dev_catalog"
+                                                                                                                        ],
+                                                                                                           "note":  "Described as enhanced agentic capabilities with DSpark speculative decoding; no independent harness benchmark yet."
+                                                                                                       },
+                                                                                            "tool_use":  {
+                                                                                                            "rating":  "adequate",
+                                                                                                            "confidence":  "medium",
+                                                                                                            "evidence":  [
+                                                                                                                             "models_dev_catalog"
+                                                                                                                         ],
+                                                                                                            "note":  "tool_call: true confirmed by catalog."
+                                                                                                        },
+                                                                                            "deep_reasoning":  {
+                                                                                                             "rating":  "adequate",
+                                                                                                             "confidence":  "medium",
+                                                                                                             "evidence":  [
+                                                                                                                              "models_dev_catalog"
+                                                                                                                          ],
+                                                                                                             "note":  "reasoning: true with toggleable effort (low/high/max)."
+                                                                                                         }
+                                                                                        },
+                                                                       "benchmarks":  [
+
+                                                                                        ],
+                                                                       "efficiency":  {
+                                                                                          "interpretation":  "Catalog identity and capabilities confirmed; no independent coding-agent harness evidence yet."
+                                                                                      },
+                                                                       "research_gaps":  [
+                                                                                             "Independent coding-agent benchmark (TB4/SWE-Pro) for this exact SKU",
+                                                                                             "Go subscription hosted behavior may differ from direct API"
+                                                                                         ],
+                                                                       "cautions":  [
+                                                                                        "Catalog text-only declaration conflicts with direct API migration to V4.1 vision. Do not assume which version Go serves."
+                                                                                    ],
+                                                                       "source_keys":  [
+                                                                                           "models_dev_catalog", "go_docs_20260919", "deepseek_pricing_20260919"
+                                                                                       ],
+                                                                       "last_researched_at":  "2026-09-19"
+                                                                   },
                    "unresearched:opencode-go/deepseek-v4-flash-vision-exp":  {
                                                                                  "provider":  "opencode-go",
                                                                                  "aliases":  [
                                                                                                  "opencode-go/deepseek-v4-flash-vision-exp"
                                                                                              ],
-                                                                                 "research_status":  "identity_only",
-                                                                                 "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                                 "research_status":  "catalog_enriched",
+                                                                                 "positioning":  "Go catalog: experimental image/text reasoning model with tool calls. Direct DeepSeek API now redirects this legacy name to V4.1; Go backend equivalence is unverified.",
                                                                                  "context":  {
-                                                                                                 "input_tokens":  null,
-                                                                                                 "output_tokens":  null,
-                                                                                                 "confidence":  "low"
+                                                                                                 "input_tokens": 1000000,
+                                                                                                 "max_output_tokens": 384000,
+                                                                                                 "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Catalog total context window; not simultaneous input plus maximum output."
                                                                                              },
                                                                                  "capabilities":  {
+                                                                                     "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"],"note":"Declared tool-call support only; no local quality measurement."}
 
                                                                                                   },
                                                                                  "benchmarks":  [
@@ -4456,228 +4597,256 @@
                                                                                                     "interpretation":  "unresearched"
                                                                                                 },
                                                                                  "research_gaps":  [
-                                                                                                       "Official model documentation",
+                                                                                                       "Catalog checked; Go backend version and task quality remain unverified",
                                                                                                        "Independent coding-agent evidence"
                                                                                                    ],
                                                                                  "cautions":  [
                                                                                                   "Do not recommend for consequential work until current evidence is collected."
                                                                                               ],
-                                                                                 "source_keys":  [
+                                                                                 "source_keys":  ["models_dev_catalog", "go_docs_20260919", "deepseek_pricing_20260919"
 
                                                                                                  ],
-                                                                                 "last_researched_at":  null
+                                                                                 "last_researched_at": "2026-09-19"
                                                                              },
                    "unresearched:opencode-go/deepseek-v4-pro":  {
                                                                     "provider":  "opencode-go",
                                                                     "aliases":  [
                                                                                     "opencode-go/deepseek-v4-pro"
                                                                                 ],
-                                                                    "research_status":  "identity_only",
-                                                                    "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                    "research_status":  "catalog_enriched",
+                                                                    "positioning":  "Go catalog: text-only flagship DeepSeek reasoning/coding model with tool calls. Direct API currently identifies Pro-0813; exact Go version remains unverified.",
                                                                     "context":  {
-                                                                                    "input_tokens":  null,
-                                                                                    "output_tokens":  null,
-                                                                                    "confidence":  "low"
+                                                                                    "input_tokens": 1000000,
+                                                                                    "max_output_tokens": 384000,
+                                                                                    "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                                 },
                                                                     "capabilities":  {
+                                                                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                                                                        "coding": {"rating":"good","confidence":"medium","evidence":["deepseek41_card_20260919"],"note":"Pro comparator results; exact Go version unverified."},
+                                                                        "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["deepseek41_card_20260919"]}
 
                                                                                      },
                                                                     "benchmarks":  [
+                                                                        {"source":"deepseek41_card_20260919","benchmark":"Terminal-Bench 2.1","value":87.9,"unit":"percent","harness":"Comparator table; exact Pro setup not restated","configuration":"DS-V4-Pro max effort comparison","comparability":"Vendor comparator, not Go route verification; retrieved 2026-09-19"},
+                                                                        {"source":"deepseek41_card_20260919","benchmark":"DeepSWE v1.1","value":62.7,"unit":"percent resolved","harness":"Comparator table; exact Pro setup not restated","configuration":"DS-V4-Pro max effort comparison","comparability":"Vendor comparator; do not mix with initial Pro release scores"}
 
                                                                                    ],
                                                                     "efficiency":  {
                                                                                        "interpretation":  "unresearched"
                                                                                    },
                                                                     "research_gaps":  [
-                                                                                          "Official model documentation",
+                                                                                          "Go backend version and independent task-quality corroboration",
                                                                                           "Independent coding-agent evidence"
                                                                                       ],
                                                                     "cautions":  [
                                                                                      "Do not recommend for consequential work until current evidence is collected."
                                                                                  ],
-                                                                    "source_keys":  [
+                                                                    "source_keys":  ["models_dev_catalog", "go_docs_20260919", "deepseek_pricing_20260919"
 
                                                                                     ],
-                                                                    "last_researched_at":  null
+                                                                    "last_researched_at": "2026-09-19"
                                                                 },
                    "unresearched:opencode-go/glm-5.1":  {
                                                             "provider":  "opencode-go",
                                                             "aliases":  [
                                                                             "opencode-go/glm-5.1"
                                                                         ],
-                                                            "research_status":  "identity_only",
-                                                            "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                            "research_status": "catalog_enriched",
+                                                            "positioning": "Go catalog: text-only GLM hybrid reasoning, coding and agentic engineering; tool calls supported.",
                                                             "context":  {
-                                                                            "input_tokens":  null,
-                                                                            "output_tokens":  null,
-                                                                            "confidence":  "low"
+                                                                            "input_tokens": 202752,
+                                                                            "max_output_tokens": 32768,
+                                                                            "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                         },
                                                             "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"],"note":"Self-reported benchmark aggregated externally; not independently reproduced."}
 
                                                                              },
-                                                            "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":58.4,"unit":"percent","harness":"Unspecified by aggregator","configuration":"GLM-5.1 exact row;0.584 converted to percent","comparability":"Self-reported via aggregator; not Go inference"}
 
                                                                            ],
                                                             "efficiency":  {
                                                                                "interpretation":  "unresearched"
                                                                            },
                                                             "research_gaps":  [
-                                                                                  "Official model documentation",
+                                                                                  "Catalog checked; hosted task-quality corroboration remains incomplete",
                                                                                   "Independent coding-agent evidence"
                                                                               ],
                                                             "cautions":  [
                                                                              "Do not recommend for consequential work until current evidence is collected."
                                                                          ],
-                                                            "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "llmstats_swepro_20260919"
 
                                                                             ],
-                                                            "last_researched_at":  null
+                                                            "last_researched_at": "2026-09-19"
                                                         },
                    "unresearched:opencode-go/glm-5.2":  {
                                                             "provider":  "opencode-go",
                                                             "aliases":  [
                                                                             "opencode-go/glm-5.2"
                                                                         ],
-                                                            "research_status":  "identity_only",
-                                                            "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                            "research_status": "catalog_enriched",
+                                                            "positioning": "Go catalog: text-only GLM for long-horizon coding agents; reasoning and tool calls supported.",
                                                             "context":  {
-                                                                            "input_tokens":  null,
-                                                                            "output_tokens":  null,
-                                                                            "confidence":  "low"
+                                                                            "input_tokens": 1000000,
+                                                                            "max_output_tokens": 131072,
+                                                                            "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                         },
                                                             "capabilities":  {
+                                                                "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                                                                "coding": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919"]},
+                                                                "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919"]}
 
                                                                              },
                                                             "benchmarks":  [
+                                                                {"source":"glm53_card_20260919","benchmark":"Terminal-Bench 2.1","value":81.0,"unit":"percent","harness":"GLM5.3 card comparison; GLM5.2 setup not separately restated","configuration":"GLM-5.2 comparator","comparability":"Provider comparison; not an OpenCode Go measurement; retrieved 2026-09-19"},
+                                                                {"source":"glm53_card_20260919","benchmark":"DeepSWE v1.1","value":46.2,"unit":"percent resolved","harness":"GLM5.3 card comparison","configuration":"GLM-5.2 comparator","comparability":"Provider comparison; no GLM5.3 score transfer"}
 
                                                                            ],
                                                             "efficiency":  {
                                                                                "interpretation":  "unresearched"
                                                                            },
                                                             "research_gaps":  [
-                                                                                  "Official model documentation",
+                                                                                  "Catalog checked; hosted task-quality corroboration remains incomplete",
                                                                                   "Independent coding-agent evidence"
                                                                               ],
                                                             "cautions":  [
                                                                              "Do not recommend for consequential work until current evidence is collected."
                                                                          ],
-                                                            "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "glm53_card_20260919"
 
                                                                             ],
-                                                            "last_researched_at":  null
+                                                            "last_researched_at": "2026-09-19"
                                                         },
                    "unresearched:opencode-go/glm-5.3":  {
                                                             "provider":  "opencode-go",
                                                             "aliases":  [
                                                                             "opencode-go/glm-5.3"
                                                                         ],
-                                                            "research_status":  "identity_only",
-                                                            "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                            "research_status": "catalog_enriched",
+                                                            "positioning": "Go catalog: text-only GLM for long-horizon coding and agents; reasoning and tool calls supported. Provider card reports gains from post-training over GLM-5.2.",
                                                             "context":  {
-                                                                            "input_tokens":  null,
-                                                                            "output_tokens":  null,
-                                                                            "confidence":  "low"
+                                                                            "input_tokens": 1000000,
+                                                                            "max_output_tokens": 131072,
+                                                                            "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                         },
                                                             "capabilities":  {
+                                                                "tool_use": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919"]},
+                                                                "coding": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919"]},
+                                                                "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919"]}
 
                                                                              },
                                                             "benchmarks":  [
+                                                                {"source":"glm53_card_20260919","benchmark":"Terminal-Bench 2.1","value":88.2,"unit":"percent","harness":"Claude Code 2.1.207","configuration":"max effort; temperature1; top_p1; 65536 output; 6h timeout","comparability":"Provider-reported, not Go measurement; retrieved 2026-09-19"},
+                                                                {"source":"glm53_card_20260919","benchmark":"Terminal-Bench 3.0","value":28.3,"unit":"percent avg@3","harness":"Claude Code 2.1.207","configuration":"max effort; 400K context; 128K output; 600 turns; 10h timeout","comparability":"Different benchmark from TB2.1; not a same-scale score"},
+                                                                {"source":"glm53_card_20260919","benchmark":"DeepSWE v1.1","value":66.9,"unit":"percent resolved","harness":"mini-swe-agent","configuration":"temperature0.95; top_p1; 400K context; 6h timeout","comparability":"Provider reported"}
 
                                                                            ],
                                                             "efficiency":  {
                                                                                "interpretation":  "unresearched"
                                                                            },
                                                             "research_gaps":  [
-                                                                                  "Official model documentation",
+                                                                                  "Catalog and provider card checked; hosted corroboration remains incomplete",
                                                                                   "Independent coding-agent evidence"
                                                                               ],
                                                             "cautions":  [
                                                                              "Do not recommend for consequential work until current evidence is collected."
                                                                          ],
-                                                            "source_keys":  [
+                                                            "source_keys":  ["models_dev_catalog", "go_docs_20260919", "glm53_card_20260919"
 
                                                                             ],
-                                                            "last_researched_at":  null
+                                                            "last_researched_at": "2026-09-19"
                                                         },
                    "unresearched:opencode-go/glm-5.3-flash":  {
                                                                   "provider":  "opencode-go",
                                                                   "aliases":  [
                                                                                   "opencode-go/glm-5.3-flash"
                                                                               ],
-                                                                  "research_status":  "identity_only",
-                                                                  "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                  "research_status": "catalog_enriched",
+                                                                  "positioning": "Go catalog: GLM for coding/agents, text/image/video/PDF input; reasoning and tool calls supported. No score transferred from non-Flash GLM.",
                                                                   "context":  {
-                                                                                  "input_tokens":  null,
-                                                                                  "output_tokens":  null,
-                                                                                  "confidence":  "low"
+                                                                                  "input_tokens": 1000000,
+                                                                                  "max_output_tokens": 131072,
+                                                                                  "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                               },
                                                                   "capabilities":  {
+                        "tool_use": {"rating":"good","confidence":"medium","evidence":["glm53flash_card_20260919"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["glm53flash_card_20260919"]},
+                        "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["glm53flash_card_20260919"]}
 
                                                                                    },
-                                                                  "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"glm53flash_card_20260919","benchmark":"Terminal-Bench 2.1","value":84.3,"unit":"percent","harness":"Claude Code2.1.207","configuration":"max effort;temperature1;top_p1;65536 output;6h timeout","comparability":"Provider reported; exact Flash model"},
+                            {"source":"glm53flash_card_20260919","benchmark":"DeepSWE v1.1","value":63.4,"unit":"percent resolved","harness":"mini-swe-agent","configuration":"temperature0.95;top_p1;400K context;6h timeout","comparability":"Provider reported; not Go inference"}
 
                                                                                  ],
                                                                   "efficiency":  {
                                                                                      "interpretation":  "unresearched"
                                                                                  },
                                                                   "research_gaps":  [
-                                                                                        "Official model documentation",
+                                                                                        "Catalog checked; exact Flash task-quality evidence still needed",
                                                                                         "Independent coding-agent evidence"
                                                                                     ],
                                                                   "cautions":  [
                                                                                    "Do not recommend for consequential work until current evidence is collected."
                                                                                ],
-                                                                  "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "glm53flash_card_20260919"
 
                                                                                   ],
-                                                                  "last_researched_at":  null
+                                                                  "last_researched_at": "2026-09-19"
                                                               },
                    "unresearched:opencode-go/gpt-5.6-luna":  {
                                                                  "provider":  "opencode-go",
                                                                  "aliases":  [
                                                                                  "opencode-go/gpt-5.6-luna"
                                                                              ],
-                                                                 "research_status":  "identity_only",
-                                                                 "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                 "research_status": "catalog_enriched",
+                                                                 "positioning": "Go catalog: cost-efficient GPT-5.6 for high-volume workloads; text/image/PDF input, reasoning and tool calls. Go docs confirm $15 base allowance, not the prior estimated $60.",
                                                                  "context":  {
-                                                                                 "input_tokens":  null,
-                                                                                 "output_tokens":  null,
-                                                                                 "confidence":  "low"
+                                                                                 "input_tokens": 922000,
+                                                                                 "max_output_tokens": 128000,
+                                                                                 "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Catalog explicitly separates 922000 input from 1050000 total context."
                                                                              },
                                                                  "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"],"note":"Model-level self-reported benchmark; Go behavior unverified."}
 
                                                                                   },
-                                                                 "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":62.7,"unit":"percent","harness":"Unspecified by aggregator","configuration":"GPT5.6 Luna exact row;0.627 converted to percent","comparability":"Self-reported model evidence; not Go measurement"}
 
                                                                                 ],
                                                                  "efficiency":  {
                                                                                     "interpretation":  "unresearched"
                                                                                 },
                                                                  "research_gaps":  [
-                                                                                       "Official model documentation",
+                                                                                       "Catalog checked; Go task-quality corroboration remains incomplete",
                                                                                        "Independent coding-agent evidence"
                                                                                    ],
                                                                  "cautions":  [
                                                                                   "Do not recommend for consequential work until current evidence is collected."
                                                                               ],
-                                                                 "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "llmstats_swepro_20260919"
 
                                                                                  ],
-                                                                 "last_researched_at":  null
+                                                                 "last_researched_at": "2026-09-19"
                                                              },
                    "unresearched:opencode-go/grok-4.6":  {
                                                              "provider":  "opencode-go",
                                                              "aliases":  [
                                                                              "opencode-go/grok-4.6"
                                                                          ],
-                                                             "research_status":  "identity_only",
-                                                             "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                             "research_status": "catalog_enriched",
+                                                             "positioning": "Go catalog: xAI model for coding and long-running agents; text/image input, reasoning and tool calls. Hosted Go behavior is not established by other Grok routes.",
                                                              "context":  {
-                                                                             "input_tokens":  null,
-                                                                             "output_tokens":  null,
-                                                                             "confidence":  "low"
+                                                                             "input_tokens": 500000,
+                                                                             "max_output_tokens": 500000,
+                                                                             "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Shared 500000-token window; output ceiling is not additional input capacity."
                                                                          },
                                                              "capabilities":  {
+                                                                 "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]}
 
                                                                               },
                                                              "benchmarks":  [
@@ -4687,360 +4856,405 @@
                                                                                 "interpretation":  "unresearched"
                                                                             },
                                                              "research_gaps":  [
-                                                                                   "Official model documentation",
+                                                                                   "Catalog checked; Go task-quality corroboration remains incomplete",
                                                                                    "Independent coding-agent evidence"
                                                                                ],
                                                              "cautions":  [
                                                                               "Do not recommend for consequential work until current evidence is collected."
                                                                           ],
-                                                             "source_keys":  [
+                                                             "source_keys":  ["models_dev_catalog", "go_docs_20260919"
 
                                                                              ],
-                                                             "last_researched_at":  null
+                                                             "last_researched_at": "2026-09-19"
                                                          },
                    "unresearched:opencode-go/hy3":  {
                                                         "provider":  "opencode-go",
                                                         "aliases":  [
                                                                         "opencode-go/hy3"
                                                                     ],
-                                                        "research_status":  "identity_only",
-                                                        "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                        "research_status": "catalog_enriched",
+                                                        "positioning": "Go catalog: Tencent text reasoning model for coding/instruction following; tool calls supported. Do not conflate Hy3 with Hy3-preview benchmarks.",
                                                         "context":  {
-                                                                        "input_tokens":  null,
-                                                                        "output_tokens":  null,
-                                                                        "confidence":  "low"
+                                                                        "input_tokens": 192000,
+                                                                        "max_output_tokens": 128000,
+                                                                        "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Catalog input limit 192000; total context 256000 shared with output."
                                                                     },
                                                         "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"]}
 
                                                                          },
-                                                        "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":57.9,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Hy3 exact row;0.579 converted to percent","comparability":"Self-reported; no Hy3-preview score transfer"}
 
                                                                        ],
                                                         "efficiency":  {
                                                                            "interpretation":  "unresearched"
                                                                        },
                                                         "research_gaps":  [
-                                                                              "Official model documentation",
+                                                                              "Catalog checked; Hy3 versus Hy3-preview benchmark identity unresolved",
                                                                               "Independent coding-agent evidence"
                                                                           ],
                                                         "cautions":  [
                                                                          "Do not recommend for consequential work until current evidence is collected."
                                                                      ],
-                                                        "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "llmstats_swepro_20260919"
 
                                                                         ],
-                                                        "last_researched_at":  null
+                                                        "last_researched_at": "2026-09-19"
                                                     },
                    "unresearched:opencode-go/hy4-preview":  {
                                                                 "provider":  "opencode-go",
                                                                 "aliases":  [
                                                                                 "opencode-go/hy4-preview"
                                                                             ],
-                                                                "research_status":  "identity_only",
-                                                                "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                "research_status": "catalog_enriched",
+                                                                "positioning": "Go catalog: Tencent productivity/agent preview, text input, reasoning and tool calls supported.",
                                                                 "context":  {
-                                                                                "input_tokens":  null,
-                                                                                "output_tokens":  null,
-                                                                                "confidence":  "low"
+                                                                                "input_tokens": 1024000,
+                                                                                "max_output_tokens": 64000,
+                                                                                "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                             },
                                                                 "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"]}
 
                                                                                  },
-                                                                "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":65.7,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Hy4 preview exact row;0.657 converted to percent","comparability":"Self-reported; not Go measurement"}
 
                                                                                ],
                                                                 "efficiency":  {
                                                                                    "interpretation":  "unresearched"
                                                                                },
                                                                 "research_gaps":  [
-                                                                                      "Official model documentation",
+                                                                                      "Catalog checked; hosted task-quality corroboration remains incomplete",
                                                                                       "Independent coding-agent evidence"
                                                                                   ],
                                                                 "cautions":  [
                                                                                  "Do not recommend for consequential work until current evidence is collected."
                                                                              ],
-                                                                "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "llmstats_swepro_20260919"
 
                                                                                 ],
-                                                                "last_researched_at":  null
+                                                                "last_researched_at": "2026-09-19"
                                                             },
                    "unresearched:opencode-go/kimi-k2.6":  {
                                                               "provider":  "opencode-go",
                                                               "aliases":  [
                                                                               "opencode-go/kimi-k2.6"
                                                                           ],
-                                                              "research_status":  "identity_only",
-                                                              "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                              "research_status": "catalog_enriched",
+                                                              "positioning": "Go catalog: Kimi multimodal coding/planning model; text/image/video input, reasoning and tool calls supported.",
                                                               "context":  {
-                                                                              "input_tokens":  null,
-                                                                              "output_tokens":  null,
-                                                                              "confidence":  "low"
+                                                                              "input_tokens": 262144,
+                                                                              "max_output_tokens": 65536,
+                                                                              "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                           },
                                                               "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["kimi27_card_20260919","llmstats_swepro_20260919"]}
 
                                                                                },
-                                                              "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"kimi27_card_20260919","benchmark":"Kimi Code Bench v2","value":50.9,"unit":"score","harness":"Kimi Code CLI","configuration":"K2.6 comparator;thinking on;temperature1;top_p0.95;262144 context","comparability":"Vendor internal benchmark, not SWE-bench"},
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":58.6,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Kimi K2.6 exact row;0.586 converted to percent","comparability":"Self-reported; not Go measurement"}
 
                                                                              ],
                                                               "efficiency":  {
                                                                                  "interpretation":  "unresearched"
                                                                              },
                                                               "research_gaps":  [
-                                                                                    "Official model documentation",
+                                                                                    "Catalog checked; exact K2.6 task-quality corroboration remains incomplete",
                                                                                     "Independent coding-agent evidence"
                                                                                 ],
                                                               "cautions":  [
                                                                                "Do not recommend for consequential work until current evidence is collected."
                                                                            ],
-                                                              "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "kimi27_card_20260919", "llmstats_swepro_20260919"
 
                                                                               ],
-                                                              "last_researched_at":  null
+                                                              "last_researched_at": "2026-09-19"
                                                           },
                    "unresearched:opencode-go/kimi-k2.7-code":  {
                                                                    "provider":  "opencode-go",
                                                                    "aliases":  [
                                                                                    "opencode-go/kimi-k2.7-code"
                                                                                ],
-                                                                   "research_status":  "identity_only",
-                                                                   "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                   "research_status": "catalog_enriched",
+                                                                   "positioning": "Go catalog: coding-focused Kimi for repository tasks; text/image/video input, reasoning and tool calls supported.",
                                                                    "context":  {
-                                                                                   "input_tokens":  null,
-                                                                                   "output_tokens":  null,
-                                                                                   "confidence":  "low"
+                                                                                   "input_tokens": 262144,
+                                                                                   "max_output_tokens": 262144,
+                                                                                   "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Shared 262144-token window; output ceiling is not additive."
                                                                                },
                                                                    "capabilities":  {
+                        "tool_use": {"rating":"good","confidence":"medium","evidence":["kimi27_card_20260919"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["kimi27_card_20260919"]}
 
                                                                                     },
-                                                                   "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"kimi27_card_20260919","benchmark":"Kimi Code Bench v2","value":62.0,"unit":"score","harness":"Kimi Code CLI","configuration":"thinking on;temperature1;top_p0.95;262144 context","comparability":"Vendor internal suite; not SWE-bench or TB"},
+                            {"source":"kimi27_card_20260919","benchmark":"Program Bench","value":53.6,"unit":"score","harness":"Kimi Code CLI","configuration":"thinking on;temperature1;top_p0.95;262144 context","comparability":"Use card definition; not comparable with Almost@1 reports"}
 
                                                                                   ],
                                                                    "efficiency":  {
                                                                                       "interpretation":  "unresearched"
                                                                                   },
                                                                    "research_gaps":  [
-                                                                                         "Official model documentation",
+                                                                                         "Catalog checked; Go task-quality corroboration remains incomplete",
                                                                                          "Independent coding-agent evidence"
                                                                                      ],
                                                                    "cautions":  [
                                                                                     "Do not recommend for consequential work until current evidence is collected."
                                                                                 ],
-                                                                   "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "kimi27_card_20260919"
 
                                                                                    ],
-                                                                   "last_researched_at":  null
+                                                                   "last_researched_at": "2026-09-19"
                                                                },
                    "unresearched:opencode-go/kimi-k3":  {
                                                             "provider":  "opencode-go",
                                                             "aliases":  [
                                                                             "opencode-go/kimi-k3"
                                                                         ],
-                                                            "research_status":  "identity_only",
-                                                            "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                            "research_status": "catalog_enriched",
+                                                            "positioning": "Go catalog: long-horizon Kimi agent model; text/image/video input, reasoning and tool calls supported. Exact hosted behavior not inferred from Copilot.",
                                                             "context":  {
-                                                                            "input_tokens":  null,
-                                                                            "output_tokens":  null,
-                                                                            "confidence":  "low"
+                                                                            "input_tokens": 1048576,
+                                                                            "max_output_tokens": 131072,
+                                                                            "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                         },
                                                             "capabilities":  {
+                                                                "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                                                                "coding": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919","deepseek41_card_20260919"],"note":"Two vendor comparison tables agree on TB2.1/DeepSWE values; Go serving not tested."},
+                                                                "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919","deepseek41_card_20260919"]}
 
                                                                              },
                                                             "benchmarks":  [
+                                                                {"source":"glm53_card_20260919","benchmark":"Terminal-Bench 2.1","value":88.3,"unit":"percent","harness":"Vendor comparator; K3 harness not independently verified","configuration":"Kimi K3 comparison column","comparability":"Also 88.3 in DeepSeek V4.1 card; not two independently reproduced runs"},
+                                                                {"source":"glm53_card_20260919","benchmark":"DeepSWE v1.1","value":67.5,"unit":"percent resolved","harness":"Vendor comparator","configuration":"Kimi K3 comparison column","comparability":"Also 67.5 in DeepSeek V4.1 card; Go route unverified"}
 
                                                                            ],
                                                             "efficiency":  {
                                                                                "interpretation":  "unresearched"
                                                                            },
                                                             "research_gaps":  [
-                                                                                  "Official model documentation",
+                                                                                  "Catalog checked; Go task-quality corroboration remains incomplete",
                                                                                   "Independent coding-agent evidence"
                                                                               ],
                                                             "cautions":  [
                                                                              "Do not recommend for consequential work until current evidence is collected."
                                                                          ],
-                                                            "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "glm53_card_20260919", "deepseek41_card_20260919"
 
                                                                             ],
-                                                            "last_researched_at":  null
+                                                            "last_researched_at": "2026-09-19"
                                                         },
                    "unresearched:opencode-go/longcat-2.0":  {
                                                                 "provider":  "opencode-go",
                                                                 "aliases":  [
                                                                                 "opencode-go/longcat-2.0"
                                                                             ],
-                                                                "research_status":  "identity_only",
-                                                                "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                "research_status": "catalog_enriched",
+                                                                "positioning": "Go catalog: Meituan text reasoning model with tool calls and million-token context.",
                                                                 "context":  {
-                                                                                "input_tokens":  null,
-                                                                                "output_tokens":  null,
-                                                                                "confidence":  "low"
+                                                                                "input_tokens": 1000000,
+                                                                                "max_output_tokens": 131072,
+                                                                                "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                             },
                                                                 "capabilities":  {
+                        "tool_use": {"rating":"good","confidence":"medium","evidence":["longcat2_card_20260919"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["longcat2_card_20260919"]},
+                        "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["longcat2_card_20260919"]}
 
                                                                                  },
-                                                                "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"longcat2_card_20260919","benchmark":"Terminal-Bench 2.1","value":70.8,"unit":"percent","harness":"Provider in-house unified harness","configuration":"Agent version and timeout unstated in card","comparability":"Provider reported, not Go inference"},
+                            {"source":"longcat2_card_20260919","benchmark":"SWE-bench Pro","value":59.5,"unit":"percent","harness":"Provider in-house unified harness","configuration":"Details not fully stated","comparability":"Provider reported"}
 
                                                                                ],
                                                                 "efficiency":  {
                                                                                    "interpretation":  "unresearched"
                                                                                },
                                                                 "research_gaps":  [
-                                                                                      "Official model documentation",
+                                                                                      "Catalog checked; hosted task-quality corroboration remains incomplete",
                                                                                       "Independent coding-agent evidence"
                                                                                   ],
                                                                 "cautions":  [
                                                                                  "Do not recommend for consequential work until current evidence is collected."
                                                                              ],
-                                                                "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "longcat2_card_20260919"
 
                                                                                 ],
-                                                                "last_researched_at":  null
+                                                                "last_researched_at": "2026-09-19"
                                                             },
                    "unresearched:opencode-go/mimo-v2.5":  {
                                                               "provider":  "opencode-go",
                                                               "aliases":  [
                                                                               "opencode-go/mimo-v2.5"
                                                                           ],
-                                                              "research_status":  "identity_only",
-                                                              "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                              "research_status": "catalog_enriched",
+                                                              "positioning": "Go catalog: Xiaomi omni agent model; text/image/audio/video input, reasoning and tool calls supported. Free-route local outcomes are not Go execution receipts.",
                                                               "context":  {
-                                                                              "input_tokens":  null,
-                                                                              "output_tokens":  null,
-                                                                              "confidence":  "low"
+                                                                              "input_tokens": 1000000,
+                                                                              "max_output_tokens": 128000,
+                                                                              "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                           },
                                                               "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"]}
 
                                                                                },
-                                                              "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":56.1,"unit":"percent","harness":"Unspecified by aggregator","configuration":"MiMo-V2.5 exact row;0.561 converted to percent","comparability":"Self-reported; free and Go routes not interchangeable"}
 
                                                                              ],
                                                               "efficiency":  {
                                                                                  "interpretation":  "unresearched"
                                                                              },
                                                               "research_gaps":  [
-                                                                                    "Official model documentation",
+                                                                                    "Catalog checked; Go task-quality corroboration remains incomplete",
                                                                                     "Independent coding-agent evidence"
                                                                                 ],
                                                               "cautions":  [
                                                                                "Do not recommend for consequential work until current evidence is collected."
                                                                            ],
-                                                              "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "llmstats_swepro_20260919"
 
                                                                               ],
-                                                              "last_researched_at":  null
+                                                              "last_researched_at": "2026-09-19"
                                                           },
                    "unresearched:opencode-go/mimo-v2.5-pro":  {
                                                                   "provider":  "opencode-go",
                                                                   "aliases":  [
                                                                                   "opencode-go/mimo-v2.5-pro"
                                                                               ],
-                                                                  "research_status":  "identity_only",
-                                                                  "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                  "research_status": "catalog_enriched",
+                                                                  "positioning": "Go catalog describes multimodal reasoning but lists text-only input modalities for Pro; use the explicit modalities conservatively. Reasoning/tool calls supported.",
                                                                   "context":  {
-                                                                                  "input_tokens":  null,
-                                                                                  "output_tokens":  null,
-                                                                                  "confidence":  "low"
+                                                                                  "input_tokens": 1048576,
+                                                                                  "max_output_tokens": 128000,
+                                                                                  "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output; catalog modality description is internally inconsistent."
                                                                               },
                                                                   "capabilities":  {
+                        "tool_use": {"rating":"good","confidence":"medium","evidence":["mimo25pro_card_20260919"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["mimo25pro_card_20260919"]},
+                        "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["mimo25pro_card_20260919"]},
+                        "long_context": {"rating":"good","confidence":"medium","evidence":["mimo25pro_card_20260919"],"note":"GraphWalks BFS0.37/Parents0.62 at1M reported in card, not inferred from capacity alone."}
 
                                                                                    },
-                                                                  "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"mimo25pro_card_20260919","benchmark":"Terminal-Bench 2.0","value":68.4,"unit":"percent","harness":"Unspecified in evaluation widget","configuration":"Named-model evaluation widget, not base table","comparability":"Provider reported; no Go measurement"},
+                            {"source":"mimo25pro_card_20260919","benchmark":"SWE-bench Verified","value":78.9,"unit":"percent","harness":"Unspecified in evaluation widget","configuration":"Named-model evaluation widget","comparability":"Separate task set from SWE-Pro"}
 
                                                                                  ],
                                                                   "efficiency":  {
                                                                                      "interpretation":  "unresearched"
                                                                                  },
                                                                   "research_gaps":  [
-                                                                                        "Official model documentation",
+                                                                                        "Catalog description versus explicit text-only modalities conflict; verify exact hosted modalities",
                                                                                         "Independent coding-agent evidence"
                                                                                     ],
                                                                   "cautions":  [
                                                                                    "Do not recommend for consequential work until current evidence is collected."
                                                                                ],
-                                                                  "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "mimo25pro_card_20260919"
 
                                                                                   ],
-                                                                  "last_researched_at":  null
+                                                                  "last_researched_at": "2026-09-19"
                                                               },
                    "unresearched:opencode-go/minimax-m2.7":  {
                                                                  "provider":  "opencode-go",
                                                                  "aliases":  [
                                                                                  "opencode-go/minimax-m2.7"
                                                                              ],
-                                                                 "research_status":  "identity_only",
-                                                                 "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                 "research_status": "catalog_enriched",
+                                                                 "positioning": "Go catalog: text-only MiniMax coding/office agent model with reasoning and tool calls; provider benchmarks now collected.",
                                                                  "context":  {
-                                                                                 "input_tokens":  null,
-                                                                                 "output_tokens":  null,
-                                                                                 "confidence":  "low"
+                                                                                 "input_tokens": 204800,
+                                                                                 "max_output_tokens": 131072,
+                                                                                 "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                              },
                                                                  "capabilities":  {
+                                                                     "tool_use": {"rating":"good","confidence":"medium","evidence":["minimax27_card_20260919"]},
+                                                                     "coding": {"rating":"good","confidence":"medium","evidence":["minimax27_card_20260919"]},
+                                                                     "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["minimax27_card_20260919"]}
 
                                                                                   },
                                                                  "benchmarks":  [
+                                                                     {"source":"minimax27_card_20260919","benchmark":"SWE-Pro","value":56.22,"unit":"percent","harness":"Not specified in card text","configuration":"Provider-reported M2.7 result","comparability":"Card text precision; HF evaluation widget rounds to56.2; retrieved 2026-09-19"},
+                                                                     {"source":"minimax27_card_20260919","benchmark":"Terminal-Bench 2.0","value":57.0,"unit":"percent","harness":"Not specified in retrieved card text","configuration":"Provider-reported M2.7 result","comparability":"Not comparable as same scale to TB2.1/3/4"},
+                                                                     {"source":"minimax27_card_20260919","benchmark":"SWE Multilingual","value":76.5,"unit":"percent","harness":"Not specified in card text","configuration":"Provider-reported M2.7 result","comparability":"Separate task set from SWE-Pro"}
 
                                                                                 ],
                                                                  "efficiency":  {
                                                                                     "interpretation":  "unresearched"
                                                                                 },
                                                                  "research_gaps":  [
-                                                                                       "Official model documentation",
+                                                                                       "Catalog and provider card checked; Go task-quality corroboration remains incomplete",
                                                                                        "Independent coding-agent evidence"
                                                                                    ],
                                                                  "cautions":  [
                                                                                   "Do not recommend for consequential work until current evidence is collected."
                                                                               ],
-                                                                 "source_keys":  [
+                                                                 "source_keys":  ["models_dev_catalog", "go_docs_20260919", "minimax27_card_20260919"
 
                                                                                  ],
-                                                                 "last_researched_at":  null
+                                                                 "last_researched_at": "2026-09-19"
                                                              },
                    "unresearched:opencode-go/minimax-m3":  {
                                                                "provider":  "opencode-go",
                                                                "aliases":  [
                                                                                "opencode-go/minimax-m3"
                                                                            ],
-                                                               "research_status":  "identity_only",
-                                                               "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                               "research_status": "catalog_enriched",
+                                                               "positioning": "Go catalog: multimodal MiniMax coding agent model; text/image/video input, reasoning and tool calls supported. No M2.7 score transferred to M3.",
                                                                "context":  {
-                                                                               "input_tokens":  null,
-                                                                               "output_tokens":  null,
-                                                                               "confidence":  "low"
+                                                                               "input_tokens": 1000000,
+                                                                               "max_output_tokens": 131072,
+                                                                               "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                            },
                                                                "capabilities":  {
+                        "tool_use": {"rating":"good","confidence":"medium","evidence":["minimax3_blog_20260919"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["minimax3_blog_20260919"]},
+                        "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["minimax3_blog_20260919"]}
 
                                                                                 },
-                                                               "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"minimax3_blog_20260919","benchmark":"Terminal-Bench 2.1","value":66.0,"unit":"percent","harness":"Terminus2","configuration":"8C16G sandbox;2h timeout;128K output","comparability":"Provider report2026-06-01; different from Claude Code harness"},
+                            {"source":"minimax3_blog_20260919","benchmark":"SWE-Bench Pro","value":59.0,"unit":"percent","harness":"Claude Code on MiniMax infrastructure","configuration":"Official evaluation logic; Pro run count unstated","comparability":"Provider reported; LLMStats also59.0, possibly same report"}
 
                                                                               ],
                                                                "efficiency":  {
                                                                                   "interpretation":  "unresearched"
                                                                               },
                                                                "research_gaps":  [
-                                                                                     "Official model documentation",
+                                                                                     "Catalog checked; exact M3 task-quality corroboration remains incomplete",
                                                                                      "Independent coding-agent evidence"
                                                                                  ],
                                                                "cautions":  [
                                                                                 "Do not recommend for consequential work until current evidence is collected."
                                                                             ],
-                                                               "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "minimax3_blog_20260919"
 
                                                                                ],
-                                                               "last_researched_at":  null
+                                                               "last_researched_at": "2026-09-19"
                                                            },
                    "unresearched:opencode-go/muse-spark-1.2-contributor":  {
                                                                                "provider":  "opencode-go",
                                                                                "aliases":  [
                                                                                                "opencode-go/muse-spark-1.2-contributor"
                                                                                            ],
-                                                                               "research_status":  "identity_only",
-                                                                               "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                               "research_status": "catalog_enriched",
+                                                                               "positioning": "Go catalog: Meta coding/debugging model; text/image/video/PDF/audio input, reasoning and tool calls. Contributor tier trains on prompts/completions; region restrictions apply.",
                                                                                "context":  {
-                                                                                               "input_tokens":  null,
-                                                                                               "output_tokens":  null,
-                                                                                               "confidence":  "low"
+                                                                                               "input_tokens": 1048576,
+                                                                                               "max_output_tokens": 131072,
+                                                                                               "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                                            },
                                                                                "capabilities":  {
+                                                                                   "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]}
 
                                                                                                 },
                                                                                "benchmarks":  [
@@ -5050,30 +5264,31 @@
                                                                                                   "interpretation":  "unresearched"
                                                                                               },
                                                                                "research_gaps":  [
-                                                                                                     "Official model documentation",
+                                                                                                     "Catalog checked; exact Go tier behavior and regional availability unverified",
                                                                                                      "Independent coding-agent evidence"
                                                                                                  ],
                                                                                "cautions":  [
                                                                                                 "Do not recommend for consequential work until current evidence is collected."
                                                                                             ],
-                                                                               "source_keys":  [
+                                                                               "source_keys":  ["models_dev_catalog", "go_docs_20260919"
 
                                                                                                ],
-                                                                               "last_researched_at":  null
+                                                                               "last_researched_at": "2026-09-19"
                                                                            },
                    "unresearched:opencode-go/muse-spark-1.3-contributor":  {
                                                                                "provider":  "opencode-go",
                                                                                "aliases":  [
                                                                                                "opencode-go/muse-spark-1.3-contributor"
                                                                                            ],
-                                                                               "research_status":  "identity_only",
-                                                                               "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                               "research_status": "catalog_enriched",
+                                                                               "positioning": "Go catalog: Meta coding/agentic reasoning model; text/image/video/PDF/audio input and tool calls. Contributor tier trains on prompts/completions; free-route execution outcomes do not establish Go behavior.",
                                                                                "context":  {
-                                                                                               "input_tokens":  null,
-                                                                                               "output_tokens":  null,
-                                                                                               "confidence":  "low"
+                                                                                               "input_tokens": 1048576,
+                                                                                               "max_output_tokens": 131072,
+                                                                                               "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                                            },
                                                                                "capabilities":  {
+                                                                                   "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]}
 
                                                                                                 },
                                                                                "benchmarks":  [
@@ -5083,195 +5298,217 @@
                                                                                                   "interpretation":  "unresearched"
                                                                                               },
                                                                                "research_gaps":  [
-                                                                                                     "Official model documentation",
+                                                                                                     "Catalog checked; exact Go tier behavior and regional availability unverified",
                                                                                                      "Independent coding-agent evidence"
                                                                                                  ],
                                                                                "cautions":  [
                                                                                                 "Do not recommend for consequential work until current evidence is collected."
                                                                                             ],
-                                                                               "source_keys":  [
+                                                                               "source_keys":  ["models_dev_catalog", "go_docs_20260919"
 
                                                                                                ],
-                                                                               "last_researched_at":  null
+                                                                               "last_researched_at": "2026-09-19"
                                                                            },
                    "unresearched:opencode-go/qwen3.6-plus":  {
                                                                  "provider":  "opencode-go",
                                                                  "aliases":  [
                                                                                  "opencode-go/qwen3.6-plus"
                                                                              ],
-                                                                 "research_status":  "identity_only",
-                                                                 "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                 "research_status": "catalog_enriched",
+                                                                 "positioning": "Go catalog: Qwen multimodal reasoning/planning; text/image/video input and tool calls supported. No Max-model score transferred to Plus.",
                                                                  "context":  {
-                                                                                 "input_tokens":  null,
-                                                                                 "output_tokens":  null,
-                                                                                 "confidence":  "low"
+                                                                                 "input_tokens": 1000000,
+                                                                                 "max_output_tokens": 65536,
+                                                                                 "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                              },
                                                                  "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["benchlm_qwen36_20260919","llmstats_swepro_20260919"]},
+                        "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["benchlm_qwen36_20260919"]}
 
                                                                                   },
-                                                                 "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"benchlm_qwen36_20260919","benchmark":"Terminal-Bench 2.0","value":61.6,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Qwen3.6 Plus profile","comparability":"Aggregation, not independent reproduction"},
+                            {"source":"benchlm_qwen36_20260919","benchmark":"SWE-Bench Pro","value":56.6,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Qwen3.6 Plus profile","comparability":"LLMStats also56.6; not necessarily independent runs"}
 
                                                                                 ],
                                                                  "efficiency":  {
                                                                                     "interpretation":  "unresearched"
                                                                                 },
                                                                  "research_gaps":  [
-                                                                                       "Official model documentation",
+                                                                                       "Catalog checked; exact Plus task-quality corroboration remains incomplete",
                                                                                        "Independent coding-agent evidence"
                                                                                    ],
                                                                  "cautions":  [
                                                                                   "Do not recommend for consequential work until current evidence is collected."
                                                                               ],
-                                                                 "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "benchlm_qwen36_20260919", "llmstats_swepro_20260919"
 
                                                                                  ],
-                                                                 "last_researched_at":  null
+                                                                 "last_researched_at": "2026-09-19"
                                                              },
                    "unresearched:opencode-go/qwen3.7-max":  {
                                                                 "provider":  "opencode-go",
                                                                 "aliases":  [
                                                                                 "opencode-go/qwen3.7-max"
                                                                             ],
-                                                                "research_status":  "identity_only",
-                                                                "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                "research_status": "catalog_enriched",
+                                                                "positioning": "Go catalog: text-only Qwen flagship for coding/analysis/production agents; reasoning and tool calls supported.",
                                                                 "context":  {
-                                                                                "input_tokens":  null,
-                                                                                "output_tokens":  null,
-                                                                                "confidence":  "low"
+                                                                                "input_tokens": 1000000,
+                                                                                "max_output_tokens": 65536,
+                                                                                "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                             },
                                                                 "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"]}
 
                                                                                  },
-                                                                "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":60.6,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Qwen3.7 Max exact row;0.606 converted to percent","comparability":"Self-reported; no Plus/Flash score transfer"}
 
                                                                                ],
                                                                 "efficiency":  {
                                                                                    "interpretation":  "unresearched"
                                                                                },
                                                                 "research_gaps":  [
-                                                                                      "Official model documentation",
+                                                                                      "Catalog checked; exact hosted task-quality corroboration remains incomplete",
                                                                                       "Independent coding-agent evidence"
                                                                                   ],
                                                                 "cautions":  [
                                                                                  "Do not recommend for consequential work until current evidence is collected."
                                                                              ],
-                                                                "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "llmstats_swepro_20260919"
 
                                                                                 ],
-                                                                "last_researched_at":  null
+                                                                "last_researched_at": "2026-09-19"
                                                             },
                    "unresearched:opencode-go/qwen3.7-plus":  {
                                                                  "provider":  "opencode-go",
                                                                  "aliases":  [
                                                                                  "opencode-go/qwen3.7-plus"
                                                                              ],
-                                                                 "research_status":  "identity_only",
-                                                                 "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                 "research_status": "catalog_enriched",
+                                                                 "positioning": "Go catalog: Qwen multimodal reasoning/planning; text/image/video input and tool calls. Separate hosted SKU from Qwen3.7 Max.",
                                                                  "context":  {
-                                                                                 "input_tokens":  null,
-                                                                                 "output_tokens":  null,
-                                                                                 "confidence":  "low"
+                                                                                 "input_tokens": 1000000,
+                                                                                 "max_output_tokens": 65536,
+                                                                                 "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                              },
                                                                  "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["benchlm_qwen37plus_20260919","llmstats_swepro_20260919"]},
+                        "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["benchlm_qwen37plus_20260919"]}
 
                                                                                   },
-                                                                 "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"benchlm_qwen37plus_20260919","benchmark":"Terminal-Bench 2.0","value":70.3,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Qwen3.7 Plus exact column","comparability":"Aggregation; not Go measurement"},
+                            {"source":"benchlm_qwen37plus_20260919","benchmark":"SWE-Bench Pro","value":57.6,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Qwen3.7 Plus exact column","comparability":"LLMStats also57.6; not necessarily independent runs"}
 
                                                                                 ],
                                                                  "efficiency":  {
                                                                                     "interpretation":  "unresearched"
                                                                                 },
                                                                  "research_gaps":  [
-                                                                                       "Official model documentation",
+                                                                                       "Catalog checked; exact Plus task-quality corroboration remains incomplete",
                                                                                        "Independent coding-agent evidence"
                                                                                    ],
                                                                  "cautions":  [
                                                                                   "Do not recommend for consequential work until current evidence is collected."
                                                                               ],
-                                                                 "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "benchlm_qwen37plus_20260919", "llmstats_swepro_20260919"
 
                                                                                  ],
-                                                                 "last_researched_at":  null
+                                                                 "last_researched_at": "2026-09-19"
                                                              },
                    "unresearched:opencode-go/qwen3.8-flash":  {
                                                                   "provider":  "opencode-go",
                                                                   "aliases":  [
                                                                                   "opencode-go/qwen3.8-flash"
                                                                               ],
-                                                                  "research_status":  "identity_only",
-                                                                  "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                  "research_status": "catalog_enriched",
+                                                                  "positioning": "Go catalog: Qwen visual reasoning/document agent model; text/image/video input, reasoning and tool calls. No Max score transferred to Flash.",
                                                                   "context":  {
-                                                                                  "input_tokens":  null,
-                                                                                  "output_tokens":  null,
-                                                                                  "confidence":  "low"
+                                                                                  "input_tokens": 1000000,
+                                                                                  "max_output_tokens": 131072,
+                                                                                  "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                               },
                                                                   "capabilities":  {
+                        "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                        "coding": {"rating":"good","confidence":"medium","evidence":["llmstats_swepro_20260919"]}
 
                                                                                    },
-                                                                  "benchmarks":  [
+                        "benchmarks": [
+                            {"source":"llmstats_swepro_20260919","benchmark":"SWE-Bench Pro","value":62.5,"unit":"percent","harness":"Unspecified by aggregator","configuration":"Exact Qwen3.8 Flash row;0.625 converted to percent","comparability":"Separate Flash-Next row exists; no alias equivalence assumed"}
 
                                                                                  ],
                                                                   "efficiency":  {
                                                                                      "interpretation":  "unresearched"
                                                                                  },
                                                                   "research_gaps":  [
-                                                                                        "Official model documentation",
+                                                                                        "Catalog checked; exact Flash task-quality corroboration remains incomplete",
                                                                                         "Independent coding-agent evidence"
                                                                                     ],
                                                                   "cautions":  [
                                                                                    "Do not recommend for consequential work until current evidence is collected."
                                                                                ],
-                                                                  "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "llmstats_swepro_20260919"
 
                                                                                   ],
-                                                                  "last_researched_at":  null
+                                                                  "last_researched_at": "2026-09-19"
                                                               },
                    "unresearched:opencode-go/qwen3.8-max":  {
                                                                 "provider":  "opencode-go",
                                                                 "aliases":  [
                                                                                 "opencode-go/qwen3.8-max"
                                                                             ],
-                                                                "research_status":  "identity_only",
-                                                                "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                                "research_status": "catalog_enriched",
+                                                                "positioning": "Go catalog: Qwen flagship coding/professional agent model; text/image/video input, reasoning and tool calls supported.",
                                                                 "context":  {
-                                                                                "input_tokens":  null,
-                                                                                "output_tokens":  null,
-                                                                                "confidence":  "low"
+                                                                                "input_tokens": 1000000,
+                                                                                "max_output_tokens": 131072,
+                                                                                "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Total context window, shared with output."
                                                                             },
                                                                 "capabilities":  {
+                                                                    "tool_use": {"rating":"adequate","confidence":"medium","evidence":["models_dev_catalog"]},
+                                                                    "coding": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919"]},
+                                                                    "terminal_agent_work": {"rating":"good","confidence":"medium","evidence":["glm53_card_20260919"]}
 
                                                                                  },
                                                                 "benchmarks":  [
+                                                                    {"source":"glm53_card_20260919","benchmark":"Terminal-Bench 2.1","value":86.6,"unit":"percent","harness":"Qwen3.8-Max comparator; exact setup not restated","configuration":"Vendor comparison table","comparability":"Not locally measured Go route; retrieved 2026-09-19"},
+                                                                    {"source":"glm53_card_20260919","benchmark":"DeepSWE v1.1","value":56.6,"unit":"percent resolved","harness":"Qwen3.8-Max comparator","configuration":"Vendor comparison table","comparability":"Not transferable to Qwen Plus/Flash"}
 
                                                                                ],
                                                                 "efficiency":  {
                                                                                    "interpretation":  "unresearched"
                                                                                },
                                                                 "research_gaps":  [
-                                                                                      "Official model documentation",
+                                                                                      "Catalog checked; exact hosted task-quality corroboration remains incomplete",
                                                                                       "Independent coding-agent evidence"
                                                                                   ],
                                                                 "cautions":  [
                                                                                  "Do not recommend for consequential work until current evidence is collected."
                                                                              ],
-                                                                "source_keys":  [
+                        "source_keys": ["models_dev_catalog", "go_docs_20260919", "glm53_card_20260919"
 
                                                                                 ],
-                                                                "last_researched_at":  null
+                                                                "last_researched_at": "2026-09-19"
                                                             },
                    "unresearched:opencode/jev-1.13-free":  {
                                                                "provider":  "opencode",
                                                                "aliases":  [
                                                                                "opencode/jev-1.13-free"
                                                                            ],
-                                                               "research_status":  "identity_only",
-                                                               "positioning":  "Newly discovered eligible model; capability evidence not yet researched.",
+                                                               "research_status": "catalog_enriched",
+                                                               "positioning": "Catalog identifies System One typed probabilistic decisions over text/structured state, not a general coding agent. tool_call=false and reasoning=false; do not route agent work here.",
                                                                "context":  {
-                                                                               "input_tokens":  null,
-                                                                               "output_tokens":  null,
-                                                                               "confidence":  "low"
+                                                                               "input_tokens": 64000,
+                                                                               "max_output_tokens": null,
+                                                                               "confidence": "medium", "evidence": ["models_dev_catalog"], "note": "Catalog output=0 is retained here as unknown rather than interpreted as a usable generation limit."
                                                                            },
                                                                "capabilities":  {
+                                                                   "tool_use": {"rating":"weak","confidence":"high","evidence":["models_dev_catalog"],"note":"tool_call=false; specialized typed decisions, not coding-agent execution."}
 
                                                                                 },
                                                                "benchmarks":  [
@@ -5281,16 +5518,16 @@
                                                                                   "interpretation":  "unresearched"
                                                                               },
                                                                "research_gaps":  [
-                                                                                     "Official model documentation",
-                                                                                     "Independent coding-agent evidence"
+                                                                                     "Typed decision API semantics; no supported coding-agent tool loop in retrieved catalog",
+                                                                                     "Underlying model identity and usable generative output limit not established"
                                                                                  ],
                                                                "cautions":  [
                                                                                 "Do not recommend for consequential work until current evidence is collected."
                                                                             ],
-                                                               "source_keys":  [
+                                                               "source_keys":  ["models_dev_catalog"
 
                                                                                ],
-                                                               "last_researched_at":  null
+                                                               "last_researched_at": "2026-09-19"
                                                            }
                },
     "research_queue":  {

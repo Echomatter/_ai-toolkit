@@ -40,7 +40,9 @@ const DelegationPlugin: Plugin = async ({ client, directory }) => {
           variant: tool.schema.string().optional().describe('A supported reasoning variant for this child only, when explicitly required'),
         },
         async execute(args, context) {
-          const receipt = await delegate.execute(args, context)
+          const receipt = await delegate.execute(args, { ...context,
+            metadata: async (update: any) => { await present.metadata(context, update).catch(() => false) },
+          })
           const attempt = receipt.attempts?.at(-1)
           return { title: `@${receipt.role} · ${receipt.status}`, output: JSON.stringify(receipt, null, 2),
             metadata: { sessionId: attempt?.child_session, parentSessionId: receipt.parent_session,

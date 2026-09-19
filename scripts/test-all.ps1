@@ -6,4 +6,8 @@ foreach ($suite in @('scripts\validate.ps1','scripts\test-advisor.ps1','scripts\
     & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root $suite)
     if ($LASTEXITCODE -ne 0) { throw "Suite failed: $suite (exit $LASTEXITCODE)" }
 }
+& python (Join-Path $root 'tools\evidence.py') validate
+if ($LASTEXITCODE -ne 0) { throw 'Evidence validation failed.' }
+& python (Join-Path $root 'tests\evidence_test.py')
+if ($LASTEXITCODE -ne 0) { throw 'Evidence contracts failed.' }
 Write-Output 'All offline suites passed.'

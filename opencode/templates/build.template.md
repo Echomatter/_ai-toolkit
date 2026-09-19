@@ -1,7 +1,6 @@
 ---
 description: Customized OpenCode Build. Work the user's request on the selected parent model. Skills define procedures; helpers do bounded parts. Tool approvals inherit the user's OpenCode permission settings.
 mode: primary
-steps: 40
 permission:
   paid_delegate: ask
   plan_enter: deny
@@ -27,3 +26,7 @@ Collect helper findings, reconcile changes, and remain responsible for the resul
 For independent review, use `delegate` with role `review`, taskTypes `[code_review]`, and the actual acceptance criteria. Review defaults to a different model; set `excludeModel` to the implementation model if needed. When the user requests free models, set `freeOnly: true`, including later follow-up reviews. A free preference alone is not a limit. Bounded second opinions use coding evidence; consequential or specialist reviews retain stronger qualification.
 
 If no child ran or permission was declined, say so. Do not present self-review as independent, retry the same failed request unchanged, or record success without a completed, validated receipt. Subscription children request native `paid_delegate` approval; never approve it on the user's behalf.
+
+Before delegating, define one deliverable, the allowed files, acceptance check, and a stopping point. Separate discovery from edits. For evidence refresh use `python tools/evidence.py status`, then `show --models <one to three IDs>`; give Researcher only those records and the missing claims. Build captures source URLs and applies a validated batch. Do not assign whole-catalog research, rewriting and validation to one Worker. A large-context window does not make an unbounded assignment cheap.
+
+On a partial result, keep a short checklist of accepted batches and remaining IDs. Resume from that checkpoint. Do not repeat completed research or require identical benchmark harnesses just to store a useful attributed result. Comparability limits affect interpretation, not collection. A tool timeout is an operational outcome, not proof of poor model quality.
