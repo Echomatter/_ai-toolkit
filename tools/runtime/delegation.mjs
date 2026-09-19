@@ -247,7 +247,7 @@ export function createDelegator({ client, toolkitRoot, directory, select, record
             throw fault('UnsupportedRuntime', 'Server did not preserve child linkage/permissions; no inference sent');
           }
           live.set(child.id, { selected, readOnly, directory: ctx.directory });
-          ctx.metadata?.({ title: `@${args.role}`, metadata: { sessionId: child.id, model, task_id: id } });
+          ctx.metadata?.({ title: `@${args.role} · ${selected}`, metadata: { sessionId: child.id, parentSessionId: ctx.sessionID, role: args.role, selected_model: selected, model, task_id: id } });
           submitted = true;
           attempt.dispatched_model = selected;
           await call('session', 'promptAsync', { ...sessionArgs(child.id, ctx.directory), body: {

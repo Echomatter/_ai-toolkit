@@ -11,7 +11,9 @@ const DelegationPlugin: Plugin = async ({ client, directory }) => {
   const toolkitRoot = fs.readFileSync(locator, 'utf8').trim()
   const { createBridge } = await import(pathToFileURL(path.join(toolkitRoot, 'tools/runtime/bridge.mjs')).href)
   const { createDelegator } = await import(pathToFileURL(path.join(toolkitRoot, 'tools/runtime/delegation.mjs')).href)
+  const { createPresenter, restoreDelegateTools } = await import(pathToFileURL(path.join(toolkitRoot, 'tools/runtime/presentation.mjs')).href)
   const delegate = createDelegator({ client, toolkitRoot, directory, ...createBridge(toolkitRoot) })
+  const present = createPresenter({ client, directory })
   return {
     tool: {
       delegate: tool({
@@ -36,12 +38,23 @@ const DelegationPlugin: Plugin = async ({ client, directory }) => {
           variant: tool.schema.string().optional().describe('A supported reasoning variant for this child only, when explicitly required'),
         },
         async execute(args, context) {
-          return JSON.stringify(await delegate.execute(args, context), null, 2)
+          const receipt = await delegate.execute(args, context)
+          const attempt = receipt.attempts?.at(-1)
+          return { title: `@${receipt.role} · ${receipt.status}`, output: JSON.stringify(receipt, null, 2),
+            metadata: { sessionId: attempt?.child_session, parentSessionId: receipt.parent_session,
+              role: receipt.role, selected_model: attempt?.selected_model, task_id: receipt.task_id } }
         },
       }),
     },
     'chat.params': async input => { await delegate.checkModel(input) },
     'tool.execute.before': async (input, output) => { await delegate.checkTool(input, output) },
+    'experimental.chat.messages.transform': async (_input, output) => { restoreDelegateTools(output.messages) },
+    event: async ({ event }) => {
+      if (event.type === 'message.part.updated') {
+        // Presentation failure must never fail or replay real child execution.
+        await present(event.properties.part).catch(() => {})
+      }
+    },
   }
 }
 export default DelegationPlugin

@@ -8,7 +8,7 @@ $prompt='Read-only toolkit integration test. Invoke delegate exactly once with r
 & opencode run --dir $root --agent build --model $ParentModel --format json --title 'Toolkit live cross-model contract' $prompt | Set-Content -LiteralPath $log -Encoding UTF8
 if($LASTEXITCODE-ne 0){throw "OpenCode run failed. Local log: $log"}
 $events=@(Get-Content $log|Where-Object{$_.Trim().StartsWith('{')}|ForEach-Object{$_|ConvertFrom-Json})
-$calls=@($events|Where-Object{$_.part.tool-eq'delegate'-and$_.part.state.status-eq'completed'})
+$calls=@($events|Where-Object{($_.part.tool-eq'delegate'-or$_.part.state.metadata.ai_toolkit_delegate_display.original_tool-eq'delegate')-and$_.part.state.status-eq'completed'}|Group-Object {$_.part.callID}|ForEach-Object{$_.Group[-1]})
 if($calls.Count-ne 1){throw "Expected one completed delegate call; got $($calls.Count). Local log: $log"}
 $receipt=$calls[0].part.state.output|ConvertFrom-Json
 $attempt=@($receipt.attempts)[-1]

@@ -14,6 +14,8 @@ Build is customized, not stock. Native Plan and Explore remain. There are no too
 
 User-invoked work keeps the selected parent model. Roles do not own models. For automatic child work, `delegate` calls the existing selector, creates a native child session, sends the provider-qualified model with the prompt, and checks returned session/message identity. It already runs the child: do not invoke another Worker after its result.
 
+Desktop shows each real delegated child as a clickable native agent card, labeled `delegate` and its selected model. Click the card to inspect the child's tools, progress and result. This display adapter reuses the same call/session; it never starts a second agent. Model-facing history retains the original `delegate` call. See [the visibility and economics audit](docs/ECONOMICS-AUDIT.md) for compatibility and measured usage.
+
 **Verification status:** tested on OpenCode Desktop and CLI 1.18.31 with live cross-model child execution, unchanged parent models, a Researcher-to-Worker edit workflow, and isolated Windows PowerShell 5.1 regressions. See [verification and limits](docs/VERIFICATION.md) for evidence and provider coverage.
 
 ## Install the candidate

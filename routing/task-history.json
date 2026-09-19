@@ -1,6 +1,6 @@
 {
     "generated":  true,
-    "generated_at":  "2026-09-19T03:09:34.0303318Z",
+    "generated_at":  "2026-09-19T17:10:49.1508217Z",
     "entries":  [
                     {
                         "task_id":  "873e5e1f-ee3d-466e-9dc4-f420f51cf967",
@@ -22,6 +22,177 @@
                         "role":  "worker",
                         "delegated_model":  "",
                         "parent_model":  "opencode/muse-spark-1.3-contributor-free"
+                    },
+                    {
+                        "task_id":  "0310924479891cc77b0ffef2e96f638862764d878220b0fc08db53bc5020bf83",
+                        "timestamp":  "2026-09-19T17:10:47.1985997Z",
+                        "repo":  "F:\\_ai-toolkit",
+                        "task_type":  [
+                                          "repository orientation",
+                                          "financial model review",
+                                          "code search"
+                                      ],
+                        "model":  "openai/gpt-5.5",
+                        "access":  "openai-oauth",
+                        "success":  true,
+                        "tests_passed":  true,
+                        "attempts":  1,
+                        "escalated":  true,
+                        "review_found_defects":  false,
+                        "elapsed_band":  "2-5m",
+                        "role":  "researcher",
+                        "delegated_model":  "openai/gpt-5.5",
+                        "parent_model":  "openai/gpt-5.6-luna",
+                        "user_task_id":  "token-economics-review-2026-09-19",
+                        "observation_kind":  "research",
+                        "fallback_used":  false,
+                        "execution_source":  "runtime_receipt",
+                        "elapsed_ms":  110775,
+                        "parent_session":  "ses_f45708efdffeMKWqS0McUcoMrL",
+                        "child_session":  "ses_f45702a92ffejkaXuQrp3Hjh4u",
+                        "selected_model":  "openai/gpt-5.5",
+                        "dispatched_model":  "openai/gpt-5.5",
+                        "observed_model":  "openai/gpt-5.5",
+                        "execution_attempts":  [
+                                                   {
+                                                       "selected_model":  "openai/gpt-5.5",
+                                                       "dispatched_model":  "openai/gpt-5.5",
+                                                       "observed_model":  "openai/gpt-5.5",
+                                                       "surface":  "openai-oauth",
+                                                       "selection_reasons":  [
+                                                                                 "escalation: no adequately proven free route survives task requirements and availability checks",
+                                                                                 "task: code search + financial model review + repository orientation | writes=False terminal=True large_ctx=0 deep=True diversity=True consequence=False",
+                                                                                 "capabilities: tool_use=strong/medium; terminal_agent_work=strong/high; long_horizon_engineering=strong/high; coding=strong/high; deep_reasoning=strong/high",
+                                                                                 "benchmarks: no same-version benchmark bonus applied",
+                                                                                 "local history: n=0 anecdotal only (needs n\u003e=3)",
+                                                                                 "economics: qualify first; compare normalized capacity estimates, use explicit price proxies only when quota mapping is unknown",
+                                                                                 "quota: API-rate proxy only; ChatGPT quota mapping unmeasured; estimate=caller.",
+                                                                                 "availability: opencode-go pool-exhausted (go window weekly status=rate-limited); github-copilot-oauth pool-exhausted (copilot AI-credit pool depleted (premium_interactions) with no permitted overage)"
+                                                                             ],
+                                                       "adequacy":  "strong",
+                                                       "started_at":  "2026-09-19T16:46:23.592Z",
+                                                       "status":  "completed",
+                                                       "abort_verified":  null,
+                                                       "child_session":  "ses_f45702a92ffejkaXuQrp3Hjh4u",
+                                                       "usage":  {
+                                                                     "input":  99046,
+                                                                     "output":  3470,
+                                                                     "reasoning":  1170,
+                                                                     "cache_read":  290816,
+                                                                     "cache_write":  0,
+                                                                     "provider_dollars":  0
+                                                                 },
+                                                       "usage_source":  "session_messages",
+                                                       "completed_at":  "2026-09-19T16:48:14.411Z",
+                                                       "elapsed_ms":  110775
+                                                   }
+                                               ],
+                        "consumption":  {
+                                            "input_tokens":  99046,
+                                            "output_tokens":  3470,
+                                            "reasoning_tokens":  1170,
+                                            "cache_read_tokens":  290816,
+                                            "cache_write_tokens":  0,
+                                            "cost_dollars":  0,
+                                            "quality":  "measured",
+                                            "source":  "session_messages",
+                                            "reason":  "Structured child counters; provider dollars are not subscription quota or a cash charge."
+                                        },
+                        "revisions":  [
+                                          {
+                                              "previous_escalated":  false,
+                                              "previous_attempts":  1,
+                                              "corrected_at":  "2026-09-19T17:10:47.1985997Z",
+                                              "previous_tests_passed":  true,
+                                              "previous_success":  true,
+                                              "previous_observation_kind":  "implementation"
+                                          }
+                                      ]
+                    },
+                    {
+                        "task_id":  "e38c8b0df717f81fdc3d95677a7d13b7de5d1e6310555dfad0687bd41f13d9e0",
+                        "timestamp":  "2026-09-19T17:10:48.1480853Z",
+                        "repo":  "F:\\_ai-toolkit",
+                        "task_type":  [
+                                          "financial analysis"
+                                      ],
+                        "model":  "opencode/mimo-v2.5-free",
+                        "access":  "opencode-free",
+                        "success":  true,
+                        "tests_passed":  true,
+                        "attempts":  1,
+                        "escalated":  false,
+                        "elapsed_band":  "2-5m",
+                        "role":  "researcher",
+                        "delegated_model":  "opencode/mimo-v2.5-free",
+                        "parent_model":  "openai/gpt-5.6-luna",
+                        "user_task_id":  "token-economics-review-2026-09-19",
+                        "observation_kind":  "research",
+                        "fallback_used":  false,
+                        "execution_source":  "runtime_receipt",
+                        "elapsed_ms":  172219,
+                        "parent_session":  "ses_f45708efdffeMKWqS0McUcoMrL",
+                        "child_session":  "ses_f456e3004ffekipM2iNqkYB5CW",
+                        "selected_model":  "opencode/mimo-v2.5-free",
+                        "dispatched_model":  "opencode/mimo-v2.5-free",
+                        "observed_model":  "opencode/mimo-v2.5-free",
+                        "execution_attempts":  [
+                                                   {
+                                                       "selected_model":  "opencode/mimo-v2.5-free",
+                                                       "dispatched_model":  "opencode/mimo-v2.5-free",
+                                                       "observed_model":  "opencode/mimo-v2.5-free",
+                                                       "surface":  "opencode-free",
+                                                       "selection_reasons":  [
+                                                                                 "free-first: an adequate free route wins ordinary bounded work",
+                                                                                 "task: financial analysis | writes=False terminal=False large_ctx=0 deep=False diversity=True consequence=False",
+                                                                                 "benchmarks: no same-version benchmark bonus applied",
+                                                                                 "local history: n=0 anecdotal only (needs n\u003e=3)",
+                                                                                 "economics: qualify first; compare normalized capacity estimates, use explicit price proxies only when quota mapping is unknown",
+                                                                                 "quota: Currently free eligible route; quota failures still exclude it.",
+                                                                                 "availability: opencode-go pool-exhausted (go window weekly status=rate-limited); github-copilot-oauth pool-exhausted (copilot AI-credit pool depleted (premium_interactions) with no permitted overage)"
+                                                                             ],
+                                                       "adequacy":  "adequate",
+                                                       "started_at":  "2026-09-19T16:48:33.271Z",
+                                                       "status":  "completed",
+                                                       "abort_verified":  null,
+                                                       "child_session":  "ses_f456e3004ffekipM2iNqkYB5CW",
+                                                       "usage":  {
+                                                                     "input":  100121,
+                                                                     "output":  8547,
+                                                                     "reasoning":  0,
+                                                                     "cache_read":  1088832,
+                                                                     "cache_write":  0,
+                                                                     "provider_dollars":  0
+                                                                 },
+                                                       "usage_source":  "session_messages",
+                                                       "completed_at":  "2026-09-19T16:51:25.530Z",
+                                                       "elapsed_ms":  172219
+                                                   }
+                                               ],
+                        "consumption":  {
+                                            "input_tokens":  100121,
+                                            "output_tokens":  8547,
+                                            "reasoning_tokens":  0,
+                                            "cache_read_tokens":  1088832,
+                                            "cache_write_tokens":  0,
+                                            "cost_dollars":  0,
+                                            "quality":  "measured",
+                                            "source":  "session_messages",
+                                            "reason":  "Structured child counters; provider dollars are not subscription quota or a cash charge."
+                                        },
+                        "revisions":  [
+                                          {
+                                              "previous_escalated":  false,
+                                              "previous_attempts":  1,
+                                              "corrected_at":  "2026-09-19T17:10:48.1480853Z",
+                                              "previous_tests_passed":  true,
+                                              "previous_success":  true,
+                                              "previous_observation_kind":  "implementation"
+                                          }
+                                      ],
+                        "review_found_defects":  true,
+                        "reviewed_at":  "2026-09-19T17:10:49.1508217Z",
+                        "review_task_id":  "economics-audit-2026-09-19"
                     }
                 ]
 }

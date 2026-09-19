@@ -19,7 +19,7 @@ jobs:
       - name: Isolated execution contracts
         shell: pwsh
         run: |
-          node --test tests/delegate-runtime.test.mjs
+          node --test tests/delegate-runtime.test.mjs tests/presentation.test.mjs tests/usage.test.mjs
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
       - name: Selector and quota contracts
         shell: powershell

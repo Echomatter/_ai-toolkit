@@ -15,4 +15,6 @@ Use `-UserTaskId` (and `delegate.userTaskId`) to group related child/fallback wo
 
 Parent/child costs are related, not separate charges to sum twice. A fallback leaves an honest attempt history. Legacy all-session CLI measurements remain estimates because same-model concurrency and rounded counters cannot establish exact task consumption.
 
+For an orchestration audit, export the parent and actual child sessions with `opencode export`, then run `node scripts/summarize-session-usage.mjs PARENT_EXPORT CHILD_EXPORT...`. Keep the result in `.state/session-usage`. This separates the parent's own usage from each child, deduplicates sessions/messages, and explicitly leaves savings unmeasured without a comparable parent-only baseline. Researcher observations are research, not implementation; paid escalation and fallback attempts are distinct fields.
+
 Binding, provider, quota and deployment failures are operational observations, not poor coding performance by the intended model. No fabricated model self-identification, measured zero balances, or subscription-dollar savings. Read-only reviewers return their findings to Build for recording rather than bypassing the role's write boundary.

@@ -147,7 +147,7 @@ try {
             success=$Success;tests_passed=$TestsPassed;attempts=$Attempts;escalated=$Escalated;
             review_found_defects=$ReviewFoundDefects;elapsed_band=$ElapsedBand;role=$Role;delegated_model=$DelegatedModel;parent_model=$ParentModel}
         $entry.user_task_id = if ($UserTaskId) { $UserTaskId } else { $TaskId }
-        $entry.observation_kind = if ($Role -eq 'review') { 'review' } else { 'implementation' }
+        $entry.observation_kind = if ($Role -eq 'review') { 'review' } elseif ($Role -eq 'researcher') { 'research' } else { 'implementation' }
         if($null-ne$cIn-or$null-ne$cOut-or$null-ne$cCost-or$cQuality-eq'unmeasurable'){
             $entry.consumption=[ordered]@{input_tokens=$cIn;output_tokens=$cOut;cache_read_tokens=$cCache;cost_dollars=$cCost;quality=$cQuality;reason=$cReason}
         }
@@ -160,15 +160,17 @@ try {
             if($Model-and$Model-ne$attempt.observed_model){throw 'Recorded model differs from actual execution model.'}
             $entry.model=$attempt.observed_model;$entry.access=$attempt.surface;$entry.role=$receipt.role
             $entry.parent_model=$receipt.parent_model;$entry.attempts=@($receipt.attempts).Count
-            $entry.escalated=(@($receipt.attempts).Count-gt 1);$entry.execution_source='runtime_receipt';$entry.elapsed_ms=$attempt.elapsed_ms
+            $entry.fallback_used=(@($receipt.attempts).Count-gt 1)
+            $entry.escalated=($Escalated -or @($attempt.selection_reasons|Where-Object{$_ -like 'escalation:*'}).Count-gt 0)
+            $entry.execution_source='runtime_receipt';$entry.elapsed_ms=$attempt.elapsed_ms
             $entry.user_task_id=if($receipt.user_task_id){$receipt.user_task_id}else{$receipt.parent_session}
             $entry.parent_session=$receipt.parent_session;$entry.child_session=$attempt.child_session
             $entry.selected_model=$attempt.selected_model;$entry.dispatched_model=$attempt.dispatched_model;$entry.observed_model=$attempt.observed_model
             $entry.execution_attempts=@($receipt.attempts)
-            $entry.observation_kind=if($receipt.role-eq'review'){'review'}else{'implementation'}
+            $entry.observation_kind=if($receipt.role-eq'review'){'review'}elseif($receipt.role-eq'researcher'){'research'}else{'implementation'}
             if($attempt.usage){
                 $entry.consumption=[ordered]@{
-                    input_tokens=$attempt.usage.input;output_tokens=$attempt.usage.output;cache_read_tokens=$attempt.usage.cache_read;cache_write_tokens=$attempt.usage.cache_write;
+                    input_tokens=$attempt.usage.input;output_tokens=$attempt.usage.output;reasoning_tokens=$attempt.usage.reasoning;cache_read_tokens=$attempt.usage.cache_read;cache_write_tokens=$attempt.usage.cache_write;
                     cost_dollars=$attempt.usage.provider_dollars;quality='measured';source='session_messages';
                     reason='Structured child counters; provider dollars are not subscription quota or a cash charge.'}
             }
@@ -179,8 +181,8 @@ try {
         if($priorEntry.Count){
             $prior=$priorEntry[0]
             $entry.revisions=@($prior.revisions|Where-Object{$null-ne$_})
-            if($prior.success-ne$entry.success-or$prior.tests_passed-ne$entry.tests_passed-or$prior.attempts-ne$entry.attempts){
-                $entry.revisions+=@{corrected_at=$now;previous_success=$prior.success;previous_tests_passed=$prior.tests_passed;previous_attempts=$prior.attempts}
+            if($prior.success-ne$entry.success-or$prior.tests_passed-ne$entry.tests_passed-or$prior.attempts-ne$entry.attempts-or$prior.escalated-ne$entry.escalated-or$prior.observation_kind-ne$entry.observation_kind){
+                $entry.revisions+=@{corrected_at=$now;previous_success=$prior.success;previous_tests_passed=$prior.tests_passed;previous_attempts=$prior.attempts;previous_escalated=$prior.escalated;previous_observation_kind=$prior.observation_kind}
             }
         }
         $existing=@($existing|Where-Object{$_.task_id-ne$TaskId})

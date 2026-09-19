@@ -37,6 +37,10 @@ try {
  & $script -ToolkitRoot $root -TaskId $id -MarkReviewDefect -ReviewTaskId 'review-observation'|Out-Null
  $h=Get-Content $history -Raw|ConvertFrom-Json
  Check ($h.entries[0].review_task_id-eq'review-observation') 'review observation explicitly links to implementation'
+ $params.Escalated=$true
+ & $script @params|Out-Null
+ $h=Get-Content $history -Raw|ConvertFrom-Json
+ Check ($h.entries[0].escalated -and -not $h.entries[0].fallback_used) 'first-attempt paid escalation is distinct from a retry'
  $params.Model='opencode-go/wrong';$rejected=$false
  try { & $script @params|Out-Null } catch { $rejected=$true }
  Check $rejected 'wrong-model outcome rejected'
